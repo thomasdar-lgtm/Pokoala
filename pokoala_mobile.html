@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>PoKoala Mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Raleway:wght@700;800;900&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async></script>
+
+<style>
+:root {
+  --red:#CC0000; --red2:#FF3333;
+  --yellow:#FFDE00; --yellow2:#FFD700;
+  --blue:#003A8C; --blue2:#1565C0;
+  --ink:#1A1A2E; --ink2:#3D3D5C; --ink3:#7A7A9A;
+  --white:#E8E0CC;
+  --green:#0A7C4E; --green-light:#E3F5EE;
+  --amber:#B86800;
+  --radius:14px; --radius-sm:10px; --radius-xs:6px;
+  --nav-h:60px;
+  --header-h:56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+html,body{height:100%;overflow:hidden}
+
+body {
+  font-family:'Nunito',sans-serif;
+  color:#fff;
+  font-size:15px;
+  background:#1a0a0a;
+  background-image:
+    radial-gradient(ellipse at 20% 20%,rgba(204,0,0,0.2) 0%,transparent 50%),
+    radial-gradient(ellipse at 80% 80%,rgba(0,58,140,0.15) 0%,transparent 50%);
+  background-attachment:fixed;
+}
+
+/* ── APP SHELL ── */
+#app {display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* ── HEADER ── */
+#header {
+  flex-shrink:0;
+  height:var(--header-h);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;
+  background:rgba(10,0,20,0.85);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  position:relative;z-index:20;
+  padding-top:env(safe-area-inset-top,0);
+}
+.header-logo {
+  font-family:'Raleway',sans-serif;font-weight:900;font-size:22px;
+  background:linear-gradient(135deg,#FFD700,#FF3333);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:-.02em;
+}
+.drive-pill {
+  display:flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:20px;
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);
+  font-size:12px;font-weight:700;cursor:pointer;
+  transition:background .15s;user-select:none;
+}
+.drive-pill:active{background:rgba(255,255,255,0.15)}
+.drive-dot {width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0}
+.drive-dot.ok{background:#4ade80}
+.drive-dot.loading{background:#FFD700;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── CONTENT ── */
+#content {
+  flex:1;overflow:hidden;position:relative;
+}
+.tab-page {
+  position:absolute;inset:0;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:12px 12px calc(16px + var(--safe-bottom));
+  display:none;
+}
+.tab-page.active{display:block}
+
+/* ── BOTTOM NAV ── */
+#nav {
+  flex-shrink:0;
+  height:calc(var(--nav-h) + var(--safe-bottom));
+  background:rgba(10,0,20,0.95);
+  border-top:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:flex-start;
+  padding-bottom:var(--safe-bottom);
+  position:relative;z-index:20;
+}
+.nav-btn {
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;padding:10px 0 0;
+  font-size:10px;font-weight:700;
+  color:rgba(255,255,255,0.35);
+  cursor:pointer;user-select:none;letter-spacing:.02em;
+  transition:color .15s;border:none;background:none;
+}
+.nav-btn:active{opacity:.7}
+.nav-btn.active{color:#FFD700}
+.nav-icon{font-size:22px;line-height:1}
+.nav-btn.active .nav-icon{filter:drop-shadow(0 0 6px rgba(255,215,0,0.5))}
+
+/* ── CARDS / PILLS ── */
+.card-block {
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:var(--radius);
+  overflow:hidden;
+  margin-bottom:10px;
+}
+.card-block-header {
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;
+  font-size:13px;font-weight:700;color:rgba(255,255,255,0.6);
+  text-transform:uppercase;letter-spacing:.06em;
+}
+
+/* ── STAT BADGES ── */
+.stat-row {display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.stat-badge {
+  flex:1;min-width:80px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:var(--radius-sm);
+  padding:12px 10px;text-align:center;
+}
+.stat-badge .val{font-size:22px;font-weight:900;font-family:'Raleway',sans-serif;line-height:1}
+.stat-badge .lbl{font-size:10px;color:rgba(255,255,255,0.45);font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── SEARCH BAR ── */
+.search-wrap {
+  display:flex;gap:8px;margin-bottom:12px;
+  position:sticky;top:0;z-index:5;
+  padding:2px 0 6px;
+}
+.search-input {
+  flex:1;padding:10px 14px;border-radius:var(--radius-sm);
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);
+  color:#fff;font-family:'Nunito',sans-serif;font-size:15px;
+  outline:none;-webkit-appearance:none;
+}
+.search-input:focus{border-color:rgba(255,215,0,0.4);background:rgba(255,255,255,0.1)}
+.search-input::placeholder{color:rgba(255,255,255,0.3)}
+
+/* ── COLLECTION ITEMS ── */
+.coll-item {
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  cursor:pointer;
+  transition:background .1s;
+  active:background:rgba(255,255,255,0.05);
+}
+.coll-item:last-child{border-bottom:none}
+.coll-item:active{background:rgba(255,255,255,0.06)}
+.coll-thumb {
+  width:44px;height:60px;
+  object-fit:contain;border-radius:4px;flex-shrink:0;
+  background:rgba(255,255,255,0.04);
+}
+.coll-thumb-ph {
+  width:44px;height:60px;border-radius:4px;
+  background:rgba(255,255,255,0.06);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.coll-info{flex:1;min-width:0}
+.coll-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.coll-sub{font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.coll-right{text-align:right;flex-shrink:0}
+.coll-qty{
+  font-size:13px;font-weight:800;color:#FFD700;
+  background:rgba(255,215,0,0.12);border-radius:6px;padding:2px 8px;
+}
+.coll-price{font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px}
+
+/* ── BADGE RARETY ── */
+.badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700}
+.b-common{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5)}
+.b-uncommon{background:rgba(100,200,100,0.15);color:#6dc46d}
+.b-rare{background:rgba(30,100,255,0.15);color:#6fa3ff}
+.b-holo{background:rgba(200,150,0,0.2);color:#FFD700}
+.b-secret{background:rgba(180,0,200,0.2);color:#e060ff}
+
+/* ── TOAST ── */
+#toast {
+  position:fixed;bottom:calc(var(--nav-h) + var(--safe-bottom) + 12px);left:50%;transform:translateX(-50%);
+  background:rgba(30,30,50,0.96);border:1px solid rgba(255,255,255,0.15);
+  color:#fff;font-weight:700;font-size:13px;
+  padding:10px 20px;border-radius:20px;
+  white-space:nowrap;z-index:9999;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+  max-width:calc(100vw - 32px);text-align:center;
+}
+#toast.show{opacity:1}
+
+/* ── MODAL ── */
+.modal-bg {
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.85);
+  display:flex;align-items:flex-end;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.modal-bg.open{opacity:1;pointer-events:auto}
+.modal-sheet {
+  width:100%;max-height:92vh;
+  background:#0f0a1e;
+  border-radius:20px 20px 0 0;
+  border-top:1px solid rgba(255,255,255,0.1);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);
+  padding-bottom:calc(20px + var(--safe-bottom));
+}
+.modal-bg.open .modal-sheet{transform:translateY(0)}
+.modal-handle {
+  width:40px;height:4px;border-radius:2px;
+  background:rgba(255,255,255,0.2);
+  margin:12px auto 0;
+}
+.modal-close-row {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px 0;
+}
+.modal-title{font-family:'Raleway',sans-serif;font-weight:800;font-size:18px}
+.modal-close {
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,0.08);border:none;color:#fff;
+  font-size:18px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.modal-img-wrap{display:flex;justify-content:center;padding:16px}
+.modal-img-wrap img{max-width:200px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
+.modal-section{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.06)}
+.modal-section label{display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+
+/* ── QTY CONTROL ── */
+.qty-ctrl {
+  display:flex;align-items:center;gap:0;
+  background:rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;
+}
+.qty-ctrl button {
+  width:44px;height:44px;background:none;border:none;color:#fff;
+  font-size:22px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .1s;
+}
+.qty-ctrl button:active{background:rgba(255,255,255,0.15)}
+.qty-ctrl .qty-val{
+  min-width:44px;text-align:center;font-size:20px;font-weight:800;
+}
+
+/* ── SELECT ── */
+.mob-select {
+  width:100%;padding:10px 12px;border-radius:var(--radius-xs);
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);
+  color:#fff;font-family:'Nunito',sans-serif;font-size:14px;
+  -webkit-appearance:none;outline:none;
+}
+
+/* ── ACTION BTNS ── */
+.btn {
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:12px 16px;border-radius:var(--radius-sm);border:none;
+  font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;transition:filter .1s;
+}
+.btn:active{filter:brightness(.85)}
+.btn-primary{background:linear-gradient(135deg,#CC0000,#FF3333);color:#fff}
+.btn-secondary{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#fff}
+.btn-danger{background:rgba(200,0,0,0.2);border:1px solid rgba(200,0,0,0.3);color:#f87171}
+.btn-drive{background:rgba(0,58,140,0.3);border:1px solid rgba(0,100,255,0.3);color:#6fa3ff}
+.btn-full{width:100%}
+.btn-row{display:flex;gap:8px;padding:0 16px}
+
+/* ── SERIES BROWSE ── */
+.serie-block {
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;
+}
+.serie-header {
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  cursor:pointer;user-select:none;
+}
+.serie-header:active{background:rgba(255,255,255,0.05)}
+.serie-name{flex:1;font-weight:700;font-size:14px}
+.serie-arrow{color:rgba(255,255,255,0.3);font-size:12px;transition:transform .2s}
+.serie-arrow.open{transform:rotate(180deg)}
+.serie-sets{display:none;border-top:1px solid rgba(255,255,255,0.06)}
+.serie-sets.open{display:block}
+.set-item {
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px 10px 22px;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  cursor:pointer;transition:background .1s;
+}
+.set-item:last-child{border-bottom:none}
+.set-item:active{background:rgba(255,255,255,0.06)}
+.set-item-name{flex:1;font-size:13px;font-weight:600;color:rgba(255,255,255,0.8)}
+.set-item-count{font-size:11px;color:rgba(255,255,255,0.3)}
+
+/* ── CARD GRID ── */
+.card-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(82px,1fr));
+  gap:6px;padding:10px;
+}
+.grid-card {
+  position:relative;cursor:pointer;border-radius:6px;overflow:hidden;
+  border:2px solid transparent;
+  transition:border-color .1s;
+  aspect-ratio:0.716;
+  background:rgba(255,255,255,0.04);
+}
+.grid-card.owned{border-color:rgba(255,215,0,0.5)}
+.grid-card.owned::after{
+  content:'✓';position:absolute;top:3px;right:3px;
+  background:rgba(255,215,0,0.85);color:#000;
+  font-size:9px;font-weight:900;border-radius:50%;
+  width:16px;height:16px;display:flex;align-items:center;justify-content:center;
+}
+.grid-card img{width:100%;height:100%;object-fit:cover}
+.grid-card-num{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(transparent,rgba(0,0,0,0.7));
+  font-size:9px;font-weight:700;text-align:center;padding:4px 2px 2px;
+}
+.grid-card .qty-badge{
+  position:absolute;top:3px;left:3px;
+  background:rgba(255,215,0,0.9);color:#000;
+  font-size:9px;font-weight:900;border-radius:4px;padding:1px 4px;
+}
+.grid-card .add-btn {
+  position:absolute;inset:0;background:rgba(255,215,0,0.15);
+  display:none;align-items:center;justify-content:center;
+  font-size:28px;font-weight:800;color:#FFD700;
+}
+.grid-card:not(.owned):active .add-btn,
+.grid-card:not(.owned).add-hint .add-btn{display:flex}
+
+/* ── PROGRESS BAR ── */
+.prog-bar{height:4px;border-radius:2px;background:rgba(255,255,255,0.1);overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#FFD700,#FFA500);transition:width .3s}
+
+/* ── GRID OVERLAY (full screen browse sheet) ── */
+#grid-overlay {
+  position:fixed;inset:0;z-index:100;
+  background:#0f0a1e;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+}
+#grid-overlay.open{transform:translateY(0)}
+.grid-overlay-header {
+  flex-shrink:0;
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;
+  background:rgba(10,0,20,0.9);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  padding-top:calc(12px + env(safe-area-inset-top,0));
+}
+.grid-overlay-back {
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,0.08);border:none;color:#fff;
+  font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  flex-shrink:0;
+}
+.grid-overlay-title{flex:1;font-family:'Raleway',sans-serif;font-weight:800;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid-stats-bar {
+  flex-shrink:0;padding:8px 12px;
+  background:rgba(0,0,0,0.3);border-bottom:1px solid rgba(255,255,255,0.06);
+  display:none;
+}
+.grid-overlay-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+/* ── DRIVE MODAL ── */
+.drive-option-row {
+  display:flex;gap:10px;margin:0 16px 10px;
+}
+.drive-option {
+  flex:1;padding:14px 10px;
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+  border-radius:var(--radius-sm);text-align:center;cursor:pointer;
+}
+.drive-option:active{background:rgba(255,255,255,0.1)}
+.drive-option .icon{font-size:24px;margin-bottom:4px}
+.drive-option .name{font-size:12px;font-weight:700;color:rgba(255,255,255,0.7)}
+
+/* ── EMPTY ── */
+.empty-state {
+  text-align:center;padding:48px 24px;
+  color:rgba(255,255,255,0.35);font-size:13px;font-weight:600;
+}
+.empty-state .big{font-size:48px;margin-bottom:12px}
+
+/* ── SCROLLBARS ── */
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:2px}
+
+/* ── SEARCH RESULTS ── */
+.search-result-item {
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  cursor:pointer;transition:background .1s;
+}
+.search-result-item:active{background:rgba(255,255,255,0.06)}
+.search-result-img{width:36px;height:50px;object-fit:contain;border-radius:3px;flex-shrink:0;background:rgba(255,255,255,0.04)}
+.search-result-info{flex:1;min-width:0}
+.search-result-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-result-sub{font-size:11px;color:rgba(255,255,255,0.4);margin-top:1px}
+.add-card-btn {
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.3);
+  color:#FFD700;font-size:20px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;
+}
+.add-card-btn:active{background:rgba(255,215,0,0.3)}
+
+/* ── LOADER ── */
+.loader {
+  display:flex;align-items:center;justify-content:center;
+  padding:32px;color:rgba(255,255,255,0.35);font-size:13px;
+  gap:8px;
+}
+.loader::before{
+  content:'';width:18px;height:18px;border-radius:50%;
+  border:2px solid rgba(255,255,255,0.1);
+  border-top-color:#FFD700;
+  animation:spin .7s linear infinite;flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── FILTER PILLS ── */
+.filter-pills{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;-webkit-overflow-scrolling:touch}
+.filter-pills::-webkit-scrollbar{display:none}
+.filter-pill {
+  flex-shrink:0;padding:5px 12px;border-radius:20px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);cursor:pointer;
+}
+.filter-pill.active{background:rgba(255,215,0,0.15);border-color:rgba(255,215,0,0.4);color:#FFD700}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <span class="header-logo">PoKoala</span>
+    <div class="drive-pill" onclick="openDriveModal()">
+      <div class="drive-dot" id="drive-dot"></div>
+      <span id="drive-label">Drive</span>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- ── TAB: COLLECTION ── -->
+    <div class="tab-page active" id="tab-col">
+      <div class="search-wrap">
+        <input class="search-input" id="coll-search" type="search" placeholder="🔍 Chercher dans ma collection…" oninput="renderCollection()">
+      </div>
+      <div class="filter-pills" id="coll-filters">
+        <div class="filter-pill active" data-f="" onclick="setCollFilter(this,'')">Tout</div>
+        <div class="filter-pill" data-f="doubles" onclick="setCollFilter(this,'doubles')">Doubles</div>
+        <div class="filter-pill" data-f="forsale" onclick="setCollFilter(this,'forsale')">En vente</div>
+      </div>
+      <div class="stat-row" id="stat-row"></div>
+      <div class="card-block">
+        <div id="coll-list"></div>
+      </div>
+    </div>
+
+    <!-- ── TAB: BROWSE ── -->
+    <div class="tab-page" id="tab-browse">
+      <div id="series-list"><div class="loader">Chargement des séries…</div></div>
+    </div>
+
+    <!-- ── TAB: SEARCH ── -->
+    <div class="tab-page" id="tab-search">
+      <div class="search-wrap">
+        <input class="search-input" id="search-q" type="search" placeholder="🔍 Chercher une carte…" oninput="debounceSearch()">
+      </div>
+      <div id="search-results"><div class="empty-state"><div class="big">🔍</div>Tape le nom d'une carte</div></div>
+    </div>
+
+    <!-- ── TAB: STATS ── -->
+    <div class="tab-page" id="tab-stats">
+      <div id="stats-content"></div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- BOTTOM NAV -->
+  <nav id="nav">
+    <button class="nav-btn active" id="nav-col" onclick="switchTab('col')">
+      <span class="nav-icon">📦</span>Collection
+    </button>
+    <button class="nav-btn" id="nav-browse" onclick="switchTab('browse')">
+      <span class="nav-icon">📚</span>Parcourir
+    </button>
+    <button class="nav-btn" id="nav-search" onclick="switchTab('search')">
+      <span class="nav-icon">🔍</span>Recherche
+    </button>
+    <button class="nav-btn" id="nav-stats" onclick="switchTab('stats')">
+      <span class="nav-icon">📊</span>Stats
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- GRID OVERLAY (extension card browser) -->
+<div id="grid-overlay">
+  <div class="grid-overlay-header">
+    <button class="grid-overlay-back" onclick="closeGridOverlay()">←</button>
+    <div class="grid-overlay-title" id="grid-title">Extension</div>
+    <div id="grid-completion" style="font-size:12px;font-weight:700;color:#FFD700"></div>
+  </div>
+  <div class="grid-stats-bar" id="grid-stats-bar"></div>
+  <div class="grid-overlay-body">
+    <div class="card-grid" id="card-grid"></div>
+  </div>
+</div>
+
+<!-- CARD DETAIL MODAL -->
+<div class="modal-bg" id="card-modal">
+  <div class="modal-sheet" id="card-modal-sheet">
+    <div class="modal-handle"></div>
+    <div id="card-modal-content"></div>
+  </div>
+</div>
+
+<!-- DRIVE MODAL -->
+<div class="modal-bg" id="drive-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-close-row">
+      <span class="modal-title">Google Drive</span>
+      <button class="modal-close" onclick="closeModal('drive-modal')">✕</button>
+    </div>
+    <div id="drive-modal-body" style="padding:16px">
+      <div id="drive-not-connected" style="display:none">
+        <p style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:16px">Connecte-toi pour accéder à ta collection sur tous tes appareils.</p>
+        <button class="btn btn-drive btn-full" onclick="driveSignIn()">🔗 Se connecter à Google Drive</button>
+      </div>
+      <div id="drive-connected" style="display:none">
+        <p id="drive-email" style="font-size:13px;color:#4ade80;margin-bottom:16px;font-weight:700"></p>
+        <div class="drive-option-row">
+          <div class="drive-option" onclick="driveSave()">
+            <div class="icon">☁️</div><div class="name">Sauvegarder</div>
+          </div>
+          <div class="drive-option" onclick="driveLoad()">
+            <div class="icon">📥</div><div class="name">Restaurer</div>
+          </div>
+        </div>
+        <button class="btn btn-danger btn-full" style="margin-top:8px" onclick="driveSignOut()">Déconnecter</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ============================================================
+// CONFIG & STATE
+// ============================================================
+const DRIVE_CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file email profile';
+const DRIVE_FILE_NAME = 'pokoala_collection.json';
+const TCGDEX_FR = 'https://api.tcgdex.net/v2/fr';
+const TCGDEX_EN = 'https://api.tcgdex.net/v2/en';
+const POKEMONTCG_API = 'https://api.pokemontcg.io/v2';
+
+let col = [];        // collection
+let _driveToken = null;
+let _driveFileId = null;
+let _seriesData = [];
+let _gridCards = [];
+let _gridSetId = null;
+let _collFilter = '';
+let _activeTab = 'col';
+let _searchTimer = null;
+let _pendingSave = false;
+
+// ============================================================
+// PERSISTENCE (localStorage + Drive)
+// ============================================================
+function save(){
+  try{ localStorage.setItem('pk_col', JSON.stringify(col)); }catch(e){}
+  scheduleDriveSave();
+}
+
+function load(){
+  try{
+    const s = localStorage.getItem('pk_col');
+    if(s) col = JSON.parse(s);
+  }catch(e){ col = []; }
+}
+
+function scheduleDriveSave(){
+  if(!_driveToken) return;
+  _pendingSave = true;
+  clearTimeout(scheduleDriveSave._t);
+  scheduleDriveSave._t = setTimeout(() => {
+    if(_pendingSave) driveSave(true);
+  }, 2500);
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(tab){
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('nav-'+tab).classList.add('active');
+  _activeTab = tab;
+  if(tab === 'col') renderCollection();
+  if(tab === 'browse' && !_seriesData.length) loadSeries();
+  if(tab === 'stats') renderStats();
+}
+
+// ============================================================
+// COLLECTION
+// ============================================================
+let _collFilterActive = '';
+function setCollFilter(el, f){
+  _collFilterActive = f;
+  document.querySelectorAll('#coll-filters .filter-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderCollection();
+}
+
+function renderCollection(){
+  const search = (document.getElementById('coll-search')?.value || '').toLowerCase().trim();
+  let items = [...col];
+  if(search) items = items.filter(c =>
+    (c.name||'').toLowerCase().includes(search) ||
+    (c.nameEn||'').toLowerCase().includes(search) ||
+    (c.set||'').toLowerCase().includes(search)
+  );
+  if(_collFilterActive === 'doubles') items = items.filter(c => c.qty > 1);
+  if(_collFilterActive === 'forsale') items = items.filter(c => c.for_sale);
+
+  // Stats bar
+  const uniq = col.length;
+  const total = col.reduce((s,c) => s + (c.qty||1), 0);
+  const val = col.reduce((s,c) => s + (c.price||0)*condMul(c.cond)*(c.qty||1), 0);
+  const doubles = col.reduce((s,c) => s + Math.max(0,(c.qty||1)-1), 0);
+  document.getElementById('stat-row').innerHTML = `
+    <div class="stat-badge"><div class="val" style="color:#FFD700">${uniq}</div><div class="lbl">Cartes uniques</div></div>
+    <div class="stat-badge"><div class="val" style="color:#6fa3ff">${total}</div><div class="lbl">Total</div></div>
+    <div class="stat-badge"><div class="val" style="color:#4ade80">${val>0?val.toFixed(0)+'€':'—'}</div><div class="lbl">Valeur</div></div>
+    <div class="stat-badge"><div class="val" style="color:rgba(255,255,255,0.5)">${doubles}</div><div class="lbl">Doubles</div></div>
+  `;
+
+  const list = document.getElementById('coll-list');
+  if(!items.length){
+    list.innerHTML = col.length === 0
+      ? `<div class="empty-state"><div class="big">🃏</div>Ta collection est vide.<br>Recherche des cartes pour commencer !</div>`
+      : `<div class="empty-state"><div class="big">🔍</div>Aucune carte trouvée</div>`;
+    return;
+  }
+  list.innerHTML = items.map(c => {
+    const imgSrc = cardImgUrl(c);
+    const mul = condMul(c.cond);
+    const price = c.priceManual != null ? c.priceManual : (c.price ? +(c.price*mul).toFixed(2) : null);
+    const sid = escId(c.id);
+    return `<div class="coll-item" onclick="openCardModal('${sid}')">
+      ${imgSrc
+        ? `<img class="coll-thumb" src="${imgSrc}" loading="lazy" onerror="this.outerHTML='<div class=coll-thumb-ph>🃏</div>'">`
+        : `<div class="coll-thumb-ph">🃏</div>`}
+      <div class="coll-info">
+        <div class="coll-name">${c.name}</div>
+        <div class="coll-sub">${c.set||''}${c.num?' · N°'+c.num:''}${c.rarity?' · '+c.rarity:''}</div>
+        ${c.cond && c.cond!=='NM' ? `<div style="margin-top:3px"><span class="badge b-common">${c.cond}</span></div>` : ''}
+      </div>
+      <div class="coll-right">
+        <span class="coll-qty">${c.qty}×</span>
+        ${price ? `<div class="coll-price">${price.toFixed(2)} €</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function condMul(c){ return{M:1.3,NM:1.0,LP:.85,MP:.65,HP:.4,D:.2}[c]||1; }
+function escId(id){ return (id||'').replace(/'/g,"\\'"); }
+
+function cardImgUrl(c){
+  // prefer TCGdex FR image via card id pattern, fallback to stored img
+  if(c.imgLarge) return c.imgLarge;
+  if(c.img) return c.img;
+  if(c.id){
+    // Try to build TCGdex URL: setId/number
+    const parts = c.id.split('-');
+    if(parts.length >= 2){
+      const setId = parts.slice(0,-1).join('-');
+      const num = parts[parts.length-1];
+      return `https://assets.tcgdex.net/fr/${setId}/${num}/high.webp`;
+    }
+  }
+  return '';
+}
+
+// ============================================================
+// CARD MODAL
+// ============================================================
+function openCardModal(id){
+  const c = col.find(x => x.id === id);
+  if(!c) return;
+  const imgSrc = cardImgUrl(c);
+  const mul = condMul(c.cond);
+  const price = c.priceManual != null ? c.priceManual : (c.price ? +(c.price*mul).toFixed(2) : null);
+  const sid = escId(id);
+
+  document.getElementById('card-modal-content').innerHTML = `
+    <div class="modal-close-row">
+      <span class="modal-title" style="font-size:16px">${c.name}</span>
+      <button class="modal-close" onclick="closeModal('card-modal')">✕</button>
+    </div>
+    ${imgSrc ? `<div class="modal-img-wrap"><img src="${imgSrc}" onerror="this.style.display='none'"></div>` : ''}
+    <div class="modal-section">
+      <label>Extension</label>
+      <div style="font-size:13px;color:rgba(255,255,255,0.7)">${c.set||'—'}${c.num?' · N°'+c.num:''}${c.rarity?' · '+c.rarity:''}</div>
+    </div>
+    <div class="modal-section">
+      <label>Quantité</label>
+      <div class="qty-ctrl" style="max-width:160px">
+        <button onclick="updQtyModal('${sid}',-1)">−</button>
+        <div class="qty-val" id="modal-qty">${c.qty}</div>
+        <button onclick="updQtyModal('${sid}',1)">+</button>
+      </div>
+    </div>
+    <div class="modal-section">
+      <label>État</label>
+      <select class="mob-select" style="max-width:180px" onchange="updCondModal('${sid}',this.value)">
+        ${['M','NM','LP','MP','HP','D'].map(v=>`<option${c.cond===v?' selected':''}>${v}</option>`).join('')}
+      </select>
+    </div>
+    <div class="modal-section">
+      <label>Prix estimé</label>
+      <div style="font-size:18px;font-weight:800;color:#FFD700">${price ? price.toFixed(2)+' €' : '—'}</div>
+    </div>
+    <div class="modal-section">
+      <label>Qté en vente</label>
+      <div class="qty-ctrl" style="max-width:160px">
+        <button onclick="setForSaleModal('${sid}',${(c.qty_for_sale||0)-1})">−</button>
+        <div class="qty-val" id="modal-forsale">${c.qty_for_sale||0}</div>
+        <button onclick="setForSaleModal('${sid}',${(c.qty_for_sale||0)+1})">+</button>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-danger" style="flex:1" onclick="removeCardModal('${sid}')">🗑️ Supprimer</button>
+      ${c.nameEn ? `<button class="btn btn-secondary" style="flex:1" onclick="openCM('${escId(c.nameEn||c.name)}','${escId(c.setId||c.set||'')}','${escId(c.num||'')}')">📈 Cardmarket</button>` : ''}
+    </div>
+  `;
+  openModal('card-modal');
+}
+
+function updQtyModal(id, d){
+  const c = col.find(x => x.id === id);
+  if(!c) return;
+  c.qty = Math.max(0, (c.qty||1)+d);
+  if(c.qty === 0){ col.splice(col.indexOf(c),1); closeModal('card-modal'); save(); renderCollection(); return; }
+  document.getElementById('modal-qty').textContent = c.qty;
+  save(); renderCollection();
+}
+
+function updCondModal(id, v){
+  const c = col.find(x => x.id === id);
+  if(c){ c.cond = v; save(); renderCollection(); }
+}
+
+function setForSaleModal(id, qty){
+  const c = col.find(x => x.id === id);
+  if(!c) return;
+  c.qty_for_sale = Math.max(0, Math.min(qty, c.qty));
+  c.for_sale = c.qty_for_sale > 0;
+  document.getElementById('modal-forsale').textContent = c.qty_for_sale;
+  save(); renderCollection();
+}
+
+function removeCardModal(id){
+  col = col.filter(x => x.id !== id);
+  closeModal('card-modal');
+  save(); renderCollection();
+  toast('Carte retirée');
+}
+
+function openCM(name, set, num){
+  const q = encodeURIComponent(name + ' ' + (num||''));
+  window.open('https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString='+q, '_blank');
+}
+
+// ============================================================
+// ADD CARD (from search or browse)
+// ============================================================
+function addCard(cardData, frName){
+  const existing = col.find(c => c.id === cardData.id);
+  if(existing){
+    existing.qty = (existing.qty||1) + 1;
+    toast(`+1 · ${existing.name} (${existing.qty}×)`);
+  } else {
+    const name = frName || cardData.name;
+    // build TCGdex image url
+    const parts = (cardData.id||'').split('-');
+    let imgUrl = '', imgLarge = '';
+    if(parts.length >= 2){
+      const setId = parts.slice(0,-1).join('-');
+      const num = parts[parts.length-1];
+      imgUrl = `https://assets.tcgdex.net/fr/${setId}/${num}/low.webp`;
+      imgLarge = `https://assets.tcgdex.net/fr/${setId}/${num}/high.webp`;
+    }
+    if(!imgUrl && cardData.images?.small) imgUrl = cardData.images.small;
+    if(!imgLarge && cardData.images?.large) imgLarge = cardData.images.large;
+
+    col.push({
+      id: cardData.id,
+      name: name,
+      nameEn: cardData.name,
+      set: cardData.set?.name || cardData.set || '',
+      setId: cardData.set?.id || '',
+      num: cardData.number || '',
+      rarity: cardData.rarity || '',
+      img: imgUrl,
+      imgLarge: imgLarge,
+      price: null,
+      priceSrc: null,
+      priceManual: null,
+      cond: 'NM',
+      qty: 1,
+      qty_for_sale: 0,
+      for_sale: false,
+    });
+    toast(`✅ ${name} ajoutée !`);
+  }
+  save(); renderCollection();
+}
+
+// ============================================================
+// SEARCH (pokemontcg.io API)
+// ============================================================
+function debounceSearch(){
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(doSearch, 400);
+}
+
+async function doSearch(){
+  const q = document.getElementById('search-q').value.trim();
+  const res = document.getElementById('search-results');
+  if(q.length < 2){
+    res.innerHTML = `<div class="empty-state"><div class="big">🔍</div>Tape le nom d'une carte</div>`;
+    return;
+  }
+  res.innerHTML = `<div class="loader">Recherche en cours…</div>`;
+  try{
+    const r = await fetch(`${POKEMONTCG_API}/cards?q=name:"${encodeURIComponent(q)}"&pageSize=30&select=id,name,number,rarity,set,images`);
+    const d = await r.json();
+    const cards = d.data || [];
+    if(!cards.length){
+      res.innerHTML = `<div class="empty-state"><div class="big">🤷</div>Aucune carte trouvée pour "${q}"</div>`;
+      return;
+    }
+    res.innerHTML = cards.map(c => {
+      const owned = col.find(x => x.id === c.id);
+      const imgSrc = c.images?.small || '';
+      return `<div class="search-result-item">
+        ${imgSrc ? `<img class="search-result-img" src="${imgSrc}" loading="lazy">` : '<div class="search-result-img"></div>'}
+        <div class="search-result-info" onclick="addFromSearch(${JSON.stringify(JSON.stringify(c)).slice(1,-1)})">
+          <div class="search-result-name">${c.name}</div>
+          <div class="search-result-sub">${c.set?.name||''} · N°${c.number||'—'} · ${c.rarity||'—'}</div>
+          ${owned ? `<div style="margin-top:2px;font-size:11px;color:#FFD700">✓ Dans la collection (${owned.qty}×)</div>` : ''}
+        </div>
+        <div class="add-card-btn" onclick="addFromSearch(${JSON.stringify(JSON.stringify(c)).slice(1,-1)})">+</div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    res.innerHTML = `<div class="empty-state"><div class="big">⚠️</div>Erreur de recherche</div>`;
+  }
+}
+
+function addFromSearch(jsonStr){
+  try{
+    const c = JSON.parse(jsonStr);
+    addCard(c, c.name);
+  }catch(e){ toast('Erreur ajout carte'); }
+}
+
+// ============================================================
+// SERIES BROWSER
+// ============================================================
+async function loadSeries(){
+  document.getElementById('series-list').innerHTML = '<div class="loader">Chargement des séries…</div>';
+  try{
+    const r = await fetch(`${TCGDEX_FR}/series`);
+    _seriesData = await r.json();
+    // Fetch sets for each series (TCGdex returns series with sets array)
+    renderSeriesList();
+  }catch(e){
+    document.getElementById('series-list').innerHTML = `<div class="empty-state"><div class="big">⚠️</div>Impossible de charger les séries</div>`;
+  }
+}
+
+function renderSeriesList(){
+  if(!_seriesData.length){
+    document.getElementById('series-list').innerHTML = `<div class="empty-state"><div class="big">📚</div>Aucune série disponible</div>`;
+    return;
+  }
+  // reverse so newest is first
+  const series = [..._seriesData].reverse();
+  document.getElementById('series-list').innerHTML = series.map((serie, i) => {
+    const sets = serie.sets || [];
+    const idx = 'serie-'+i;
+    return `<div class="serie-block">
+      <div class="serie-header" onclick="toggleSerie('${idx}')">
+        <span class="serie-name">${serie.name}</span>
+        <span class="serie-arrow" id="arr-${idx}">▾</span>
+      </div>
+      <div class="serie-sets" id="sets-${idx}">
+        ${sets.map(s => {
+          const symbolUrl = s.symbol ? s.symbol+'.png' : '';
+          return `<div class="set-item" onclick="openGrid('${escId(s.id)}','${escId(s.name||'')}')">
+            ${symbolUrl ? `<img src="${symbolUrl}" alt="" style="width:22px;height:22px;object-fit:contain;opacity:.8" onerror="this.style.display='none'">` : '<span style="width:22px"></span>'}
+            <span class="set-item-name">${s.name||s.id}</span>
+            <span class="set-item-count">${s.cardCount?.official||s.cards?.length||''}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSerie(idx){
+  const sets = document.getElementById('sets-'+idx);
+  const arr = document.getElementById('arr-'+idx);
+  const isOpen = sets.classList.contains('open');
+  sets.classList.toggle('open', !isOpen);
+  if(arr) arr.classList.toggle('open', !isOpen);
+}
+
+async function openGrid(setId, setName){
+  _gridSetId = setId;
+  document.getElementById('grid-title').textContent = setName || setId;
+  document.getElementById('grid-completion').textContent = '';
+  document.getElementById('grid-stats-bar').style.display = 'none';
+  document.getElementById('card-grid').innerHTML = '<div class="loader">Chargement…</div>';
+  document.getElementById('grid-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  try{
+    const r = await fetch(`${TCGDEX_FR}/sets/${setId}`);
+    const d = await r.json();
+    _gridCards = d.cards || [];
+    renderCardGrid();
+  }catch(e){
+    document.getElementById('card-grid').innerHTML = '<div class="empty-state"><div class="big">⚠️</div>Erreur chargement</div>';
+  }
+}
+
+function renderCardGrid(){
+  const ownedMap = new Map(col.map(c => [c.id, c]));
+  const setIdPrefix = _gridSetId;
+
+  const owned = _gridCards.filter(c => ownedMap.has(c.id) || ownedMap.has(setIdPrefix+'-'+c.localId));
+  const pct = _gridCards.length > 0 ? Math.round(owned.length / _gridCards.length * 100) : 0;
+
+  document.getElementById('grid-completion').textContent = `${owned.length}/${_gridCards.length}`;
+  const statsBar = document.getElementById('grid-stats-bar');
+  statsBar.style.display = 'block';
+  statsBar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:12px;font-weight:700">${owned.length}/${_gridCards.length}</span>
+      <div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:${pct}%"></div></div>
+      <span style="font-size:12px;font-weight:800;color:#FFD700">${pct}%</span>
+    </div>`;
+
+  if(!_gridCards.length){
+    document.getElementById('card-grid').innerHTML = '<div class="empty-state"><div class="big">🤷</div>Aucune carte</div>';
+    return;
+  }
+
+  document.getElementById('card-grid').innerHTML = _gridCards.map(c => {
+    const cardId = c.id || (setIdPrefix+'-'+c.localId);
+    const ownedCard = ownedMap.get(cardId) || ownedMap.get(setIdPrefix+'-'+c.localId);
+    const imgSrc = c.image ? c.image+'/low.webp' : `https://assets.tcgdex.net/fr/${setIdPrefix}/${c.localId}/low.webp`;
+    const sid = escId(cardId);
+    return `<div class="grid-card ${ownedCard ? 'owned' : ''}" onclick="gridCardTap('${sid}','${escId(c.name||'')}','${escId(imgSrc)}')">
+      <img src="${imgSrc}" loading="lazy" onerror="this.style.display='none'">
+      ${ownedCard && ownedCard.qty > 1 ? `<div class="qty-badge">${ownedCard.qty}×</div>` : ''}
+      <div class="grid-card-num">${c.localId||c.number||''}</div>
+    </div>`;
+  }).join('');
+}
+
+function gridCardTap(cardId, cardName, imgSrc){
+  const ownedCard = col.find(x => x.id === cardId);
+  if(ownedCard){
+    openCardModal(cardId);
+    return;
+  }
+  // Not owned → show add confirmation
+  const setData = _gridCards.find(c => (c.id === cardId) || ((_gridSetId+'-'+c.localId) === cardId));
+  if(!setData) return;
+
+  // Build a minimal card object compatible with addCard
+  const cardObj = {
+    id: cardId,
+    name: cardName || setData.name || cardId,
+    number: setData.localId || setData.number || '',
+    rarity: setData.rarity || '',
+    set: { id: _gridSetId, name: document.getElementById('grid-title').textContent },
+    images: { small: imgSrc }
+  };
+  showAddConfirm(cardObj);
+}
+
+function showAddConfirm(cardObj){
+  // Inline confirm inside the grid (simple toast-style)
+  // Actually show the card modal in "add" mode
+  const modal = document.getElementById('card-modal');
+  const imgSrc = cardObj.images?.small || '';
+  document.getElementById('card-modal-content').innerHTML = `
+    <div class="modal-close-row">
+      <span class="modal-title" style="font-size:16px">${cardObj.name}</span>
+      <button class="modal-close" onclick="closeModal('card-modal')">✕</button>
+    </div>
+    ${imgSrc ? `<div class="modal-img-wrap"><img src="${imgSrc.replace('low.webp','high.webp')}" onerror="this.src='${imgSrc}'"></div>` : ''}
+    <div class="modal-section">
+      <div style="font-size:13px;color:rgba(255,255,255,0.6)">${cardObj.set?.name||''} · N°${cardObj.number||'—'}</div>
+    </div>
+    <div class="btn-row" style="margin-top:8px;margin-bottom:4px">
+      <button class="btn btn-primary btn-full" onclick="addCard(window._pendingCard);closeModal('card-modal');renderCardGrid()">
+        ➕ Ajouter à ma collection
+      </button>
+    </div>
+  `;
+  window._pendingCard = cardObj;
+  openModal('card-modal');
+}
+
+function closeGridOverlay(){
+  document.getElementById('grid-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ============================================================
+// STATS TAB
+// ============================================================
+function renderStats(){
+  if(!col.length){
+    document.getElementById('stats-content').innerHTML = `<div class="empty-state"><div class="big">📊</div>Ta collection est vide</div>`;
+    return;
+  }
+  const uniq = col.length;
+  const total = col.reduce((s,c) => s+(c.qty||1), 0);
+  const doubles = col.reduce((s,c) => s+Math.max(0,(c.qty||1)-1), 0);
+  const val = col.reduce((s,c) => s+(c.price||0)*condMul(c.cond)*(c.qty||1), 0);
+  const forsale = col.filter(c => c.for_sale).length;
+
+  // by extension
+  const bySet = {};
+  col.forEach(c => {
+    const s = c.set || 'Inconnue';
+    if(!bySet[s]) bySet[s] = { count:0, qty:0, val:0 };
+    bySet[s].count++;
+    bySet[s].qty += (c.qty||1);
+    bySet[s].val += (c.price||0)*condMul(c.cond)*(c.qty||1);
+  });
+  const setSorted = Object.entries(bySet).sort((a,b) => b[1].count - a[1].count);
+
+  // by rarity
+  const byRarity = {};
+  col.forEach(c => {
+    const r = c.rarity || 'Inconnue';
+    if(!byRarity[r]) byRarity[r] = 0;
+    byRarity[r] += (c.qty||1);
+  });
+  const rarSorted = Object.entries(byRarity).sort((a,b) => b[1]-a[1]);
+
+  document.getElementById('stats-content').innerHTML = `
+    <div class="stat-row">
+      <div class="stat-badge"><div class="val" style="color:#FFD700">${uniq}</div><div class="lbl">Uniques</div></div>
+      <div class="stat-badge"><div class="val" style="color:#6fa3ff">${total}</div><div class="lbl">Total</div></div>
+      <div class="stat-badge"><div class="val" style="color:#4ade80">${val>0?val.toFixed(0)+'€':'—'}</div><div class="lbl">Valeur</div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-badge"><div class="val" style="color:rgba(255,255,255,0.5)">${doubles}</div><div class="lbl">Doubles</div></div>
+      <div class="stat-badge"><div class="val" style="color:#FFD700">${forsale}</div><div class="lbl">En vente</div></div>
+      <div class="stat-badge"><div class="val" style="color:rgba(255,255,255,0.4)">${setSorted.length}</div><div class="lbl">Extensions</div></div>
+    </div>
+    <div class="card-block" style="margin-bottom:10px">
+      <div class="card-block-header">Par extension (top 10)</div>
+      ${setSorted.slice(0,10).map(([name, data]) => `
+        <div style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%">${name}</span>
+            <span style="font-size:12px;font-weight:700;color:#FFD700">${data.count} cartes</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:${Math.round(data.count/uniq*100)}%"></div></div>
+            <span style="font-size:11px;color:rgba(255,255,255,0.4);width:30px;text-align:right">${Math.round(data.count/uniq*100)}%</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="card-block">
+      <div class="card-block-header">Par rareté</div>
+      ${rarSorted.map(([name, count]) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <span style="font-size:13px">${name}</span>
+          <span style="font-size:13px;font-weight:700;color:rgba(255,215,0,0.8)">${count}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function openModal(id){
+  const m = document.getElementById(id);
+  m.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id){
+  const m = document.getElementById(id);
+  m.classList.remove('open');
+  if(!document.querySelector('.modal-bg.open') && !document.getElementById('grid-overlay').classList.contains('open')){
+    document.body.style.overflow = '';
+  }
+}
+
+// Close modals on backdrop tap
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if(e.target === m) closeModal(m.id); });
+});
+
+// ============================================================
+// GOOGLE DRIVE
+// ============================================================
+function openDriveModal(){
+  updateDriveModalUI();
+  openModal('drive-modal');
+}
+
+function updateDriveModalUI(){
+  const dot = document.getElementById('drive-dot');
+  const label = document.getElementById('drive-label');
+  const nc = document.getElementById('drive-not-connected');
+  const conn = document.getElementById('drive-connected');
+  if(_driveToken){
+    dot.className = 'drive-dot ok';
+    label.textContent = localStorage.getItem('drive_hint')?.split('@')[0] || '✓';
+    nc.style.display = 'none';
+    conn.style.display = 'block';
+    document.getElementById('drive-email').textContent = '✓ ' + (localStorage.getItem('drive_hint') || 'Connecté');
+  } else {
+    dot.className = 'drive-dot';
+    label.textContent = 'Drive';
+    nc.style.display = 'block';
+    conn.style.display = 'none';
+  }
+}
+
+function driveSignIn(){
+  const hint = localStorage.getItem('drive_hint');
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: DRIVE_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    login_hint: hint || undefined,
+    callback: async (resp) => {
+      if(resp.error){ toast('Erreur : ' + resp.error); return; }
+      _driveToken = resp.access_token;
+      localStorage.setItem('drive_token', _driveToken);
+      // Get user info
+      try{
+        const info = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+_driveToken}}).then(r=>r.json());
+        if(info.email) localStorage.setItem('drive_hint', info.email);
+      }catch(e){}
+      updateDriveModalUI();
+      toast('✅ Connecté à Google Drive');
+      // Auto-load collection from Drive on first connect
+      await driveLoad(true);
+    }
+  });
+  client.requestAccessToken();
+}
+
+function driveSignOut(){
+  if(_driveToken) try{ google.accounts.oauth2.revoke(_driveToken); }catch(e){}
+  _driveToken = null;
+  _driveFileId = null;
+  localStorage.removeItem('drive_token');
+  updateDriveModalUI();
+  closeModal('drive-modal');
+  toast('Déconnecté de Drive');
+}
+
+async function driveFindFile(){
+  if(!_driveToken) return null;
+  const r = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FILE_NAME}'+and+trashed=false&fields=files(id,name)`,
+    { headers: {'Authorization':'Bearer '+_driveToken} }
+  );
+  const d = await r.json();
+  return d.files?.[0]?.id || null;
+}
+
+async function driveSave(silent=false){
+  if(!_driveToken){ if(!silent) toast('Connecte-toi à Drive d\'abord'); return; }
+  _pendingSave = false;
+  try{
+    if(!silent){ document.getElementById('drive-dot').className = 'drive-dot loading'; }
+    const data = JSON.stringify({ collection: col, savedAt: new Date().toISOString() });
+    const fileId = _driveFileId || await driveFindFile();
+    let r;
+    if(fileId){
+      r = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+        method:'PATCH',
+        headers:{'Authorization':'Bearer '+_driveToken,'Content-Type':'application/json'},
+        body: data
+      });
+    } else {
+      const meta = JSON.stringify({ name: DRIVE_FILE_NAME, mimeType:'application/json' });
+      const form = new FormData();
+      form.append('metadata', new Blob([meta],{type:'application/json'}));
+      form.append('file', new Blob([data],{type:'application/json'}));
+      r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method:'POST',
+        headers:{'Authorization':'Bearer '+_driveToken},
+        body: form
+      });
+    }
+    const result = await r.json();
+    _driveFileId = result.id;
+    document.getElementById('drive-dot').className = 'drive-dot ok';
+    if(!silent){ toast('✅ Collection sauvegardée sur Drive !'); closeModal('drive-modal'); }
+  }catch(e){
+    document.getElementById('drive-dot').className = 'drive-dot';
+    if(!silent) toast('Erreur sauvegarde Drive');
+  }
+}
+
+async function driveLoad(silent=false){
+  if(!_driveToken){ if(!silent) toast('Connecte-toi à Drive d\'abord'); return; }
+  try{
+    if(!silent) toast('⏳ Récupération…');
+    const fileId = _driveFileId || await driveFindFile();
+    if(!fileId){ if(!silent) toast('Aucune sauvegarde trouvée'); return; }
+    _driveFileId = fileId;
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+      headers:{'Authorization':'Bearer '+_driveToken}
+    });
+    const d = await r.json();
+    if(d.collection && d.collection.length > 0){
+      col = d.collection;
+      save();
+      renderCollection();
+      toast(`✅ ${col.length} cartes récupérées de Drive !`);
+    } else if(!silent){
+      toast('Aucune collection sur Drive');
+    }
+    if(!silent) closeModal('drive-modal');
+  }catch(e){
+    if(!silent) toast('Erreur récupération Drive');
+  }
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+let _toastTimer;
+function toast(msg, dur=2500){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+async function init(){
+  load();
+  renderCollection();
+
+  // Restore Drive token
+  const savedToken = localStorage.getItem('drive_token');
+  if(savedToken){
+    _driveToken = savedToken;
+    updateDriveModalUI();
+    // Validate token by trying to find file
+    try{
+      const fileId = await driveFindFile();
+      if(fileId){
+        _driveFileId = fileId;
+        document.getElementById('drive-dot').className = 'drive-dot ok';
+      }
+    }catch(e){
+      // Token probably expired — clear it
+      _driveToken = null;
+      localStorage.removeItem('drive_token');
+      updateDriveModalUI();
+    }
+  }
+}
+
+init();
+</script>
+</body>
+</html>

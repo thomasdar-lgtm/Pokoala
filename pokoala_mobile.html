@@ -227,7 +227,7 @@ body::before{
 
 /* ── SERIES BROWSER ── */
 .serie-block{
-  background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+  background:rgba(20,10,40,0.85);border:1px solid rgba(255,255,255,0.1);
   border-radius:var(--radius-sm);margin-bottom:7px;overflow:hidden;
 }
 .serie-header{
@@ -253,34 +253,33 @@ body::before{
 /* ── CARD GRID ── */
 .card-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(78px,1fr));
+  grid-template-columns:repeat(3,1fr);
   gap:5px;padding:8px;
 }
 .grid-card{
-  position:relative;cursor:pointer;border-radius:5px;overflow:hidden;
-  border:2px solid transparent;
-  aspect-ratio:0.716;
-  background:rgba(255,255,255,0.03);
-  transition:border-color .1s;
+  position:relative;border-radius:8px;overflow:hidden;
+  cursor:pointer;
+  aspect-ratio:63/88;
+  background:rgba(255,255,255,0.04);
 }
-.grid-card.owned{border-color:rgba(255,215,0,0.55)}
-.grid-card img{width:100%;height:100%;object-fit:cover}
+.grid-card img{width:100%;height:100%;object-fit:cover;display:block}
+.grid-card.not-owned{filter:grayscale(80%) brightness(0.5)}
 .grid-card-num{
-  position:absolute;bottom:0;left:0;right:0;
-  background:linear-gradient(transparent,rgba(0,0,0,0.75));
-  font-size:8px;font-weight:800;text-align:center;
-  padding:6px 2px 2px;color:rgba(255,255,255,0.8);
+  position:absolute;bottom:3px;left:0;right:0;text-align:center;
+  font-size:9px;font-weight:700;color:rgba(255,255,255,0.7);
+  text-shadow:0 1px 3px rgba(0,0,0,0.8);
 }
-.grid-qty-badge{
-  position:absolute;top:2px;left:2px;
+.grid-card-qty{
+  position:absolute;top:3px;right:3px;
   background:rgba(255,215,0,0.9);color:#000;
-  font-size:8px;font-weight:900;border-radius:3px;padding:1px 4px;
+  font-size:9px;font-weight:800;border-radius:4px;padding:1px 4px;
 }
-.grid-owned-check{
-  position:absolute;top:2px;right:2px;
-  background:rgba(74,222,128,0.9);
-  width:14px;height:14px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
+.grid-add-btn{
+  position:absolute;top:4px;left:4px;
+  background:rgba(255,215,0,0.95);color:#000;
+  border:none;border-radius:6px;padding:4px 8px;
+  font-size:14px;font-weight:800;cursor:pointer;
+  opacity:1;line-height:1.2;
 }
 
 /* ── PROGRESS BAR ── */
@@ -289,11 +288,16 @@ body::before{
 
 /* ── GRID OVERLAY ── */
 #grid-overlay{
-  position:fixed;inset:0;z-index:100;
+  position:fixed;
+  top:0;left:0;right:0;
+  bottom:calc(var(--nav-h) + var(--safe-bottom));
+  z-index:100;
   background:#100820;
-  transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+  transform:translateY(calc(-100% - var(--nav-h) - var(--safe-bottom)));
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
   display:flex;flex-direction:column;
 }
+#grid-overlay.open{transform:translateY(0)}
 #grid-overlay.open{transform:translateY(0)}
 .grid-ov-header{
   flex-shrink:0;
@@ -367,10 +371,10 @@ body::before{
 
 /* ── SELECT ── */
 .mob-select{
-  padding:10px 12px;border-radius:var(--radius-xs);
-  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);
-  color:#fff;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;
-  -webkit-appearance:none;outline:none;width:100%;
+  padding:8px 10px;border-radius:var(--radius-xs);
+  background:#1a0a2e;border:1px solid rgba(255,255,255,0.15);
+  color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:400;
+  -webkit-appearance:auto;outline:none;width:100%;
 }
 
 /* ── BUTTONS ── */
@@ -475,9 +479,13 @@ body::before{
 
 /* ── COLLECTION OVERLAY (pleine page) ── */
 #coll-overlay{
-  position:fixed;inset:0;z-index:100;
+  position:fixed;
+  top:0;left:0;right:0;
+  bottom:calc(var(--nav-h) + var(--safe-bottom));
+  z-index:100;
   background:#100820;
-  transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+  transform:translateY(calc(-100% - var(--nav-h) - var(--safe-bottom)));
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
   display:flex;flex-direction:column;
 }
 #coll-overlay.open{transform:translateY(0)}
@@ -658,6 +666,12 @@ body::before{
         <div style="padding:8px 16px 0">
           <button class="btn btn-danger btn-full" onclick="driveSignOut()">Se déconnecter</button>
         </div>
+        <div style="padding:8px 16px 0">
+          <button class="btn btn-secondary btn-full" onclick="syncMobileDB()" style="font-size:12px">
+            🔄 Synchroniser la base de cartes depuis le PC
+          </button>
+          <div id="db-sync-date" style="font-size:10px;color:rgba(255,255,255,0.3);text-align:center;margin-top:6px"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -690,6 +704,7 @@ const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.file email profile';
 const DRIVE_FILE_NAME='pokoala_collection.json';
 const POKEMONTCG='https://api.pokemontcg.io/v2';
 const TCGDEX_FR='https://api.tcgdex.net/v2/fr';
+const LOCAL='http://localhost:8765';
 
 let col=[], _driveToken=null, _driveFileId=null;
 let _seriesData=[], _gridCards=[], _gridSetId=null;
@@ -712,6 +727,10 @@ function switchTab(tab){
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('nav-'+tab).classList.add('active');
   _activeTab=tab;
+  // Fermer les overlays ouverts
+  document.getElementById('coll-overlay').classList.remove('open');
+  document.getElementById('grid-overlay').classList.remove('open');
+  document.body.style.overflow='';
   if(tab==='home') renderHome();
   if(tab==='browse'&&!_seriesData.length) loadSeries();
 }
@@ -721,6 +740,118 @@ const SVG_CARTES=`<svg width="96" height="70" viewBox="-5 0 130 100" xmlns="http
 const SVG_DOUBLES=`<svg width="96" height="70" viewBox="-5 -5 130 100" xmlns="http://www.w3.org/2000/svg"><g transform="translate(4, 4)"><rect x="0" y="0" width="48" height="68" rx="4" fill="#1a1a2e" stroke="#C8A800" stroke-width="1.5"/><rect x="2" y="2" width="44" height="10" rx="3" fill="#4a1a8c"/><circle cx="8" cy="7" r="4" fill="#FF9900" stroke="#C87000" stroke-width="0.5"/><rect x="32" y="3" width="12" height="6" rx="2" fill="#CC0000"/><rect x="3" y="14" width="42" height="24" rx="2" fill="#2a3a5a" stroke="#4a6a9a" stroke-width="0.5"/><circle cx="24" cy="25" r="8" fill="#FFD700"/><circle cx="21" cy="23" r="2" fill="#1a1a1a"/><circle cx="27" cy="23" r="2" fill="#1a1a1a"/><circle cx="21.7" cy="22.3" r="0.7" fill="white"/><circle cx="27.7" cy="22.3" r="0.7" fill="white"/><path d="M22 27.5 Q24 29.5 26 27.5" fill="none" stroke="#CC6600" stroke-width="0.8" stroke-linecap="round"/><ellipse cx="24" cy="34" rx="7" ry="5" fill="#FFD700"/><rect x="3" y="41" width="42" height="8" rx="1.5" fill="#2a2a4a"/><rect x="3" y="51" width="42" height="8" rx="1.5" fill="#2a2a4a"/><rect x="1" y="1" width="46" height="66" rx="3.5" fill="none" stroke="#C8A800" stroke-width="0.5"/></g><g transform="translate(58, 4)"><rect x="0" y="0" width="48" height="68" rx="4" fill="#1a1a2e" stroke="#C8A800" stroke-width="1.5"/><rect x="2" y="2" width="44" height="10" rx="3" fill="#4a1a8c"/><circle cx="8" cy="7" r="4" fill="#FF9900" stroke="#C87000" stroke-width="0.5"/><rect x="32" y="3" width="12" height="6" rx="2" fill="#CC0000"/><rect x="3" y="14" width="42" height="24" rx="2" fill="#2a3a5a" stroke="#4a6a9a" stroke-width="0.5"/><circle cx="24" cy="25" r="8" fill="#FFD700"/><circle cx="21" cy="23" r="2" fill="#1a1a1a"/><circle cx="27" cy="23" r="2" fill="#1a1a1a"/><circle cx="21.7" cy="22.3" r="0.7" fill="white"/><circle cx="27.7" cy="22.3" r="0.7" fill="white"/><path d="M22 27.5 Q24 29.5 26 27.5" fill="none" stroke="#CC6600" stroke-width="0.8" stroke-linecap="round"/><ellipse cx="24" cy="34" rx="7" ry="5" fill="#FFD700"/><rect x="3" y="41" width="42" height="8" rx="1.5" fill="#2a2a4a"/><rect x="3" y="51" width="42" height="8" rx="1.5" fill="#2a2a4a"/><rect x="1" y="1" width="46" height="66" rx="3.5" fill="none" stroke="#C8A800" stroke-width="0.5"/></g></svg>`;
 const SVG_VALEUR=`<svg width="80" height="60" viewBox="-15 -10 150 115" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="lensGv2" cx="35%" cy="30%" r="65%"><stop offset="0%" stop-color="rgba(180,220,255,0.5)"/><stop offset="100%" stop-color="rgba(50,100,180,0.15)"/></radialGradient><radialGradient id="goldRv2" cx="50%" cy="50%" r="50%"><stop offset="70%" stop-color="#C8A800"/><stop offset="100%" stop-color="#8B6000"/></radialGradient></defs><g transform="rotate(-15, 22, 38) translate(2, 5)"><rect x="0" y="0" width="38" height="52" rx="3" fill="#1a1a2e" stroke="#C8A800" stroke-width="1"/><rect x="2" y="2" width="34" height="48" rx="2" fill="#122d54"/><rect x="2" y="2" width="34" height="9" rx="2" fill="#4a1a8c"/><circle cx="7" cy="6.5" r="3.5" fill="#FF9900" stroke="#C87000" stroke-width="0.4"/><rect x="25" y="3" width="10" height="5" rx="1.5" fill="#CC0000"/><rect x="3" y="13" width="32" height="20" rx="2" fill="#2a3a5a"/><circle cx="15.5" cy="20" r="6.5" fill="#FFD700"/><circle cx="13" cy="18.5" r="1.8" fill="#1a1a1a"/><circle cx="18" cy="18.5" r="1.8" fill="#1a1a1a"/><circle cx="13.7" cy="17.8" r="0.7" fill="white"/><circle cx="18.7" cy="17.8" r="0.7" fill="white"/><ellipse cx="15.5" cy="26" rx="5.5" ry="4" fill="#FFD700"/><rect x="3" y="35" width="32" height="5" rx="1" fill="#2a2a4a"/><rect x="3" y="42" width="32" height="5" rx="1" fill="#2a2a4a"/><rect x="2" y="2" width="34" height="48" rx="2" fill="none" stroke="#C8A800" stroke-width="0.5"/></g><g transform="translate(41, 2)"><rect x="0" y="0" width="38" height="52" rx="3" fill="#1a1a2e" stroke="#C8A800" stroke-width="1"/><rect x="2" y="2" width="34" height="48" rx="2" fill="#122d54"/><rect x="2" y="2" width="34" height="9" rx="2" fill="#4a1a8c"/><circle cx="7" cy="6.5" r="3.5" fill="#FF9900"/><rect x="25" y="3" width="10" height="5" rx="1.5" fill="#CC0000"/><ellipse cx="19" cy="26" rx="11" ry="7" fill="#EDD9A3"/><ellipse cx="19" cy="26" rx="8" ry="5" fill="#F5EDD0"/><ellipse cx="19" cy="18" rx="7.5" ry="7.5" fill="#B8732A"/><ellipse cx="16.5" cy="18" rx="2.2" ry="3" fill="#1a0a00"/><ellipse cx="21.5" cy="18" rx="2.2" ry="3" fill="#1a0a00"/><circle cx="17.2" cy="17" r="0.9" fill="white"/><circle cx="22.2" cy="17" r="0.9" fill="white"/><rect x="3" y="35" width="32" height="5" rx="1" fill="#2a2a4a"/><rect x="3" y="42" width="32" height="5" rx="1" fill="#2a2a4a"/><rect x="2" y="2" width="34" height="48" rx="2" fill="none" stroke="#C8A800" stroke-width="0.5"/></g><circle cx="60" cy="62" r="20" fill="none" stroke="url(#goldRv2)" stroke-width="4"/><circle cx="60" cy="62" r="17" fill="url(#lensGv2)"/><ellipse cx="52" cy="54" rx="6" ry="3.5" fill="rgba(255,255,255,0.25)" transform="rotate(-30 52 54)"/><text x="60" y="69" text-anchor="middle" font-family="Arial Black" font-size="16" font-weight="900" fill="#1a3a88">€</text><line x1="75" y1="77" x2="92" y2="88" stroke="#8B6000" stroke-width="6" stroke-linecap="round"/><line x1="75" y1="77" x2="92" y2="88" stroke="#C8A800" stroke-width="4" stroke-linecap="round"/></svg>`;
 const SVG_VENTE=`<svg width="58" height="58" viewBox="-5 -5 90 90" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="woodG" cx="50%" cy="30%" r="70%"><stop offset="0%" stop-color="#8B5E3C"/><stop offset="100%" stop-color="#5C3A1E"/></radialGradient><linearGradient id="roofG" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#6B0000"/><stop offset="100%" stop-color="#3D0000"/></linearGradient><linearGradient id="countG" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#2a2a4a"/><stop offset="100%" stop-color="#111128"/></linearGradient></defs><rect x="11" y="26" width="5" height="46" rx="2" fill="url(#woodG)"/><rect x="64" y="26" width="5" height="46" rx="2" fill="url(#woodG)"/><path d="M7 32 L73 32 L67 16 L13 16 Z" fill="url(#roofG)"/><path d="M7 32 Q11 38 15 32 Q19 38 23 32 Q27 38 31 32 Q35 38 39 32 Q43 38 47 32 Q51 38 55 32 Q59 38 63 32 Q67 38 73 32" fill="#FFD700" stroke="#C8A000" stroke-width="0.5"/><rect x="7" y="31" width="66" height="3" fill="#FFD700"/><rect x="6" y="48" width="68" height="22" rx="3" fill="url(#countG)" stroke="#C8A800" stroke-width="1"/><g transform="rotate(-8 24 52)"><rect x="14" y="38" width="18" height="25" rx="2.5" fill="#0d2444" stroke="#C8A800" stroke-width="1"/><rect x="16" y="40" width="14" height="21" rx="1.5" fill="#122d54"/><path d="M16 49.5 A7 7 0 0 1 30 49.5 Z" fill="#cc0000"/><path d="M16 49.5 A7 7 0 0 0 30 49.5 Z" fill="#f0f0f0"/><circle cx="23" cy="49.5" r="3" fill="white" stroke="#111" stroke-width="1"/><circle cx="23" cy="49.5" r="1.5" fill="#ddd"/></g><g transform="translate(31, 36)"><rect x="0" y="0" width="18" height="25" rx="2.5" fill="#0d2444" stroke="#C8A800" stroke-width="1"/><rect x="2" y="2" width="14" height="21" rx="1.5" fill="#122d54"/><path d="M2 12.5 A7 7 0 0 1 16 12.5 Z" fill="#cc0000"/><path d="M2 12.5 A7 7 0 0 0 16 12.5 Z" fill="#f0f0f0"/><circle cx="9" cy="12.5" r="3" fill="white" stroke="#111" stroke-width="1"/><circle cx="9" cy="12.5" r="1.5" fill="#ddd"/></g><g transform="rotate(8 56 52)"><rect x="48" y="38" width="18" height="25" rx="2.5" fill="#0d2444" stroke="#C8A800" stroke-width="1"/><rect x="50" y="40" width="14" height="21" rx="1.5" fill="#122d54"/><path d="M50 49.5 A7 7 0 0 1 64 49.5 Z" fill="#cc0000"/><path d="M50 49.5 A7 7 0 0 0 64 49.5 Z" fill="#f0f0f0"/><circle cx="57" cy="49.5" r="3" fill="white" stroke="#111" stroke-width="1"/><circle cx="57" cy="49.5" r="1.5" fill="#ddd"/></g><rect x="52" y="14" width="18" height="11" rx="2.5" fill="#FFD700" stroke="#C8A000" stroke-width="0.8"/><text x="61" y="22" text-anchor="middle" font-family="Arial Black" font-size="7" font-weight="900" fill="#1a1a2e">€</text></svg>`;
+
+// ── BASE LOCALE MOBILE ──
+const MOBILE_DB_KEY = 'pk_db_light';
+const MOBILE_DB_DATE_KEY = 'pk_db_light_date';
+let _mobileDB = null; // {cards, sets, series}
+
+async function loadMobileDB(){
+  // 1. Essayer depuis localStorage
+  try{
+    const cached = localStorage.getItem(MOBILE_DB_KEY);
+    if(cached){
+      _mobileDB = JSON.parse(cached);
+      console.log(`Base mobile : ${_mobileDB.cards?.length||0} cartes (cache local)`);
+      return true;
+    }
+  }catch(e){}
+
+  // 2. Essayer depuis le serveur local
+  try{
+    const r = await fetch(`${LOCAL}/api/mobile-db`, {signal: AbortSignal.timeout(3000)});
+    if(r.ok){
+      _mobileDB = await r.json();
+      if(_mobileDB.cards?.length > 0){
+        localStorage.setItem(MOBILE_DB_KEY, JSON.stringify(_mobileDB));
+        localStorage.setItem(MOBILE_DB_DATE_KEY, new Date().toISOString());
+        console.log(`Base mobile : ${_mobileDB.cards.length} cartes (serveur local)`);
+        return true;
+      }
+    }
+  }catch(e){}
+
+  // 3. Essayer depuis Drive
+  if(_driveToken){
+    try{
+      const fileId = await driveFindFileByName('pokoala_db_light.json');
+      if(fileId){
+        const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,{
+          headers:{'Authorization':'Bearer '+_driveToken}
+        });
+        _mobileDB = await r.json();
+        if(_mobileDB.cards?.length > 0){
+          localStorage.setItem(MOBILE_DB_KEY, JSON.stringify(_mobileDB));
+          localStorage.setItem(MOBILE_DB_DATE_KEY, new Date().toISOString());
+          console.log(`Base mobile : ${_mobileDB.cards.length} cartes (Drive)`);
+          return true;
+        }
+      }
+    }catch(e){}
+  }
+
+  return false;
+}
+
+async function driveFindFileByName(name){
+  if(!_driveToken) return null;
+  const r = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='${name}'+and+trashed=false&fields=files(id,name)`,
+    {headers:{'Authorization':'Bearer '+_driveToken}}
+  );
+  const d = await r.json();
+  return d.files?.[0]?.id || null;
+}
+
+async function syncMobileDB(){
+  // Upload pokoala_db_light.json sur Drive depuis le serveur local
+  if(!_driveToken){ toast('Connecte-toi à Drive d\'abord'); return; }
+  try{
+    toast('⏳ Génération de la base mobile…');
+    const r = await fetch(`${LOCAL}/api/generate-mobile-db`, {signal: AbortSignal.timeout(10000)});
+    if(!r.ok) throw new Error('Serveur non disponible');
+    const info = await r.json();
+    if(info.status !== 'ok') throw new Error(info.message||'Erreur génération');
+
+    // Récupérer le fichier généré
+    const r2 = await fetch(`${LOCAL}/api/mobile-db`);
+    const data = await r2.text();
+
+    // Uploader sur Drive
+    const existingId = await driveFindFileByName('pokoala_db_light.json');
+    let r3;
+    if(existingId){
+      r3 = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=media`,{
+        method:'PATCH',
+        headers:{'Authorization':'Bearer '+_driveToken,'Content-Type':'application/json'},
+        body: data
+      });
+    } else {
+      const meta = JSON.stringify({name:'pokoala_db_light.json',mimeType:'application/json'});
+      const form = new FormData();
+      form.append('metadata', new Blob([meta],{type:'application/json'}));
+      form.append('file', new Blob([data],{type:'application/json'}));
+      r3 = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+        method:'POST',
+        headers:{'Authorization':'Bearer '+_driveToken},
+        body: form
+      });
+    }
+    await r3.json();
+
+    // Mettre à jour le cache local
+    _mobileDB = JSON.parse(data);
+    localStorage.setItem(MOBILE_DB_KEY, data);
+    localStorage.setItem(MOBILE_DB_DATE_KEY, new Date().toISOString());
+    toast(`✅ Base mobile synchronisée (${info.cards} cartes)`);
+  }catch(e){
+    toast('Erreur sync : '+e.message);
+  }
+}
+
+
+function condMul(c){ return{M:1.3,NM:1.0,LP:.85,MP:.65,HP:.4,D:.2}[c]||1; }
+function escId(id){ return(id||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
 function renderHome(){
   const uniq=col.length;
@@ -758,6 +889,7 @@ function openCollOverlay(filter){
   const titles={all:'Ma Collection',doubles:'Doubles',value:'Valeur',forsale:'En vente'};
   document.getElementById('coll-ov-title').textContent=titles[filter]||'Ma Collection';
   document.getElementById('coll-search').value='';
+  load(); // recharger depuis localStorage pour avoir les dernières données
   renderCollOverlay();
   document.getElementById('coll-overlay').classList.add('open');
   document.body.style.overflow='hidden';
@@ -790,7 +922,7 @@ function renderCollOverlay(){
     const price=c.priceManual!=null?c.priceManual:(c.price?+(c.price*mul).toFixed(2):null);
     const sid=escId(c.id);
     return `<div class="coll-item" onclick="openCardModal('${sid}')">
-      ${img?`<img class="coll-thumb" src="${img}" loading="lazy" onerror="this.outerHTML='<div class=coll-thumb-ph></div>'">`:`<div class="coll-thumb-ph"></div>`}
+      ${img?`<img class="coll-thumb" src="${img}" loading="lazy" onerror="this.style.display='none'">`:`<div class="coll-thumb-ph"></div>`}
       <div class="coll-info">
         <div class="coll-name">${c.name}</div>
         <div class="coll-sub">${c.set||''}${c.num?' · N°'+c.num:''}</div>
@@ -805,16 +937,20 @@ function renderCollOverlay(){
 }
 
 function cardImg(c){
-  if(c.imgLarge) return c.imgLarge;
-  if(c.img) return c.img;
-  if(c.id){
+  let url = c.imgLarge || c.img || '';
+  if(!url && c.id){
     const p=c.id.split('-');
     if(p.length>=2){
       const sid=p.slice(0,-1).join('-'), num=p[p.length-1];
       return `https://assets.tcgdex.net/fr/${sid}/${num}/high.webp`;
     }
   }
-  return '';
+  // Corriger les URLs TCGdex sans .webp
+  if(url.includes('assets.tcgdex.net') && !url.endsWith('.webp')){
+    url = url.replace('/high','/high.webp').replace('/low','/high.webp');
+    if(!url.endsWith('.webp')) url += '.webp';
+  }
+  return url;
 }
 
 
@@ -860,7 +996,7 @@ function openCardModal(id){
     <div class="modal-section">
       <label>État</label>
       <select class="mob-select" onchange="updCond('${sid}',this.value)">
-        ${['M','NM','LP','MP','HP','D'].map(v=>`<option${c.cond===v?' selected':''}>${v}</option>`).join('')}
+        ${[['M','Mint'],['NM','Near Mint'],['EX','Excellent'],['GD','Good'],['LP','Light Played'],['PL','Played'],['PO','Poor']].map(([v,l])=>`<option value="${v}"${c.cond===v?' selected':''}>${v} — ${l}</option>`).join('')}
       </select>
     </div>
     <div class="modal-section">
@@ -891,9 +1027,10 @@ function openCardModal(id){
 function updQty(id,d){
   const c=col.find(x=>x.id===id); if(!c) return;
   c.qty=Math.max(0,(c.qty||1)+d);
-  if(c.qty===0){ col.splice(col.indexOf(c),1); closeModal('card-modal'); save(); renderCollOverlay(); return; }
+  if(c.qty===0){ col.splice(col.indexOf(c),1); closeModal('card-modal'); save(); if(document.getElementById('grid-overlay').classList.contains('open')) renderGrid(); return; }
   const el=document.getElementById('m-qty'); if(el) el.textContent=c.qty;
-  save(); renderCollOverlay();
+  save();
+  if(document.getElementById('grid-overlay').classList.contains('open')) renderGrid();
 }
 function updCond(id,v){ const c=col.find(x=>x.id===id); if(c){ c.cond=v; save(); renderCollOverlay(); } }
 function updSale(id,d){
@@ -916,15 +1053,12 @@ function addCard(cardData){
   const ex=col.find(c=>c.id===cardData.id);
   if(ex){ ex.qty=(ex.qty||1)+1; toast(`+1 · ${ex.name} (${ex.qty}×)`); }
   else{
-    const p=(cardData.id||'').split('-');
-    let img='',imgL='';
-    if(p.length>=2){
-      const sid=p.slice(0,-1).join('-'),num=p[p.length-1];
-      img=`https://assets.tcgdex.net/fr/${sid}/${num}/low.webp`;
-      imgL=`https://assets.tcgdex.net/fr/${sid}/${num}/high.webp`;
-    }
-    if(!img&&cardData.images?.small) img=cardData.images.small;
-    if(!imgL&&cardData.images?.large) imgL=cardData.images.large;
+    // Utiliser les images fournies par l'API en priorité
+    let img = cardData.images?.small || '';
+    let imgL = cardData.images?.large || '';
+    // Ajouter .webp si URL TCGdex sans extension
+    if(img.includes('assets.tcgdex.net') && !img.includes('.webp')) img += '.webp';
+    if(imgL.includes('assets.tcgdex.net') && !imgL.includes('.webp')) imgL += '.webp';
     col.push({
       id:cardData.id, name:cardData.name, nameEn:cardData.name,
       set:cardData.set?.name||cardData.set||'',
@@ -944,52 +1078,128 @@ function addCard(cardData){
 function debounceSearch(){ clearTimeout(_searchTimer); _searchTimer=setTimeout(doSearch,400); }
 
 async function doSearch(){
-  const q=document.getElementById('search-q').value.trim();
+  const q=document.getElementById('search-q').value.trim().toLowerCase();
   const res=document.getElementById('search-results');
   if(q.length<2){ res.innerHTML=`<div class="empty-state"><span class="big">🔍</span>Tape un nom de carte pour commencer</div>`; return; }
+
+  // 1. Recherche dans la base mobile locale
+  if(_mobileDB?.cards?.length){
+    const results = _mobileDB.cards.filter(c =>
+      (c.name||'').toLowerCase().includes(q)
+    ).slice(0,40);
+    if(results.length){
+      renderSearchResults(results.map(c=>({
+        id: c.id,
+        name: c.name,
+        number: c.number,
+        rarity: c.rarity,
+        set: {id: c.setId, name: c.setName},
+        images: {small: `https://assets.tcgdex.net/fr/${c.setId}/${c.number}/low`}
+      })));
+      return;
+    }
+  }
+
+  // 2. Fallback API pokemontcg.io
   res.innerHTML=`<div class="loader">Recherche en cours…</div>`;
   try{
     const r=await fetch(`${POKEMONTCG}/cards?q=name:"${encodeURIComponent(q)}"&pageSize=30&select=id,name,number,rarity,set,images`);
     const d=await r.json();
     const cards=d.data||[];
     if(!cards.length){ res.innerHTML=`<div class="empty-state"><span class="big">🤷</span>Aucune carte trouvée pour "${q}"</div>`; return; }
-    res.innerHTML=cards.map(c=>{
-      const owned=col.find(x=>x.id===c.id);
-      const img=c.images?.small||'';
-      const cj=JSON.stringify(c).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      return`<div class="search-result">
-        ${img?`<img class="search-result-img" src="${img}" loading="lazy">`:'<div class="search-result-img"></div>'}
-        <div class="search-result-info">
-          <div class="search-result-name">${c.name}</div>
-          <div class="search-result-sub">${c.set?.name||''} · N°${c.number||'—'} · ${c.rarity||'—'}</div>
-          ${owned?`<div style="font-size:10px;color:var(--yellow2);margin-top:2px;font-weight:700">✓ Dans la collection (${owned.qty}×)</div>`:''}
-        </div>
-        <div class="add-btn" onclick="addCardFromJson('${cj}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="var(--red2)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </div>
-      </div>`;
-    }).join('');
+    renderSearchResults(cards);
   }catch(e){ res.innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Erreur de connexion</div>`; }
+}
+
+function renderSearchResults(cards){
+  const res=document.getElementById('search-results');
+  res.innerHTML=cards.map(c=>{
+    const owned=col.find(x=>x.id===c.id);
+    const img=c.images?.small||`https://assets.tcgdex.net/fr/${c.set?.id||''}/${c.number||''}/low`;
+    const cj=JSON.stringify(c).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return`<div class="search-result">
+      ${img?`<img class="search-result-img" src="${img}" loading="lazy">`:'<div class="search-result-img"></div>'}
+      <div class="search-result-info">
+        <div class="search-result-name">${c.name}</div>
+        <div class="search-result-sub">${c.set?.name||''} · N°${c.number||'—'} · ${c.rarity||'—'}</div>
+        ${owned?`<div style="font-size:10px;color:var(--yellow2);margin-top:2px;font-weight:700">✓ Dans la collection (${owned.qty}×)</div>`:''}
+      </div>
+      <div class="add-btn" onclick="addCardFromJson('${cj}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--red2)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function addCardFromJson(jsonStr){
   try{ addCard(JSON.parse(jsonStr)); }catch(e){ toast('Erreur ajout'); }
 }
 
-// ── SERIES BROWSER ──
+// ── SYMBOLES EXTENSIONS (identiques à la version PC) ──
+const SYMBOL_FALLBACK = {
+  "base1":"https://images.pokemontcg.io/base1/symbol.png","base2":"https://images.pokemontcg.io/base2/symbol.png","base3":"https://images.pokemontcg.io/base3/symbol.png","base4":"https://images.pokemontcg.io/base4/symbol.png","base5":"https://images.pokemontcg.io/base5/symbol.png","base6":"https://images.pokemontcg.io/base6/symbol.png","bw1":"https://images.pokemontcg.io/bw1/symbol.png","bw10":"https://images.pokemontcg.io/bw10/symbol.png","bw11":"https://images.pokemontcg.io/bw11/symbol.png","bw2":"https://images.pokemontcg.io/bw2/symbol.png","bw3":"https://images.pokemontcg.io/bw3/symbol.png","bw4":"https://images.pokemontcg.io/bw4/symbol.png","bw5":"https://images.pokemontcg.io/bw5/symbol.png","bw6":"https://images.pokemontcg.io/bw6/symbol.png","bw7":"https://images.pokemontcg.io/bw7/symbol.png","bw8":"https://images.pokemontcg.io/bw8/symbol.png","bw9":"https://images.pokemontcg.io/bw9/symbol.png","cel25":"https://images.pokemontcg.io/cel25/symbol.png","col1":"https://images.pokemontcg.io/col1/symbol.png","dc1":"https://images.pokemontcg.io/dc1/symbol.png","dp1":"https://images.pokemontcg.io/dp1/symbol.png","dp2":"https://images.pokemontcg.io/dp2/symbol.png","dp3":"https://images.pokemontcg.io/dp3/symbol.png","dp4":"https://images.pokemontcg.io/dp4/symbol.png","dp5":"https://images.pokemontcg.io/dp5/symbol.png","dp6":"https://images.pokemontcg.io/dp6/symbol.png","dp7":"https://images.pokemontcg.io/dp7/symbol.png","dv1":"https://images.pokemontcg.io/dv1/symbol.png","ecard1":"https://images.pokemontcg.io/ecard1/symbol.png","ecard2":"https://images.pokemontcg.io/ecard2/symbol.png","ecard3":"https://images.pokemontcg.io/ecard3/symbol.png","ex1":"https://images.pokemontcg.io/ex1/symbol.png","ex10":"https://images.pokemontcg.io/ex10/symbol.png","ex11":"https://images.pokemontcg.io/ex11/symbol.png","ex12":"https://images.pokemontcg.io/ex12/symbol.png","ex13":"https://images.pokemontcg.io/ex13/symbol.png","ex14":"https://images.pokemontcg.io/ex14/symbol.png","ex15":"https://images.pokemontcg.io/ex15/symbol.png","ex16":"https://images.pokemontcg.io/ex16/symbol.png","ex2":"https://images.pokemontcg.io/ex2/symbol.png","ex3":"https://images.pokemontcg.io/ex3/symbol.png","ex4":"https://images.pokemontcg.io/ex4/symbol.png","ex5":"https://images.pokemontcg.io/ex5/symbol.png","ex6":"https://images.pokemontcg.io/ex6/symbol.png","ex7":"https://images.pokemontcg.io/ex7/symbol.png","ex8":"https://images.pokemontcg.io/ex8/symbol.png","ex9":"https://images.pokemontcg.io/ex9/symbol.png","g1":"https://images.pokemontcg.io/g1/symbol.png","gym1":"https://images.pokemontcg.io/gym1/symbol.png","gym2":"https://images.pokemontcg.io/gym2/symbol.png","hgss1":"https://images.pokemontcg.io/hgss1/symbol.png","hgss2":"https://images.pokemontcg.io/hgss2/symbol.png","hgss3":"https://images.pokemontcg.io/hgss3/symbol.png","hgss4":"https://images.pokemontcg.io/hgss4/symbol.png","me1":"https://images.pokemontcg.io/me1/symbol.png","me2":"https://images.pokemontcg.io/me2/symbol.png","me2pt5":"https://images.scrydex.com/pokemon/me2pt5-symbol/symbol","me3":"https://images.scrydex.com/pokemon/me3-symbol/symbol","me4":"https://images.scrydex.com/pokemon/me4-symbol/symbol","neo1":"https://images.pokemontcg.io/neo1/symbol.png","neo2":"https://images.pokemontcg.io/neo2/symbol.png","neo3":"https://images.pokemontcg.io/neo3/symbol.png","neo4":"https://images.pokemontcg.io/neo4/symbol.png","pgo":"https://images.pokemontcg.io/pgo/symbol.png","pl1":"https://images.pokemontcg.io/pl1/symbol.png","pl2":"https://images.pokemontcg.io/pl2/symbol.png","pl3":"https://images.pokemontcg.io/pl3/symbol.png","pl4":"https://images.pokemontcg.io/pl4/symbol.png","rsv10pt5":"https://images.pokemontcg.io/rsv10pt5/symbol.png","sm1":"https://images.pokemontcg.io/sm1/symbol.png","sm10":"https://images.pokemontcg.io/sm10/symbol.png","sm11":"https://images.pokemontcg.io/sm11/symbol.png","sm115":"https://images.pokemontcg.io/sm115/symbol.png","sm12":"https://images.pokemontcg.io/sm12/symbol.png","sm2":"https://images.pokemontcg.io/sm2/symbol.png","sm3":"https://images.pokemontcg.io/sm3/symbol.png","sm35":"https://images.pokemontcg.io/sm35/symbol.png","sm4":"https://images.pokemontcg.io/sm4/symbol.png","sm5":"https://images.pokemontcg.io/sm5/symbol.png","sm6":"https://images.pokemontcg.io/sm6/symbol.png","sm7":"https://images.pokemontcg.io/sm7/symbol.png","sm75":"https://images.pokemontcg.io/sm75/symbol.png","sm8":"https://images.pokemontcg.io/sm8/symbol.png","sm9":"https://images.pokemontcg.io/sm9/symbol.png","sv1":"https://images.pokemontcg.io/sv1/symbol.png","sv10":"https://images.pokemontcg.io/sv10/symbol.png","sv2":"https://images.pokemontcg.io/sv2/symbol.png","sv3":"https://images.pokemontcg.io/sv3/symbol.png","sv3pt5":"https://images.pokemontcg.io/sv3pt5/symbol.png","sv4":"https://images.pokemontcg.io/sv4/symbol.png","sv4pt5":"https://images.pokemontcg.io/sv4pt5/symbol.png","sv5":"https://images.pokemontcg.io/sv5/symbol.png","sv6":"https://images.pokemontcg.io/sv6/symbol.png","sv6pt5":"https://images.pokemontcg.io/sv6pt5/symbol.png","sv7":"https://images.pokemontcg.io/sv7/symbol.png","sv8":"https://images.pokemontcg.io/sv8/symbol.png","sv8pt5":"https://images.pokemontcg.io/sv8pt5/symbol.png","sv9":"https://images.pokemontcg.io/sv9/symbol.png","swsh1":"https://images.pokemontcg.io/swsh1/symbol.png","swsh10":"https://images.pokemontcg.io/swsh10/symbol.png","swsh11":"https://images.pokemontcg.io/swsh11/symbol.png","swsh12":"https://images.pokemontcg.io/swsh12/symbol.png","swsh12pt5":"https://images.pokemontcg.io/swsh12pt5/symbol.png","swsh2":"https://images.pokemontcg.io/swsh2/symbol.png","swsh3":"https://images.pokemontcg.io/swsh3/symbol.png","swsh35":"https://images.pokemontcg.io/swsh35/symbol.png","swsh4":"https://images.pokemontcg.io/swsh4/symbol.png","swsh45":"https://images.pokemontcg.io/swsh45/symbol.png","swsh5":"https://images.pokemontcg.io/swsh5/symbol.png","swsh6":"https://images.pokemontcg.io/swsh6/symbol.png","swsh7":"https://images.pokemontcg.io/swsh7/symbol.png","swsh8":"https://images.pokemontcg.io/swsh8/symbol.png","swsh9":"https://images.pokemontcg.io/swsh9/symbol.png","xy0":"https://images.pokemontcg.io/xy0/symbol.png","xy1":"https://images.pokemontcg.io/xy1/symbol.png","xy10":"https://images.pokemontcg.io/xy10/symbol.png","xy11":"https://images.pokemontcg.io/xy11/symbol.png","xy12":"https://images.pokemontcg.io/xy12/symbol.png","xy2":"https://images.pokemontcg.io/xy2/symbol.png","xy3":"https://images.pokemontcg.io/xy3/symbol.png","xy4":"https://images.pokemontcg.io/xy4/symbol.png","xy5":"https://images.pokemontcg.io/xy5/symbol.png","xy6":"https://images.pokemontcg.io/xy6/symbol.png","xy7":"https://images.pokemontcg.io/xy7/symbol.png","xy8":"https://images.pokemontcg.io/xy8/symbol.png","xy9":"https://images.pokemontcg.io/xy9/symbol.png","zsv10pt5":"https://images.pokemontcg.io/zsv10pt5/symbol.png"
+};
+const SYMBOL_BY_NAME = {
+  "Flammes Fantasmagoriques":"https://images.pokemontcg.io/me2/symbol.png","Méga-Évolution":"https://images.pokemontcg.io/me1/symbol.png","Héros Transcendants":"https://images.scrydex.com/pokemon/me2pt5-symbol/symbol","Équilibre Parfait":"https://images.scrydex.com/pokemon/me3-symbol/symbol","Chaos Ascendant":"https://images.scrydex.com/pokemon/me4-symbol/symbol","Alliance Infaillible":"https://images.pokemontcg.io/sm10/symbol.png","Astres Radieux":"https://images.pokemontcg.io/swsh10/symbol.png","Aventures Ensemble":"https://images.pokemontcg.io/sv9/symbol.png","Clash des Rebelles":"https://images.pokemontcg.io/swsh2/symbol.png","Célébrations":"https://images.pokemontcg.io/cel25/symbol.png","Couronne Stellaire":"https://images.pokemontcg.io/sv7/symbol.png","Destinées Occultes":"https://images.pokemontcg.io/sm115/symbol.png","Destinées Radieuses":"https://images.pokemontcg.io/swsh45/symbol.png","Destinées de Paldea":"https://images.pokemontcg.io/sv4pt5/symbol.png","Écarlate et Violet":"https://images.pokemontcg.io/sv1/symbol.png","Écarlate et Violet — 151":"https://images.pokemontcg.io/sv3pt5/symbol.png","Éclipse Cosmique":"https://images.pokemontcg.io/sm12/symbol.png","Épée et Bouclier":"https://images.pokemontcg.io/swsh1/symbol.png","Étincelles Déferlantes":"https://images.pokemontcg.io/sv8/symbol.png","Évolution Céleste":"https://images.pokemontcg.io/swsh7/symbol.png","Évolutions Prismatiques":"https://images.pokemontcg.io/sv8pt5/symbol.png","Évolutions à Paldea":"https://images.pokemontcg.io/sv2/symbol.png","Fable Nébuleuse":"https://images.pokemontcg.io/sv6pt5/symbol.png","Faille Paradoxe":"https://images.pokemontcg.io/sv4/symbol.png","Flamme Blanche":"https://images.pokemontcg.io/rsv10pt5/symbol.png","Flammes Obsidiennes":"https://images.pokemontcg.io/sv3/symbol.png","Forces Temporelles":"https://images.pokemontcg.io/sv5/symbol.png","Foudre Noire":"https://images.pokemontcg.io/zsv10pt5/symbol.png","Gardiens Ascendants":"https://images.pokemontcg.io/sm2/symbol.png","Harmonie des Esprits":"https://images.pokemontcg.io/sm11/symbol.png","Invasion Carmin":"https://images.pokemontcg.io/sm4/symbol.png","Lumière Interdite":"https://images.pokemontcg.io/sm6/symbol.png","Légendes Brillantes":"https://images.pokemontcg.io/sm35/symbol.png","Majesté des Dragons":"https://images.pokemontcg.io/sm75/symbol.png","Mascarade Crépusculaire":"https://images.pokemontcg.io/sv6/symbol.png","Ombres Ardentes":"https://images.pokemontcg.io/sm3/symbol.png","Origine Perdue":"https://images.pokemontcg.io/swsh11/symbol.png","Poing de Fusion":"https://images.pokemontcg.io/swsh8/symbol.png","Pokémon GO":"https://images.pokemontcg.io/pgo/symbol.png","Rivalités Destinées":"https://images.pokemontcg.io/sv10/symbol.png","Règne de Glace":"https://images.pokemontcg.io/swsh6/symbol.png","Soleil et Lune":"https://images.pokemontcg.io/sm1/symbol.png","Stars Étincelantes":"https://images.pokemontcg.io/swsh9/symbol.png","Styles de Combat":"https://images.pokemontcg.io/swsh5/symbol.png","Tempête Argentée":"https://images.pokemontcg.io/swsh12/symbol.png","Tempête Céleste":"https://images.pokemontcg.io/sm7/symbol.png","Tonnerre Perdu":"https://images.pokemontcg.io/sm8/symbol.png","Ténèbres Embrasées":"https://images.pokemontcg.io/swsh3/symbol.png","Ultra-Prisme":"https://images.pokemontcg.io/sm5/symbol.png","Voltage Éclatant":"https://images.pokemontcg.io/swsh4/symbol.png","XY":"https://images.pokemontcg.io/xy1/symbol.png","Zénith Suprême":"https://images.pokemontcg.io/swsh12pt5/symbol.png","Duo de Choc":"https://images.pokemontcg.io/sm9/symbol.png","La Voie du Maître":"https://images.pokemontcg.io/swsh35/symbol.png"
+};
+
+function getSymbol(setId, setName){
+  // 1. Par ID exact
+  if(SYMBOL_FALLBACK[setId]) return SYMBOL_FALLBACK[setId];
+  // 2. Par nom FR
+  if(setName && SYMBOL_BY_NAME[setName]) return SYMBOL_BY_NAME[setName];
+  // 3. Fallback TCGdex
+  return '';
+}
+
+
 async function loadSeries(){
   document.getElementById('series-list').innerHTML='<div class="loader">Chargement des séries…</div>';
+
+  // 1. Utiliser la base mobile locale si disponible
+  if(_mobileDB?.series?.length){
+    _seriesData = _mobileDB.series;
+    renderSeries();
+    return;
+  }
+
+  // 2. Serveur local
   try{
-    const r=await fetch(`${TCGDEX_FR}/series`);
-    _seriesData=await r.json();
+    const r = await fetch(`${LOCAL}/api/series`, {signal: AbortSignal.timeout(3000)});
+    const d = await r.json();
+    if(!d.loading && d.series?.length){
+      _seriesData = d.series;
+      renderSeries();
+      return;
+    }
+    if(d.loading){
+      setTimeout(loadSeries, 2000);
+      return;
+    }
+  }catch(e){}
+
+  // 3. TCGdex en ligne (fallback)
+  try{
+    const r = await fetch(`${TCGDEX_FR}/series`);
+    const list = await r.json();
+    _seriesData = list.filter(s => s.sets?.length > 0).reverse();
     renderSeries();
   }catch(e){
-    document.getElementById('series-list').innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Impossible de charger les séries</div>`;
+    document.getElementById('series-list').innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Séries non disponibles.<br>Synchronise la base depuis le PC.</div>`;
   }
 }
 
 function renderSeries(){
-  const series=[..._seriesData].reverse();
+  const TCGDEX_TO_PTCG = {"me01":"me1","me02":"me2","me02.5":"me2pt5","me03":"me3","me04":"me4","sv01":"sv1","sv02":"sv2","sv03":"sv3","sv03.5":"sv3pt5","sv04":"sv4","sv04.5":"sv4pt5","sv05":"sv5","sv06":"sv6","sv06.5":"sv6pt5","sv07":"sv7","sv08":"sv8","sv08.5":"sv8pt5","sv09":"sv9","sv10":"sv10","sv10.5w":"rsv10pt5","sv10.5b":"zsv10pt5","swsh12.5":"swsh12pt5","sm7.5":"sm75","sm3.5":"sm35","sm11.5":"sm115"};
+
+  // Index de la collection par setId pour calcul rapide
+  const collBySet = {};
+  col.forEach(c => {
+    const sid = c.setId || c.set;
+    if(sid){ if(!collBySet[sid]) collBySet[sid]=0; collBySet[sid]++; }
+  });
+
+  const series=[..._seriesData];
   document.getElementById('series-list').innerHTML=series.map((s,i)=>{
     const sets=s.sets||[];
     return`<div class="serie-block">
@@ -998,11 +1208,24 @@ function renderSeries(){
         <span class="serie-arrow" id="sa-${i}">▾</span>
       </div>
       <div class="serie-sets" id="ss-${i}">
-        ${sets.map(st=>`<div class="set-item" onclick="openGrid('${escId(st.id)}','${escId(st.name||'')}')">
-          ${st.symbol?`<img src="${st.symbol}.png" style="width:20px;height:20px;object-fit:contain;opacity:.75" onerror="this.style.display='none'">`:'<span style="width:20px"></span>'}
-          <span class="set-item-name">${st.name||st.id}</span>
-          <span class="set-item-count">${st.cardCount?.official||''}</span>
-        </div>`).join('')}
+        ${sets.map(st=>{
+          const ptcgId = TCGDEX_TO_PTCG[st.id] || st.id;
+          const symbolUrl = getSymbol(ptcgId, st.name) || getSymbol(st.id, st.name);
+          const total = st.cardCount?.official || 0;
+          const owned = collBySet[ptcgId] || collBySet[st.id] || 0;
+          const pct = total > 0 ? Math.round(owned/total*100) : 0;
+          const pctColor = pct===100 ? '#4ade80' : pct>50 ? '#FFD700' : 'rgba(255,255,255,0.4)';
+          return`<div class="set-item" onclick="openGrid('${escId(st.id)}','${escId(st.name||'')}')">
+            ${symbolUrl?`<img src="${symbolUrl}" alt="" style="width:22px;height:22px;object-fit:contain;opacity:.85;flex-shrink:0" onerror="this.style.display='none'">`:'<span style="width:22px;flex-shrink:0"></span>'}
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <span class="set-item-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%">${st.name||st.id}</span>
+                <span style="font-size:10px;font-weight:700;color:${pctColor};flex-shrink:0;margin-left:6px">${owned>0?owned+'/'+total+' · '+pct+'%':total+' cartes'}</span>
+              </div>
+              ${total>0?`<div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${pctColor==='#4ade80'?'#4ade80':pctColor==='#FFD700'?'linear-gradient(90deg,#FFD700,#FFA500)':'rgba(255,255,255,0.15)'}"></div></div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
   }).join('');
@@ -1052,29 +1275,33 @@ function renderGrid(){
     const sid=escId(id);
     const cname=escId(c.name||'');
     const cimg=escId(img);
-    return`<div class="grid-card${oc?' owned':''}" onclick="gridTap('${sid}','${cname}','${cimg}')">
+    return`<div class="grid-card${oc?'':' not-owned'}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
       <img src="${img}" loading="lazy" onerror="this.style.opacity='.2'">
-      ${oc&&oc.qty>1?`<div class="grid-qty-badge">${oc.qty}×</div>`:''}
-      ${oc?`<div class="grid-owned-check"><svg width="8" height="8" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>`:''}
-      <div class="grid-card-num">${c.localId||c.number||''}</div>
+      <span class="grid-card-num">${c.localId||c.number||''}</span>
+      ${oc?`<span class="grid-card-qty">${oc.qty}×</span>`:''}
+      ${!oc?`<button class="grid-add-btn" onclick="event.stopPropagation();quickAddFromGrid('${sid}','${cname}','${cimg}')">+</button>`:''}
     </div>`;
   }).join('');
 }
 
-function gridTap(id,name,img){
-  const oc=col.find(x=>x.id===id);
-  if(oc){ openCardModal(id); return; }
-  // Not owned → show add sheet
-  const card={id,name,number:id.split('-').pop(),images:{small:img,large:img.replace('low.webp','high.webp')},set:{id:_gridSetId,name:document.getElementById('grid-title').textContent}};
-  window._addCard=card;
+function gridTapUnowned(id, name, img){
+  const c=_gridCards.find(x=>(x.id===id)||((_gridSetId+'-'+x.localId)===id));
+  const largImg=img.replace('/low.webp','/high.webp');
+  window._addCard={
+    id, name: name||(c?.name||id),
+    number: c?.localId||c?.number||id.split('-').pop(),
+    rarity: c?.rarity||'',
+    set:{id:_gridSetId, name:document.getElementById('grid-title').textContent},
+    images:{small:img, large:largImg}
+  };
   document.getElementById('card-modal-content').innerHTML=`
     <div class="modal-header">
       <span class="modal-title" style="font-size:15px">${name}</span>
       <button class="modal-close" onclick="closeModal('card-modal')">✕</button>
     </div>
-    <div class="modal-img-wrap"><img src="${img.replace('low.webp','high.webp')}" onerror="this.src='${img}'"></div>
+    <div class="modal-img-wrap"><img src="${largImg}" onerror="this.src='${img}'"></div>
     <div class="modal-section">
-      <div style="font-size:13px;color:rgba(255,255,255,0.55)">${document.getElementById('grid-title').textContent} · N°${id.split('-').pop()}</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.55)">${document.getElementById('grid-title').textContent}${c?.localId?' · N°'+c.localId:''}${c?.rarity?' · '+c.rarity:''}</div>
     </div>
     <div class="btn-row">
       <button class="btn btn-primary btn-full" onclick="addCard(window._addCard);closeModal('card-modal');renderGrid()">
@@ -1083,6 +1310,22 @@ function gridTap(id,name,img){
       </button>
     </div>`;
   openModal('card-modal');
+}
+
+function quickAddFromGrid(id, name, img){
+  const c=_gridCards.find(x=>(x.id===id)||((_gridSetId+'-'+x.localId)===id));
+  const cardObj={
+    id, name: name||(c?.name||id),
+    number: c?.localId||c?.number||id.split('-').pop(),
+    rarity: c?.rarity||'',
+    set:{id:_gridSetId, name:document.getElementById('grid-title').textContent},
+    images:{
+      small: c?.image ? c.image+'/low.webp' : img,
+      large: c?.image ? c.image+'/high.webp' : img.replace('/low.webp','/high.webp')
+    }
+  };
+  addCard(cardObj);
+  renderGrid();
 }
 
 function closeGrid(){
@@ -1110,10 +1353,9 @@ function updateDriveUI(){
   const conn=document.getElementById('drive-conn');
   if(_driveToken){
     dot.className='drive-dot ok';
-    const hint=localStorage.getItem('drive_hint');
-    label.textContent=hint?hint.split('@')[0]:'✓';
+    label.textContent='✓';
     nc.style.display='none'; conn.style.display='block';
-    document.getElementById('drive-email').textContent='✓ '+( hint||'Connecté');
+    document.getElementById('drive-email').textContent='✓ '+(localStorage.getItem('drive_hint')||'Connecté');
   } else {
     dot.className='drive-dot';
     label.textContent='Drive';
@@ -1212,22 +1454,12 @@ async function init(){
       else { _driveToken=null; localStorage.removeItem('drive_token'); updateDriveUI(); }
     }catch(e){ _driveToken=null; localStorage.removeItem('drive_token'); updateDriveUI(); }
   }
+  // Charger la base mobile en arrière-plan
+  await loadMobileDB();
 }
 init();
 
 // PWA Service Worker
-if('serviceWorker' in navigator){
-  const sw=`
-    const CACHE='pokoala-v1';
-    const SHELL=['./pokoala_mobile.html'];
-    self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL))));
-    self.addEventListener('fetch',e=>{
-      if(e.request.url.includes('googleapis')||e.request.url.includes('fonts.google')||e.request.url.includes('tcgdex')||e.request.url.includes('pokemontcg')||e.request.url.includes('assets.tcgdex')||e.request.url.includes('gsi/client')) return;
-      e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
-    });`;
-  const blob=new Blob([sw],{type:'application/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
-}
 </script>
 </body>
 </html>

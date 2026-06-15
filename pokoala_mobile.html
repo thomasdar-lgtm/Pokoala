@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1a0a0a">
 <title>PoKoala</title>
-<link rel="manifest" href="data:application/json,{%22name%22:%22PoKoala%22,%22short_name%22:%22PoKoala%22,%22start_url%22:%22https://thomasdar-lgtm.github.io/Pokoala/pokoala_mobile.html%22,%22display%22:%22standalone%22,%22background_color%22:%22%231a0a0a%22,%22theme_color%22:%22%231a0a0a%22}">
+<link rel="manifest" href="./manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Raleway:wght@700;800;900&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async></script>
@@ -1477,6 +1477,10 @@ async function init(){
 init();
 
 // PWA Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW:', e));
+}
+
 </script>
 </body>
 </html>

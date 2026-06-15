@@ -1,0 +1,18 @@
+{
+  "name": "PoKoala",
+  "short_name": "PoKoala",
+  "description": "Gestion de collection Pokémon TCG",
+  "start_url": "./pokoala_mobile.html",
+  "display": "standalone",
+  "background_color": "#1a0a0a",
+  "theme_color": "#1a0a0a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./Logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

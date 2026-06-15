@@ -1268,20 +1268,37 @@ function renderGrid(){
   if(fill) fill.style.width=pct+'%';
   document.getElementById('grid-stats').style.display='block';
 
+  const isLocal = window.location.hostname === 'localhost';
   document.getElementById('card-grid').innerHTML=_gridCards.map(c=>{
     const id=c.id||(_gridSetId+'-'+c.localId);
     const oc=ownedMap.get(id);
-    const img=c.image?c.image+'/low.webp':`https://assets.tcgdex.net/fr/${_gridSetId}/${c.localId}/low.webp`;
+    const tcgdexImg=c.image?c.image+'/low.webp':`https://assets.tcgdex.net/fr/${_gridSetId}/${c.localId}/low.webp`;
+    const localImg=isLocal?`${LOCAL}/images/${id}.png`:null;
     const sid=escId(id);
     const cname=escId(c.name||'');
-    const cimg=escId(img);
+    const cimg=escId(tcgdexImg);
     return`<div class="grid-card${oc?'':' not-owned'}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
-      <img src="${img}" loading="lazy" onerror="this.style.opacity='.2'">
+      <img data-src="${localImg||tcgdexImg}" data-fallback="${tcgdexImg}" loading="lazy" onerror="if(this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.style.opacity='.2'}">
       <span class="grid-card-num">${c.localId||c.number||''}</span>
       ${oc?`<span class="grid-card-qty">${oc.qty}×</span>`:''}
       ${!oc?`<button class="grid-add-btn" onclick="event.stopPropagation();quickAddFromGrid('${sid}','${cname}','${cimg}')">+</button>`:''}
     </div>`;
   }).join('');
+
+  // Intersection Observer pour lazy loading
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        const img = entry.target.querySelector('img[data-src]');
+        if(img && !img.src){
+          img.src = img.dataset.src;
+          observer.unobserve(entry.target);
+        }
+      }
+    });
+  }, {rootMargin: '100px'});
+
+  document.querySelectorAll('.grid-card').forEach(card => observer.observe(card));
 }
 
 function gridTapUnowned(id, name, img){

@@ -548,21 +548,19 @@ body::before{
     <!-- TAB ACCUEIL -->
     <div class="tab-page active" id="tab-home">
       <div class="home-grid" id="home-grid"></div>
+      <div style="margin-top:4px;position:sticky;top:0;z-index:5;background:transparent">
+        <div class="search-wrap">
+          <input class="search-input" id="search-q" type="search" placeholder="Rechercher une carte Pokémon…" oninput="debounceSearch()" autocomplete="off" inputmode="search">
+        </div>
+      </div>
+      <div class="card-block" id="search-results" style="max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
+        <div class="empty-state"><span class="big">🔍</span>Tape un nom de carte pour commencer</div>
+      </div>
     </div>
 
     <!-- TAB BROWSE -->
     <div class="tab-page" id="tab-browse">
       <div id="series-list"><div class="loader">Chargement des séries…</div></div>
-    </div>
-
-    <!-- TAB SEARCH -->
-    <div class="tab-page" id="tab-search">
-      <div class="search-wrap">
-        <input class="search-input" id="search-q" type="search" placeholder="Rechercher une carte Pokémon…" oninput="debounceSearch()">
-      </div>
-      <div class="card-block" id="search-results">
-        <div class="empty-state"><span class="big">🔍</span>Tape un nom de carte pour commencer</div>
-      </div>
     </div>
 
   </div><!-- /content -->
@@ -584,13 +582,6 @@ body::before{
         <line x1="8" y1="11" x2="14" y2="11" stroke="rgba(255,255,255,0.28)" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
       Parcourir
-    </button>
-    <button class="nav-btn" id="nav-search" onclick="switchTab('search')">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="11" cy="11" r="8" stroke="rgba(255,255,255,0.28)" stroke-width="1.8"/>
-        <path d="M21 21l-4.35-4.35" stroke="rgba(255,255,255,0.28)" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
-      Recherche
     </button>
   </nav>
 
@@ -727,7 +718,6 @@ function switchTab(tab){
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('nav-'+tab).classList.add('active');
   _activeTab=tab;
-  // Fermer les overlays ouverts
   document.getElementById('coll-overlay').classList.remove('open');
   document.getElementById('grid-overlay').classList.remove('open');
   document.body.style.overflow='';
@@ -808,7 +798,7 @@ async function syncMobileDB(){
   if(!_driveToken){ toast('Connecte-toi à Drive d\'abord'); return; }
   try{
     toast('⏳ Génération de la base mobile…');
-    const r = await fetch(`${LOCAL}/api/generate-mobile-db`, {signal: AbortSignal.timeout(10000)});
+    const r = await fetch(`${LOCAL}/api/generate-mobile-db`, {signal: AbortSignal.timeout(300000)});
     if(!r.ok) throw new Error('Serveur non disponible');
     const info = await r.json();
     if(info.status !== 'ok') throw new Error(info.message||'Erreur génération');
@@ -1078,23 +1068,37 @@ function addCard(cardData){
 function debounceSearch(){ clearTimeout(_searchTimer); _searchTimer=setTimeout(doSearch,400); }
 
 async function doSearch(){
-  const q=document.getElementById('search-q').value.trim().toLowerCase();
-  const res=document.getElementById('search-results');
-  if(q.length<2){ res.innerHTML=`<div class="empty-state"><span class="big">🔍</span>Tape un nom de carte pour commencer</div>`; return; }
+  const raw = document.getElementById('search-q').value.trim().toLowerCase();
+  const res = document.getElementById('search-results');
+  if(raw.length < 2){ res.innerHTML=`<div class="empty-state"><span class="big">🔍</span>Tape un nom de carte pour commencer</div>`; return; }
+
+  // Découper en tokens : séparer nom et numéro
+  const tokens = raw.split(/\s+/).filter(t => t.length > 0);
+  const numTokens = tokens.filter(t => /^\d+$/.test(t));
+  const nameTokens = tokens.filter(t => !/^\d+$/.test(t));
 
   // 1. Recherche dans la base mobile locale
   if(_mobileDB?.cards?.length){
-    const results = _mobileDB.cards.filter(c =>
-      (c.name||'').toLowerCase().includes(q)
-    ).slice(0,40);
+    const results = _mobileDB.cards.filter(c => {
+      const name = (c.name||'').toLowerCase();
+      const nameEn = (c.nameEn||'').toLowerCase();
+      const num = (c.number||'').toLowerCase();
+      // Les tokens texte doivent matcher le nom de la carte
+      const nameOk = nameTokens.every(t => name.includes(t) || nameEn.includes(t));
+      // Les tokens numériques doivent matcher le numéro
+      const numOk = numTokens.every(t => num === t || num === t.padStart(3,'0') || num === t.replace(/^0+/,''));
+      return nameOk && numOk;
+    }).slice(0, 40);
+
     if(results.length){
       renderSearchResults(results.map(c=>({
         id: c.id,
         name: c.name,
+        nameEn: c.nameEn,
         number: c.number,
         rarity: c.rarity,
         set: {id: c.setId, name: c.setName},
-        images: {small: `https://assets.tcgdex.net/fr/${c.setId}/${c.number}/low`}
+        images: {small: `https://assets.tcgdex.net/fr/${c.setId}/${c.number}/low.webp`}
       })));
       return;
     }
@@ -1103,10 +1107,10 @@ async function doSearch(){
   // 2. Fallback API pokemontcg.io
   res.innerHTML=`<div class="loader">Recherche en cours…</div>`;
   try{
-    const r=await fetch(`${POKEMONTCG}/cards?q=name:"${encodeURIComponent(q)}"&pageSize=30&select=id,name,number,rarity,set,images`);
+    const r=await fetch(`${POKEMONTCG}/cards?q=name:"${encodeURIComponent(tokens[0])}"&pageSize=30&select=id,name,number,rarity,set,images`);
     const d=await r.json();
     const cards=d.data||[];
-    if(!cards.length){ res.innerHTML=`<div class="empty-state"><span class="big">🤷</span>Aucune carte trouvée pour "${q}"</div>`; return; }
+    if(!cards.length){ res.innerHTML=`<div class="empty-state"><span class="big">🤷</span>Aucune carte trouvée pour "${raw}"</div>`; return; }
     renderSearchResults(cards);
   }catch(e){ res.innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Erreur de connexion</div>`; }
 }
@@ -1115,7 +1119,7 @@ function renderSearchResults(cards){
   const res=document.getElementById('search-results');
   res.innerHTML=cards.map(c=>{
     const owned=col.find(x=>x.id===c.id);
-    const img=c.images?.small||`https://assets.tcgdex.net/fr/${c.set?.id||''}/${c.number||''}/low`;
+    const img=c.images?.small||`https://assets.tcgdex.net/fr/${c.set?.id||''}/${c.number||''}/low.webp`;
     const cj=JSON.stringify(c).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return`<div class="search-result">
       ${img?`<img class="search-result-img" src="${img}" loading="lazy">`:'<div class="search-result-img"></div>'}

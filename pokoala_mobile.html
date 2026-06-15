@@ -759,7 +759,7 @@ async function loadMobileDB(){
 
   // 2. Essayer depuis le serveur local
   try{
-    const r = await fetch(`${LOCAL}/api/mobile-db`, {signal: AbortSignal.timeout(3000)});
+    const r = await fetch(`${LOCAL}/api/mobile-db`, {signal: AbortSignal.timeout(500)});
     if(r.ok){
       _mobileDB = await r.json();
       if(_mobileDB.cards?.length > 0){

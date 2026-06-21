@@ -599,6 +599,20 @@ body::before{
       <div id="series-list"><div class="loader">Chargement des séries…</div></div>
     </div>
 
+    <!-- TAB SCAN -->
+    <div class="tab-page" id="tab-scan">
+      <div id="scan-home" style="text-align:center;padding:24px 16px">
+        <div style="font-size:48px;margin-bottom:12px">📷</div>
+        <div style="font-size:16px;font-weight:700;color:rgba(255,255,255,0.8);margin-bottom:8px">Scanner une carte</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:24px;line-height:1.5">Pointe la caméra vers le bas de la carte pour lire le numéro et l'extension</div>
+        <button class="btn btn-primary" style="font-size:16px;padding:16px 32px" onclick="openScanner()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M20.3 5.7A10 10 0 1 0 5.7 20.3"/><path d="M15 2H9v2H7a2 2 0 00-2 2v1h14V6a2 2 0 00-2-2h-2V2z"/></svg>
+          Ouvrir la caméra
+        </button>
+        <div id="scan-result" style="margin-top:24px"></div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 
   <!-- BOTTOM NAV -->
@@ -618,6 +632,13 @@ body::before{
         <line x1="8" y1="11" x2="14" y2="11" stroke="rgba(255,255,255,0.28)" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
       Parcourir
+    </button>
+    <button class="nav-btn" id="nav-scan" onclick="switchTab('scan')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="rgba(255,255,255,0.28)" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="12" cy="13" r="4" stroke="rgba(255,255,255,0.28)" stroke-width="1.8"/>
+      </svg>
+      Scanner
     </button>
   </nav>
 
@@ -755,6 +776,40 @@ body::before{
   </div>
 </div>
 
+<!-- SCANNER OVERLAY -->
+<div id="scan-overlay" style="display:none;position:fixed;inset:0;z-index:200;background:#000;flex-direction:column">
+  <div style="position:relative;flex:1;overflow:hidden">
+    <video id="scan-video" autoplay playsinline style="width:100%;height:100%;object-fit:cover"></video>
+    <canvas id="scan-canvas" style="display:none"></canvas>
+
+    <!-- Cadre de visée -->
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:30%">
+      <div style="position:relative;width:85%;height:56px">
+        <!-- Zone de scan en bas de carte -->
+        <div style="position:absolute;inset:0;border:2px solid rgba(255,215,0,0.8);border-radius:6px;box-shadow:0 0 0 2000px rgba(0,0,0,0.5)"></div>
+        <!-- Coins animés -->
+        <div style="position:absolute;top:-2px;left:-2px;width:20px;height:20px;border-top:3px solid var(--yellow2);border-left:3px solid var(--yellow2)"></div>
+        <div style="position:absolute;top:-2px;right:-2px;width:20px;height:20px;border-top:3px solid var(--yellow2);border-right:3px solid var(--yellow2)"></div>
+        <div style="position:absolute;bottom:-2px;left:-2px;width:20px;height:20px;border-bottom:3px solid var(--yellow2);border-left:3px solid var(--yellow2)"></div>
+        <div style="position:absolute;bottom:-2px;right:-2px;width:20px;height:20px;border-bottom:3px solid var(--yellow2);border-right:3px solid var(--yellow2)"></div>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,0.7);font-weight:600">Cadre le bas de la carte ici</div>
+    </div>
+
+    <!-- Status -->
+    <div id="scan-status" style="position:absolute;top:20px;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#fff;padding:8px;background:rgba(0,0,0,0.5)">Prêt à scanner</div>
+  </div>
+
+  <!-- Contrôles -->
+  <div style="background:#000;padding:20px 20px calc(20px + var(--safe-bottom));display:flex;align-items:center;justify-content:space-between;gap:16px">
+    <button onclick="closeScanner()" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center">✕</button>
+    <button id="scan-btn" onclick="captureAndScan()" style="width:72px;height:72px;border-radius:50%;background:var(--yellow2);border:4px solid #fff;cursor:pointer;display:flex;align-items:center;justify-content:center">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M20.3 5.7A10 10 0 1 0 5.7 20.3"/></svg>
+    </button>
+    <button id="scan-torch" onclick="toggleTorch()" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center">🔦</button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -790,6 +845,7 @@ function switchTab(tab){
   _activeTab=tab;
   document.getElementById('coll-overlay').classList.remove('open');
   document.getElementById('grid-overlay').classList.remove('open');
+  if(_scanStream) closeScanner();
   document.body.style.overflow='';
   if(tab==='home') renderHome();
   if(tab==='browse'&&!_seriesData.length) loadSeries();
@@ -1684,7 +1740,224 @@ async function driveLoad(silent=false){
   }catch(e){ if(!silent) toast('Erreur récupération Drive'); }
 }
 
-// ── TOAST ──
+// ── SCANNER ──
+const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
+const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
+
+let _scanStream = null;
+let _torchOn = false;
+
+// Mapping codes d'extension → setId pokemontcg
+const SET_CODE_MAP = {
+  'SVE':'sve','SVI':'sv1','PAL':'sv2','OBF':'sv3','MEW':'sv3pt5',
+  'PAR':'sv4','PAF':'sv4pt5','TEF':'sv5','TWM':'sv6','SFA':'sv6pt5',
+  'SCR':'sv7','SSP':'sv8','PRE':'sv8pt5','JTG':'sv9','DRI':'sv10',
+  'BLK':'zsv10pt5','WHT':'rsv10pt5',
+  'MEG':'me1','PFL':'me2','ASC':'me2pt5','PFO':'me3','CRA':'me4',
+  'SWH':'swsh1','RCL':'swsh2','DAA':'swsh3','CPA':'swsh35',
+  'VIV':'swsh4','SHF':'swsh45','BST':'swsh5','CRE':'swsh6',
+  'EVS':'swsh7','FST':'swsh8','BRS':'swsh9','ASR':'swsh10',
+  'PGO':'pgo','LOR':'swsh11','SIT':'swsh12','CRZ':'swsh12pt5',
+  'SUM':'sm1','GRI':'sm2','BUS':'sm3','SLG':'sm35','CIN':'sm4',
+  'UPR':'sm5','FLI':'sm6','CLS':'sm7','DRM':'sm75','LOT':'sm8',
+  'TEU':'sm9','UNB':'sm10','UNM':'sm11','HIF':'sm115','CEC':'sm12',
+  'BKT':'xy8','BKP':'xy9','FCO':'xy10','STS':'xy11','EVO':'xy12',
+  'XY':'xy1','FLF':'xy2','FFI':'xy3','PHF':'xy4','PRC':'xy5',
+  'ROS':'xy6','AOR':'xy7',
+};
+
+async function openScanner(){
+  const overlay = document.getElementById('scan-overlay');
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('scan-status').textContent = 'Activation de la caméra…';
+
+  try{
+    _scanStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width: {ideal: 1920},
+        height: {ideal: 1080}
+      }
+    });
+    const video = document.getElementById('scan-video');
+    video.srcObject = _scanStream;
+    document.getElementById('scan-status').textContent = 'Prêt à scanner';
+  }catch(e){
+    document.getElementById('scan-status').textContent = 'Caméra non disponible : ' + e.message;
+  }
+}
+
+function closeScanner(){
+  if(_scanStream){ _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
+  document.getElementById('scan-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+  _torchOn = false;
+}
+
+async function toggleTorch(){
+  if(!_scanStream) return;
+  const track = _scanStream.getVideoTracks()[0];
+  try{
+    _torchOn = !_torchOn;
+    await track.applyConstraints({advanced:[{torch: _torchOn}]});
+    document.getElementById('scan-torch').style.background = _torchOn ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.1)';
+  }catch(e){ toast('Torche non supportée'); }
+}
+
+async function captureAndScan(){
+  const video = document.getElementById('scan-video');
+  const canvas = document.getElementById('scan-canvas');
+  const status = document.getElementById('scan-status');
+
+  status.textContent = '📸 Capture en cours…';
+  document.getElementById('scan-btn').disabled = true;
+
+  // Capturer le frame vidéo
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+
+  // Rogner la zone du bas de la carte (30% inférieur)
+  const cropH = Math.floor(canvas.height * 0.25);
+  const cropY = canvas.height - cropH;
+  const cropCanvas = document.createElement('canvas');
+  cropCanvas.width = canvas.width;
+  cropCanvas.height = cropH;
+  const cropCtx = cropCanvas.getContext('2d');
+  cropCtx.drawImage(canvas, 0, cropY, canvas.width, cropH, 0, 0, canvas.width, cropH);
+
+  const base64 = cropCanvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+
+  status.textContent = '🔍 Analyse en cours…';
+
+  try{
+    const response = await fetch(VISION_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        requests:[{
+          image: {content: base64},
+          features: [{type: 'TEXT_DETECTION', maxResults: 1}]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.responses?.[0]?.fullTextAnnotation?.text || '';
+
+    if(!text){
+      status.textContent = '❌ Aucun texte détecté — réessaie';
+      document.getElementById('scan-btn').disabled = false;
+      return;
+    }
+
+    parseCardText(text, status);
+  }catch(e){
+    status.textContent = '❌ Erreur API : ' + e.message;
+  }
+
+  document.getElementById('scan-btn').disabled = false;
+}
+
+function parseCardText(text, status){
+  // Chercher le pattern numéro/total (ex: "199/165", "001/086")
+  const numMatch = text.match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
+  // Chercher le code extension (2-3 lettres majuscules seules sur une ligne ou après un espace)
+  const codeMatch = text.match(/\b([A-Z]{2,4})\b/g);
+
+  let cardNum = null, setCode = null, setId = null;
+
+  if(numMatch){
+    cardNum = numMatch[1].replace(/^0+/, ''); // enlever les zéros de tête
+  }
+
+  if(codeMatch){
+    // Trouver le code qui correspond à une extension connue
+    for(const code of codeMatch){
+      if(SET_CODE_MAP[code]){
+        setCode = code;
+        setId = SET_CODE_MAP[code];
+        break;
+      }
+    }
+  }
+
+  if(!cardNum){
+    status.textContent = '❌ Numéro de carte non trouvé — réessaie';
+    return;
+  }
+
+  // Chercher dans la base locale
+  if(_mobileDB?.cards?.length && setId){
+    const card = _mobileDB.cards.find(c =>
+      c.setId === setId &&
+      (c.number === cardNum || c.number === cardNum.padStart(3,'0') || parseInt(c.number) === parseInt(cardNum))
+    );
+    if(card){
+      status.textContent = `✅ Trouvé : ${card.name}`;
+      showScanResult(card, setCode, cardNum);
+      return;
+    }
+  }
+
+  // Fallback : chercher juste par numéro si on a le setId
+  if(setId){
+    status.textContent = `⚠️ N°${cardNum} dans ${setCode} — non trouvé en base`;
+  } else {
+    status.textContent = `⚠️ N°${cardNum} détecté — extension non reconnue (${codeMatch?.join(', ')||'?'})`;
+  }
+}
+
+function showScanResult(card, setCode, cardNum){
+  closeScanner();
+  const img = card.img ? card.img.replace('/low.webp','/high.webp') : '';
+  const owned = col.find(c => c.id === card.id);
+  const scanResult = document.getElementById('scan-result');
+  scanResult.innerHTML = `
+    <div class="card-block" style="text-align:left;overflow:hidden">
+      <div style="display:flex;gap:12px;padding:12px">
+        ${img ? `<img src="${img}" style="width:80px;border-radius:6px;object-fit:contain" onerror="this.style.display='none'">` : ''}
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">${card.name}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5)">${card.setName} · N°${cardNum}</div>
+          ${card.rarity ? `<div style="margin-top:6px">${rareBadge(card.rarity)}</div>` : ''}
+          ${owned ? `<div style="margin-top:6px;font-size:12px;color:var(--yellow2);font-weight:700">✓ Déjà dans ta collection (${owned.qty}×)</div>` : ''}
+        </div>
+      </div>
+      <div class="btn-row" style="padding-bottom:12px">
+        <button class="btn btn-primary btn-full" onclick="addCardFromScan('${escId(card.id)}')">
+          ${owned ? `+1 (total ${(owned.qty||0)+1}×)` : '➕ Ajouter à ma collection'}
+        </button>
+      </div>
+    </div>`;
+
+  // Scroll vers le résultat
+  scanResult.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function addCardFromScan(cardId){
+  const card = _mobileDB?.cards?.find(c => c.id === cardId);
+  if(!card) return;
+  addCard({
+    id: card.id,
+    name: card.name,
+    number: card.number,
+    rarity: card.rarity,
+    set: {id: card.setId, name: card.setName},
+    images: {
+      small: card.img || '',
+      large: card.img ? card.img.replace('/low.webp','/high.webp') : ''
+    }
+  });
+  document.getElementById('scan-result').innerHTML = `
+    <div style="text-align:center;padding:16px;color:#4ade80;font-weight:700;font-size:15px">
+      ✅ ${card.name} ajoutée !<br>
+      <button class="btn btn-secondary" style="margin-top:12px" onclick="openScanner()">Scanner une autre carte</button>
+    </div>`;
+}
+
 let _tt;
 function toast(msg,dur=2500){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),dur); }
 

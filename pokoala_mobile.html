@@ -801,7 +801,15 @@ body::before{
   </div>
 
   <!-- Contrôles -->
-  <div style="background:#000;padding:20px 20px calc(20px + var(--safe-bottom));display:flex;align-items:center;justify-content:space-between;gap:16px">
+  <div style="background:#000;padding:12px 20px 0">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="font-size:11px;color:rgba(255,255,255,0.5)">1×</span>
+      <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="2" style="flex:1;accent-color:var(--yellow2)" oninput="setZoom(this.value)">
+      <span style="font-size:11px;color:rgba(255,255,255,0.5)">5×</span>
+      <span id="zoom-label" style="font-size:11px;font-weight:700;color:var(--yellow2);width:28px">2×</span>
+    </div>
+  </div>
+  <div style="background:#000;padding:8px 20px calc(20px + var(--safe-bottom));display:flex;align-items:center;justify-content:space-between;gap:16px">
     <button onclick="closeScanner()" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center">✕</button>
     <button id="scan-btn" onclick="captureAndScan()" style="width:72px;height:72px;border-radius:50%;background:var(--yellow2);border:4px solid #fff;cursor:pointer;display:flex;align-items:center;justify-content:center">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M20.3 5.7A10 10 0 1 0 5.7 20.3"/></svg>
@@ -1773,13 +1781,26 @@ async function openScanner(){
   document.getElementById('scan-status').textContent = 'Activation de la caméra…';
 
   try{
-    _scanStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: {exact: 'environment'},
-        width: {ideal: 1920},
-        height: {ideal: 1080}
-      }
-    });
+    // Essayer d'abord avec zoom x2 pour meilleur focus de près
+    try{
+      _scanStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: {exact: 'environment'},
+          width: {ideal: 1920},
+          height: {ideal: 1080},
+          zoom: 2.0
+        }
+      });
+    }catch(e){
+      // Fallback sans zoom
+      _scanStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: {exact: 'environment'},
+          width: {ideal: 1920},
+          height: {ideal: 1080}
+        }
+      });
+    }
     const video = document.getElementById('scan-video');
     video.srcObject = _scanStream;
     await video.play();
@@ -1812,6 +1833,15 @@ async function toggleTorch(){
     await track.applyConstraints({advanced:[{torch: _torchOn}]});
     document.getElementById('scan-torch').style.background = _torchOn ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.1)';
   }catch(e){ toast('Torche non supportée'); }
+}
+
+async function setZoom(val){
+  document.getElementById('zoom-label').textContent = parseFloat(val).toFixed(1)+'×';
+  if(!_scanStream) return;
+  const track = _scanStream.getVideoTracks()[0];
+  try{
+    await track.applyConstraints({advanced:[{zoom: parseFloat(val)}]});
+  }catch(e){}
 }
 
 async function tapToFocus(e){

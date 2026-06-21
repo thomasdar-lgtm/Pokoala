@@ -1770,7 +1770,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -1825,30 +1825,33 @@ async function analyzePhoto(input){
       img.src = URL.createObjectURL(file);
     });
 
-    // Appel Google Vision
-    const response = await fetch(VISION_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        requests:[{
-          image: {content: base64},
-          features: [{type: 'TEXT_DETECTION', maxResults: 1}]
-        }]
-      })
+    // Charger Tesseract si pas encore chargé
+    if(!window.Tesseract){
+      result.innerHTML = `<div class="loader">Chargement du moteur OCR…</div>`;
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+
+    result.innerHTML = `<div class="loader">Analyse en cours…</div>`;
+
+    const { data: { text } } = await Tesseract.recognize(file, 'eng', {
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/. ',
     });
 
-    const data = await response.json();
-    
-    // Debug : afficher réponse brute si pas de texte
-    const text = data.responses?.[0]?.fullTextAnnotation?.text || '';
-
-    if(!text){
-      result.innerHTML = `<div class="card-block" style="padding:12px;font-size:10px;color:rgba(255,255,255,0.5);word-break:break-all">
-        <div style="margin-bottom:6px;color:var(--yellow2)">Réponse API brute :</div>
-        ${JSON.stringify(data).substring(0,600)}
-      </div>`;
+    if(!text || text.trim().length < 3){
+      result.innerHTML = `<div class="card-block" style="padding:12px;font-size:10px;color:rgba(255,255,255,0.5)">Aucun texte détecté</div>`;
       return;
     }
+
+    // Debug temporaire
+    result.innerHTML = `<div class="card-block" style="padding:12px">
+      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:6px">TEXTE DÉTECTÉ :</div>
+      <div style="font-size:12px;color:#fff;white-space:pre-wrap;word-break:break-all">${text.substring(0,300)}</div>
+    </div>`;
 
     // Debug temporaire — affiche le texte brut
     result.innerHTML = `<div class="card-block" style="padding:12px">

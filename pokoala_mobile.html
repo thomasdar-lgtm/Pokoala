@@ -779,11 +779,11 @@ body::before{
 <!-- SCANNER OVERLAY -->
 <div id="scan-overlay" style="display:none;position:fixed;inset:0;z-index:200;background:#000;flex-direction:column">
   <div style="position:relative;flex:1;overflow:hidden">
-    <video id="scan-video" autoplay playsinline style="width:100%;height:100%;object-fit:cover"></video>
+    <video id="scan-video" autoplay playsinline style="width:100%;height:100%;object-fit:cover" onclick="tapToFocus(event)"></video>
     <canvas id="scan-canvas" style="display:none"></canvas>
 
     <!-- Cadre de visée -->
-    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:30%">
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:18%">
       <div style="position:relative;width:85%;height:56px">
         <!-- Zone de scan en bas de carte -->
         <div style="position:absolute;inset:0;border:2px solid rgba(255,215,0,0.8);border-radius:6px;box-shadow:0 0 0 2000px rgba(0,0,0,0.5)"></div>
@@ -1775,13 +1775,22 @@ async function openScanner(){
   try{
     _scanStream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: 'environment',
+        facingMode: {exact: 'environment'},
         width: {ideal: 1920},
         height: {ideal: 1080}
       }
     });
     const video = document.getElementById('scan-video');
     video.srcObject = _scanStream;
+    await video.play();
+    // Activer l'autofocus continu
+    const track = _scanStream.getVideoTracks()[0];
+    try{
+      const caps = track.getCapabilities();
+      const constraints = {};
+      if(caps.focusMode?.includes('continuous')) constraints.focusMode = 'continuous';
+      if(Object.keys(constraints).length) await track.applyConstraints({advanced:[constraints]});
+    }catch(e){}
     document.getElementById('scan-status').textContent = 'Prêt à scanner';
   }catch(e){
     document.getElementById('scan-status').textContent = 'Caméra non disponible : ' + e.message;
@@ -1803,6 +1812,22 @@ async function toggleTorch(){
     await track.applyConstraints({advanced:[{torch: _torchOn}]});
     document.getElementById('scan-torch').style.background = _torchOn ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.1)';
   }catch(e){ toast('Torche non supportée'); }
+}
+
+async function tapToFocus(e){
+  if(!_scanStream) return;
+  const track = _scanStream.getVideoTracks()[0];
+  const video = document.getElementById('scan-video');
+  try{
+    const rect = video.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const caps = track.getCapabilities();
+    if(caps.focusMode?.includes('manual') && caps.focusDistance){
+      await track.applyConstraints({advanced:[{focusMode:'manual', pointsOfInterest:[{x,y}]}]});
+      setTimeout(()=> track.applyConstraints({advanced:[{focusMode:'continuous'}]}), 2000);
+    }
+  }catch(e){}
 }
 
 async function captureAndScan(){

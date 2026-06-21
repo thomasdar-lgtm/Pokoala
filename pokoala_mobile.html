@@ -1029,8 +1029,9 @@ function buildRarityDropdown(rarities){
 
 // Fermer le dropdown si clic en dehors
 document.addEventListener('click', e => {
-  if(!e.target.closest('#rarity-select-wrap')){
-    document.getElementById('rarity-dropdown')?.classList.remove('open');
+  const dd = document.getElementById('rarity-dropdown');
+  if(dd?.classList.contains('open') && !e.target.closest('#rarity-select-wrap')){
+    dd.classList.remove('open');
   }
 });
 

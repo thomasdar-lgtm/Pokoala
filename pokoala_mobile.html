@@ -563,7 +563,9 @@ body::before{
         <span class="logo-po">Po</span><span class="logo-koala-text">Koala</span>
       </div>
     </div>
-    <div class="drive-pill" onclick="openDriveModal()">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.25)">v<span id="app-version"></span></span>
+      <div class="drive-pill" onclick="openDriveModal()">
       <!-- Google Drive SVG -->
       <svg viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
         <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
@@ -575,6 +577,7 @@ body::before{
       </svg>
       <div class="drive-dot" id="drive-dot"></div>
       <span class="drive-pill-label" id="drive-label">Drive</span>
+    </div>
     </div>
   </div>
 
@@ -1767,7 +1770,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
+const APP_VERSION = '1.0'; = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
 let _scanStream = null;
@@ -2082,6 +2085,7 @@ function toast(msg,dur=2500){ const el=document.getElementById('toast'); el.text
 
 // ── INIT ──
 async function init(){
+  document.getElementById('app-version').textContent = APP_VERSION;
   load(); renderHome();
   const t=localStorage.getItem('drive_token');
   if(t){

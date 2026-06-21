@@ -605,10 +605,28 @@ body::before{
         <div style="font-size:48px;margin-bottom:12px">📷</div>
         <div style="font-size:16px;font-weight:700;color:rgba(255,255,255,0.8);margin-bottom:8px">Scanner une carte</div>
         <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:24px;line-height:1.5">Pointe la caméra vers le bas de la carte pour lire le numéro et l'extension</div>
-        <button class="btn btn-primary" style="font-size:16px;padding:16px 32px" onclick="openScanner()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M20.3 5.7A10 10 0 1 0 5.7 20.3"/><path d="M15 2H9v2H7a2 2 0 00-2 2v1h14V6a2 2 0 00-2-2h-2V2z"/></svg>
-          Ouvrir la caméra
-        </button>
+        
+        <!-- Option 1 : Photo native (recommandée) -->
+        <div style="margin-bottom:16px">
+          <label style="display:inline-block;cursor:pointer">
+            <input type="file" accept="image/*" capture="environment" id="photo-input" style="display:none" onchange="analyzePhoto(this)">
+            <div class="btn btn-primary" style="font-size:16px;padding:16px 32px;pointer-events:none">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Prendre une photo
+            </div>
+          </label>
+          <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px">Recommandé — utilise l'appareil photo natif</div>
+        </div>
+
+        <!-- Option 2 : Viewfinder (backup) -->
+        <div>
+          <button class="btn btn-secondary" style="font-size:13px;padding:10px 20px" onclick="openScanner()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="2"/><circle cx="12" cy="12" r="4"/></svg>
+            Viewfinder (bêta)
+          </button>
+          <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px">Scan en temps réel</div>
+        </div>
+
         <div id="scan-result" style="margin-top:24px"></div>
       </div>
     </div>
@@ -1774,6 +1792,103 @@ const SET_CODE_MAP = {
   'ROS':'xy6','AOR':'xy7',
 };
 
+async function analyzePhoto(input){
+  const file = input.files[0];
+  if(!file) return;
+
+  const result = document.getElementById('scan-result');
+  result.innerHTML = `<div class="loader">Analyse en cours…</div>`;
+
+  try{
+    // Convertir en base64
+    const base64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+
+    // Appel Google Vision
+    const response = await fetch(VISION_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        requests:[{
+          image: {content: base64},
+          features: [{type: 'TEXT_DETECTION', maxResults: 1}]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.responses?.[0]?.fullTextAnnotation?.text || '';
+
+    if(!text){
+      result.innerHTML = `<div class="empty-state"><span class="big">❌</span>Aucun texte détecté<br>Réessaie en cadrant mieux le bas de la carte</div>`;
+      return;
+    }
+
+    // Parser le texte
+    parseScanText(text, result);
+
+  }catch(e){
+    result.innerHTML = `<div class="empty-state"><span class="big">⚠️</span>Erreur : ${e.message}</div>`;
+  }
+
+  // Reset input pour permettre de scanner la même carte deux fois
+  input.value = '';
+}
+
+function parseScanText(text, resultEl){
+  // Chercher le numéro de carte (ex: 199/165, 001/086)
+  const numMatch = text.match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
+  // Chercher les codes d'extension connus
+  const words = text.toUpperCase().match(/\b([A-Z]{2,5})\b/g) || [];
+
+  let cardNum = null, setId = null, setCode = null;
+
+  if(numMatch){
+    cardNum = String(parseInt(numMatch[1]));
+  }
+
+  for(const word of words){
+    if(SET_CODE_MAP[word]){
+      setCode = word;
+      setId = SET_CODE_MAP[word];
+      break;
+    }
+  }
+
+  if(!cardNum && !setId){
+    resultEl.innerHTML = `<div class="empty-state"><span class="big">❓</span>Texte lu mais carte non identifiée<br><small style="color:rgba(255,255,255,0.4)">${text.substring(0,100)}</small></div>`;
+    return;
+  }
+
+  // Chercher dans la base locale
+  if(_mobileDB?.cards?.length){
+    let card = null;
+    if(setId && cardNum){
+      card = _mobileDB.cards.find(c =>
+        c.setId === setId &&
+        (c.number === cardNum || c.number === cardNum.padStart(3,'0') || String(parseInt(c.number)) === cardNum)
+      );
+    }
+    if(!card && cardNum && setId){
+      // Essayer avec l'id direct
+      card = _mobileDB.cards.find(c => c.id === `${setId}-${cardNum}` || c.id === `${setId}-${cardNum.padStart(3,'0')}`);
+    }
+
+    if(card){
+      showScanResult(card, setCode||setId, cardNum);
+      return;
+    }
+  }
+
+  // Résultat partiel
+  const info = [cardNum && `N°${cardNum}`, setCode && `Extension: ${setCode}`].filter(Boolean).join(' · ');
+  resultEl.innerHTML = `<div class="empty-state"><span class="big">🔍</span>Carte non trouvée en base<br><small style="color:rgba(255,255,255,0.4)">${info || 'Aucune info extraite'}</small><br><small style="color:rgba(255,255,255,0.3);font-size:10px">${text.substring(0,80)}</small></div>`;
+}
+
 async function openScanner(){
   const overlay = document.getElementById('scan-overlay');
   overlay.style.display = 'flex';
@@ -1900,70 +2015,19 @@ async function captureAndScan(){
     });
 
     const data = await response.json();
-    const text = data.responses?.[0]?.fullTextAnnotation?.text || '';
-
+    const status = document.getElementById('scan-status');
     if(!text){
       status.textContent = '❌ Aucun texte détecté — réessaie';
       document.getElementById('scan-btn').disabled = false;
       return;
     }
-
-    parseCardText(text, status);
-  }catch(e){
-    status.textContent = '❌ Erreur API : ' + e.message;
-  }
+    parseScanText(text, document.getElementById('scan-result'));
+    status.textContent = '✅ Analyse terminée';
+    closeScanner();
 
   document.getElementById('scan-btn').disabled = false;
 }
 
-function parseCardText(text, status){
-  // Chercher le pattern numéro/total (ex: "199/165", "001/086")
-  const numMatch = text.match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
-  // Chercher le code extension (2-3 lettres majuscules seules sur une ligne ou après un espace)
-  const codeMatch = text.match(/\b([A-Z]{2,4})\b/g);
-
-  let cardNum = null, setCode = null, setId = null;
-
-  if(numMatch){
-    cardNum = numMatch[1].replace(/^0+/, ''); // enlever les zéros de tête
-  }
-
-  if(codeMatch){
-    // Trouver le code qui correspond à une extension connue
-    for(const code of codeMatch){
-      if(SET_CODE_MAP[code]){
-        setCode = code;
-        setId = SET_CODE_MAP[code];
-        break;
-      }
-    }
-  }
-
-  if(!cardNum){
-    status.textContent = '❌ Numéro de carte non trouvé — réessaie';
-    return;
-  }
-
-  // Chercher dans la base locale
-  if(_mobileDB?.cards?.length && setId){
-    const card = _mobileDB.cards.find(c =>
-      c.setId === setId &&
-      (c.number === cardNum || c.number === cardNum.padStart(3,'0') || parseInt(c.number) === parseInt(cardNum))
-    );
-    if(card){
-      status.textContent = `✅ Trouvé : ${card.name}`;
-      showScanResult(card, setCode, cardNum);
-      return;
-    }
-  }
-
-  // Fallback : chercher juste par numéro si on a le setId
-  if(setId){
-    status.textContent = `⚠️ N°${cardNum} dans ${setCode} — non trouvé en base`;
-  } else {
-    status.textContent = `⚠️ N°${cardNum} détecté — extension non reconnue (${codeMatch?.join(', ')||'?'})`;
-  }
-}
 
 function showScanResult(card, setCode, cardNum){
   closeScanner();

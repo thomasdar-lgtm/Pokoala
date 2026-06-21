@@ -1770,7 +1770,8 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '1.0'; = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
+const APP_VERSION = '1.0';
+const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
 let _scanStream = null;
@@ -2018,7 +2019,7 @@ async function captureAndScan(){
     });
 
     const data = await response.json();
-    const status = document.getElementById('scan-status');
+    const text = data.responses?.[0]?.fullTextAnnotation?.text || '';
     if(!text){
       status.textContent = '❌ Aucun texte détecté — réessaie';
       document.getElementById('scan-btn').disabled = false;
@@ -2027,6 +2028,9 @@ async function captureAndScan(){
     parseScanText(text, document.getElementById('scan-result'));
     status.textContent = '✅ Analyse terminée';
     closeScanner();
+  }catch(e){
+    status.textContent = '❌ Erreur : ' + e.message;
+  }
 
   document.getElementById('scan-btn').disabled = false;
 }

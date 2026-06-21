@@ -1770,7 +1770,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -1804,12 +1804,25 @@ async function analyzePhoto(input){
   result.innerHTML = `<div class="loader">Analyse en cours…</div>`;
 
   try{
-    // Convertir en base64
+    // Convertir en base64 avec redimensionnement
     const base64 = await new Promise((res, rej) => {
-      const reader = new FileReader();
-      reader.onload = () => res(reader.result.split(',')[1]);
-      reader.onerror = rej;
-      reader.readAsDataURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        // Limiter à 1600px max
+        const maxSize = 1600;
+        let w = img.width, h = img.height;
+        if(w > maxSize || h > maxSize){
+          if(w > h){ h = Math.round(h * maxSize/w); w = maxSize; }
+          else { w = Math.round(w * maxSize/h); h = maxSize; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        res(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+      };
+      img.onerror = rej;
+      img.src = URL.createObjectURL(file);
     });
 
     // Appel Google Vision

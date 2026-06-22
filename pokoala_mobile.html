@@ -736,9 +736,15 @@ body::before{
           <button class="btn btn-danger btn-full" onclick="driveSignOut()">Se déconnecter</button>
         </div>
         <div style="padding:8px 16px 0">
-          <button class="btn btn-secondary btn-full" onclick="syncMobileDB()" style="font-size:12px">
-            🔄 Synchroniser la base de cartes depuis le PC
+          <button class="btn btn-secondary btn-full" onclick="reloadMobileDB()" style="font-size:12px">
+            🔄 Recharger la base de cartes depuis Drive
           </button>
+        </div>
+        <div style="padding:8px 16px 0">
+          <button class="btn btn-secondary btn-full" onclick="syncMobileDB()" style="font-size:12px">
+            💻 Synchroniser la base depuis le PC
+          </button>
+        </div>
           <div id="db-sync-date" style="font-size:10px;color:rgba(255,255,255,0.3);text-align:center;margin-top:6px"></div>
         </div>
       </div>
@@ -946,6 +952,20 @@ async function driveFindFileByName(name){
   );
   const d = await r.json();
   return d.files?.[0]?.id || null;
+}
+
+async function reloadMobileDB(){
+  if(!_driveToken){ toast('Connecte-toi à Drive d\'abord'); return; }
+  toast('⏳ Rechargement de la base…');
+  localStorage.removeItem(MOBILE_DB_KEY);
+  _mobileDB = null;
+  const ok = await loadMobileDB();
+  if(ok){
+    toast(`✅ Base rechargée : ${_mobileDB?.cards?.length||0} cartes`);
+    closeModal('drive-modal');
+  } else {
+    toast('Erreur rechargement base');
+  }
 }
 
 async function syncMobileDB(){
@@ -1770,7 +1790,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.9';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

@@ -1770,7 +1770,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.6';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -1782,7 +1782,7 @@ const SET_CODE_MAP = {
   'SVE':'sve','SVI':'sv1','PAL':'sv2','OBF':'sv3','MEW':'sv3pt5',
   'PAR':'sv4','PAF':'sv4pt5','TEF':'sv5','TWM':'sv6','SFA':'sv6pt5',
   'SCR':'sv7','SSP':'sv8','PRE':'sv8pt5','JTG':'sv9','DRI':'sv10',
-  'BLK':'zsv10pt5','WHT':'rsv10pt5',
+  'BLK':'zsv10pt5','WHT':'rsv10pt5','CRI':'me4','DRI':'sv10',
   'MEG':'me1','PFL':'me2','ASC':'me2pt5','PFO':'me3','CRA':'me4',
   'SWH':'swsh1','RCL':'swsh2','DAA':'swsh3','CPA':'swsh35',
   'VIV':'swsh4','SHF':'swsh45','BST':'swsh5','CRE':'swsh6',
@@ -1825,25 +1825,28 @@ async function analyzePhoto(input){
       img.src = URL.createObjectURL(file);
     });
 
-    // Charger Tesseract si pas encore chargé
-    if(!window.Tesseract){
-      result.innerHTML = `<div class="loader">Chargement du moteur OCR…</div>`;
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      });
-    }
-
     result.innerHTML = `<div class="loader">Analyse en cours…</div>`;
 
-    const { data: { text } } = await Tesseract.recognize(file, 'eng', {
-      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/. ',
+    // Appel Google Vision
+    const response = await fetch(VISION_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        requests:[{
+          image: {content: base64},
+          features: [{type: 'TEXT_DETECTION', maxResults: 1}]
+        }]
+      })
     });
 
-    if(!text || text.trim().length < 3){
-      result.innerHTML = `<div class="card-block" style="padding:12px;font-size:10px;color:rgba(255,255,255,0.5)">Aucun texte détecté</div>`;
+    const data = await response.json();
+    const text = data.responses?.[0]?.fullTextAnnotation?.text || '';
+
+    if(!text){
+      result.innerHTML = `<div class="card-block" style="padding:12px;font-size:10px;color:rgba(255,255,255,0.5);word-break:break-all">
+        <div style="margin-bottom:6px;color:var(--yellow2)">Réponse API :</div>
+        ${JSON.stringify(data).substring(0,400)}
+      </div>`;
       return;
     }
 
@@ -1882,10 +1885,13 @@ function parseScanText(text, resultEl){
     cardNum = String(parseInt(numMatch[1]));
   }
 
+  // Utiliser la map depuis la base mobile si disponible, sinon le dictionnaire statique
+  const codeMap = _mobileDB?.ptcgoMap || SET_CODE_MAP;
+
   for(const word of words){
-    if(SET_CODE_MAP[word]){
+    if(codeMap[word]){
       setCode = word;
-      setId = SET_CODE_MAP[word];
+      setId = codeMap[word];
       break;
     }
   }

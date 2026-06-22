@@ -1770,7 +1770,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -1809,17 +1809,20 @@ async function analyzePhoto(input){
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        // Limiter à 1600px max
         const maxSize = 1600;
         let w = img.width, h = img.height;
         if(w > maxSize || h > maxSize){
           if(w > h){ h = Math.round(h * maxSize/w); w = maxSize; }
           else { w = Math.round(w * maxSize/h); h = maxSize; }
         }
+        // Recadrer sur les 30% inférieurs
+        const cropH = Math.floor(h * 0.30);
+        const cropY = h - cropH;
         canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        res(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+        canvas.height = cropH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, cropY * (img.height/h), img.width, img.height * 0.30, 0, 0, w, cropH);
+        res(canvas.toDataURL('image/jpeg', 0.9).split(',')[1]);
       };
       img.onerror = rej;
       img.src = URL.createObjectURL(file);

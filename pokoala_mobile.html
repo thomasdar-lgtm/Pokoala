@@ -1770,7 +1770,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -1888,11 +1888,26 @@ function parseScanText(text, resultEl){
   // Utiliser la map depuis la base mobile si disponible, sinon le dictionnaire statique
   const codeMap = _mobileDB?.ptcgoMap || SET_CODE_MAP;
 
-  for(const word of words){
-    if(codeMap[word]){
-      setCode = word;
-      setId = codeMap[word];
-      break;
+  // Chercher le code d'extension adjacent au numéro dans le texte
+  // Pattern : "CRI 073/086" ou "073/086 CRI"
+  const nearNumMatch = text.toUpperCase().match(/([A-Z]{2,5})\s+\d{1,3}\s*\/\s*\d{1,3}|\d{1,3}\s*\/\s*\d{1,3}\s+([A-Z]{2,5})/);
+  if(nearNumMatch){
+    const candidate = nearNumMatch[1] || nearNumMatch[2];
+    if(candidate && codeMap[candidate]){
+      setCode = candidate;
+      setId = codeMap[candidate];
+    }
+  }
+
+  // Fallback : chercher dans tous les mots mais en ignorant les mots courants
+  if(!setId){
+    const IGNORE = new Set(['PV','EX','GX','VX','HP','LV','XY','SV','DP','BW','SM','XP','AP','AR','SAR','RR','SR','CSR','CHR','UR','ACE','TAG','GEM','SIR','IR','HR','OCG','TCG','NEO','POP','GYM','EXP']);
+    for(const word of words){
+      if(!IGNORE.has(word) && codeMap[word]){
+        setCode = word;
+        setId = codeMap[word];
+        break;
+      }
     }
   }
 

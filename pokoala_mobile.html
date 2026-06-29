@@ -1860,39 +1860,94 @@ function getSymbol(setId, setName){
 }
 
 
-async function loadSeries(){
-  document.getElementById('series-list').innerHTML='<div class="loader">Chargement des séries…</div>';
+const SERIES_CACHE_KEY = 'pk_series_cache';
 
-  // 1. Utiliser la base mobile locale si disponible
+function loadSeriesFromCache(){
+  try{
+    const s = localStorage.getItem(SERIES_CACHE_KEY);
+    if(s){ const d = JSON.parse(s); return d?.length ? d : null; }
+  }catch(e){}
+  return null;
+}
+
+function saveSeriesCache(data){
+  try{ localStorage.setItem(SERIES_CACHE_KEY, JSON.stringify(data)); }catch(e){}
+}
+
+async function loadSeries(){
+  // 1. Base mobile locale
   if(_mobileDB?.series?.length){
     _seriesData = _mobileDB.series;
+    saveSeriesCache(_seriesData);
     renderSeries();
     return;
   }
 
-  // 2. Serveur local
+  // 2. Cache localStorage — affichage immédiat hors ligne
+  const cached = loadSeriesFromCache();
+  if(cached){
+    _seriesData = cached;
+    renderSeries();
+    showOfflineBanner();
+    // Tentative de mise à jour en arrière-plan
+    _refreshSeriesInBackground();
+    return;
+  }
+
+  // 3. Pas de cache — afficher le loader et charger en ligne
+  document.getElementById('series-list').innerHTML='<div class="loader">Chargement des séries…</div>';
+  await _fetchSeriesOnline();
+}
+
+function showOfflineBanner(){
+  const existing = document.getElementById('offline-banner');
+  if(existing) return;
+  const banner = document.createElement('div');
+  banner.id = 'offline-banner';
+  banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid rgba(255,215,0,0.3);border-radius:20px;padding:6px 14px;font-size:11px;color:rgba(255,255,255,0.5);z-index:999;pointer-events:none';
+  banner.textContent = '📦 Données en cache — hors ligne';
+  document.body.appendChild(banner);
+  setTimeout(()=>banner.remove(), 3000);
+}
+
+async function _refreshSeriesInBackground(){
+  try{
+    const r = await fetch(`${TCGDEX_FR}/series`, {signal: AbortSignal.timeout(5000)});
+    const list = await r.json();
+    const fresh = list.filter(s => s.sets?.length > 0).reverse();
+    if(fresh.length){
+      _seriesData = fresh;
+      saveSeriesCache(_seriesData);
+      // Pas de re-render si l'utilisateur est encore sur browse
+      const banner = document.getElementById('offline-banner');
+      if(banner) banner.remove();
+    }
+  }catch(e){}
+}
+
+async function _fetchSeriesOnline(){
+  // Serveur local
   try{
     const r = await fetch(`${LOCAL}/api/series`, {signal: AbortSignal.timeout(3000)});
     const d = await r.json();
     if(!d.loading && d.series?.length){
       _seriesData = d.series;
+      saveSeriesCache(_seriesData);
       renderSeries();
       return;
     }
-    if(d.loading){
-      setTimeout(loadSeries, 2000);
-      return;
-    }
+    if(d.loading){ setTimeout(loadSeries, 2000); return; }
   }catch(e){}
 
-  // 3. TCGdex en ligne (fallback)
+  // TCGdex en ligne
   try{
     const r = await fetch(`${TCGDEX_FR}/series`);
     const list = await r.json();
     _seriesData = list.filter(s => s.sets?.length > 0).reverse();
+    saveSeriesCache(_seriesData);
     renderSeries();
   }catch(e){
-    document.getElementById('series-list').innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Séries non disponibles.<br>Synchronise la base depuis le PC.</div>`;
+    document.getElementById('series-list').innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Séries non disponibles.<br>Connecte-toi pour charger les données.</div>`;
   }
 }
 

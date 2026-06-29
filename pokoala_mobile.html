@@ -761,6 +761,7 @@ body::before{
       <!-- Filtres -->
       <div class="boutique-filters" id="boutique-filters">
         <div class="boutique-pill active" onclick="filterBoutiques('all',this)">Tout</div>
+        <div class="boutique-pill" onclick="filterBoutiques('favs',this)">⭐ Favoris</div>
         <div class="boutique-pill" onclick="filterBoutiques('fr',this)">🇫🇷 France</div>
         <div class="boutique-pill" onclick="filterBoutiques('be',this)">🇧🇪 Belgique</div>
         <div class="boutique-pill" onclick="filterBoutiques('jp',this)">🇯🇵 Japon</div>
@@ -770,6 +771,36 @@ body::before{
 
       <!-- Liste boutiques -->
       <div class="card-block" id="boutiques-list"></div>
+
+      <!-- Formulaire ajout -->
+      <div class="achat-form" style="margin-top:12px">
+        <div class="achat-form-title">➕ Ajouter une boutique</div>
+        <div class="achat-field">
+          <label>Nom du site</label>
+          <input class="achat-input" id="bperso-nom" type="text" placeholder="masuperboutique.fr" autocomplete="off">
+        </div>
+        <div class="achat-field">
+          <label>URL</label>
+          <input class="achat-input" id="bperso-url" type="url" placeholder="https://..." autocomplete="off">
+        </div>
+        <div class="achat-row">
+          <div class="achat-field">
+            <label>Pays</label>
+            <select class="achat-input" id="bperso-tag">
+              <option value="fr">🇫🇷 France</option>
+              <option value="be">🇧🇪 Belgique</option>
+              <option value="jp">🇯🇵 Japon</option>
+              <option value="enseigne">🏬 Enseigne</option>
+              <option value="eu">🌍 Marketplace</option>
+            </select>
+          </div>
+          <div class="achat-field">
+            <label>Description</label>
+            <input class="achat-input" id="bperso-desc" type="text" placeholder="Optionnel" autocomplete="off">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="ajouterBoutiquePerso()" style="margin-top:4px">Ajouter</button>
+      </div>
 
       <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.2);margin-top:12px;padding:0 16px;line-height:1.6">
         Sources : pokescam.com · pokegourou.com · tradingcartes.com<br>Mise à jour juin 2026
@@ -1173,62 +1204,118 @@ function renderAchats(){
 // ── BOUTIQUES ──
 const BOUTIQUES = [
   // Marketplaces
-  { nom:'cardmarket.com',  url:'https://www.cardmarket.com/fr/Pokemon', tag:'eu',  flag:'🌍', desc:'Référence n°1 en Europe — cartes à l\'unité, protection acheteur', type:'mkt' },
-  { nom:'amazon.fr',       url:'https://www.amazon.fr/s?k=pokemon+cartes', tag:'fr', flag:'🇫🇷', desc:'Choix Pokescam — scellé officiel, vérifier vendeurs tiers', type:'mkt' },
-  { nom:'ebay.fr',         url:'https://www.ebay.fr/b/Cartes-Pokemon/183454', tag:'eu', flag:'🌍', desc:'Cartes rares, gradées, vintage — vérifier historique vendeur', type:'mkt' },
-  // FR spécialisées
-  { nom:'cartespokemon.com', url:'https://cartespokemon.com', tag:'fr', flag:'🇫🇷', desc:'4,4/5 Trustpilot · Displays JP/FR/CN/KR · 2200+ avis' },
-  { nom:'blazingtail.fr',    url:'https://www.blazingtail.fr', tag:'fr', flag:'🇫🇷', desc:'Paris · Scellé FR, cartes gradées PSA, rachat sous 48h' },
-  { nom:'kairyu.fr',         url:'https://kairyu.fr', tag:'fr', flag:'🇫🇷', desc:'Scellé FR/JP · Boutique bien notée communauté' },
-  { nom:'pokegourou.com',    url:'https://pokegourou.com', tag:'fr', flag:'🇫🇷', desc:'Référence anti-arnaques + boutique fiable' },
-  { nom:'ultrajeux.com',     url:'https://www.ultrajeux.com', tag:'fr', flag:'🇫🇷', desc:'Depuis 2004 · En ligne + physique · Vérifié Pokescam' },
-  { nom:'cardshunter.fr',    url:'https://www.cardshunter.fr', tag:'fr', flag:'🇫🇷', desc:'Singles, scellé · Vérifié Pokescam' },
-  { nom:'hamacards.com',     url:'https://www.hamacards.com', tag:'fr', flag:'🇫🇷', desc:'Scellé, singles · Vérifié Pokescam' },
-  { nom:'dracaugames.com',   url:'https://www.dracaugames.com', tag:'fr', flag:'🇫🇷', desc:'Haute-Marne · Géré par collectionneurs depuis 2019' },
-  { nom:'mgs-shop.fr',       url:'https://mgs-shop.fr', tag:'fr', flag:'🇫🇷', desc:'Scellé, accessoires · Vérifié Pokécardex' },
-  { nom:'investcollect.com', url:'https://investcollect.com', tag:'fr', flag:'🇫🇷', desc:'Orienté collectionneur et investisseur TCG' },
-  { nom:'destocktcg.fr',     url:'https://www.destocktcg.fr', tag:'fr', flag:'🇫🇷', desc:'Déstockage · Bonnes affaires sur stock ancien' },
-  { nom:'hikarudistribution.com', url:'https://hikarudistribution.com', tag:'fr', flag:'🇫🇷', desc:'Distribution, scellé · Vérifié Pokescam' },
-  { nom:'hitndrop.com',      url:'https://hitndrop.com', tag:'fr', flag:'🇫🇷', desc:'Drops limités · Vérifié Pokescam' },
-  { nom:'pokemoms.fr',       url:'https://pokemoms.fr', tag:'fr', flag:'🇫🇷', desc:'Active depuis 2019 · Livraison FR/EU · Vérifié Pokescam' },
-  { nom:'maxicartes.com',    url:'https://maxicartes.com', tag:'fr', flag:'🇫🇷', desc:'Scellé, singles · Référencé Tradingcartes' },
-  { nom:'pokemart.fr',       url:'https://www.pokemart.fr', tag:'fr', flag:'🇫🇷', desc:'Scellé FR · Référencé Tradingcartes' },
-  { nom:'pokedream.fr',      url:'https://www.pokedream.fr', tag:'fr', flag:'🇫🇷', desc:'Scellé, coffrets · Référencé Tradingcartes' },
-  { nom:'pokebinome.fr',     url:'https://pokebinome.fr', tag:'fr', flag:'🇫🇷', desc:'Singles, master set · Référencé Tradingcartes' },
-  { nom:'relictcg.com',      url:'https://www.relictcg.com', tag:'fr', flag:'🇫🇷', desc:'Cartes rares, singles · Référencé Tradingcartes' },
-  { nom:'pikastore.fr',      url:'https://www.pikastore.fr', tag:'fr', flag:'🇫🇷', desc:'Scellé FR/JP', warn:'⚠️ Retards précommandes signalés — tester petit panier' },
-  { nom:'bcd-jeux.fr',       url:'https://www.bcd-jeux.fr', tag:'fr', flag:'🇫🇷', desc:'En ligne + physique · Vérifié Pokescam' },
-  { nom:'parkage.com',       url:'https://www.parkage.com/fr', tag:'fr', flag:'🇫🇷', desc:'Multi-TCG, Pokémon inclus · Référencé Pokécardex' },
-  { nom:'ludifolie.com',     url:'https://www.ludifolie.com', tag:'fr', flag:'🇫🇷', desc:'Multi-TCG · Référencé Pokécardex' },
-  { nom:'lecoindesbarons.com',url:'https://lecoindesbarons.com', tag:'fr', flag:'🇫🇷', desc:'Scellé, singles · Référencé Tradingcartes' },
-  { nom:'fuji-store.fr',     url:'https://fuji-store.fr', tag:'fr', flag:'🇫🇷', desc:'Boutique physique Paris/Lille + ligne', warn:'⚠️ Prix jugés élevés par certains clients' },
+  { nom:'cardmarket.com',       url:'https://www.cardmarket.com/fr/Pokemon',                          tag:'eu',      flag:'🌍', desc:'Référence n°1 en Europe — cartes à l\'unité, protection acheteur', type:'mkt' },
+  { nom:'amazon.fr',            url:'https://www.amazon.fr/s?k=pokemon+cartes',                       tag:'enseigne',flag:'🏬', desc:'Choix Pokescam — scellé officiel, vérifier vendeurs tiers' },
+  { nom:'ebay.fr',              url:'https://www.ebay.fr/b/Cartes-Pokemon/183454',                    tag:'eu',      flag:'🌍', desc:'Cartes rares, gradées, vintage — vérifier historique vendeur', type:'mkt' },
+  // FR spécialisées — vérifiées Pokescam juin 2026
+  { nom:'cartespokemon.com',    url:'https://cartespokemon.com',                                      tag:'fr', flag:'🇫🇷', desc:'4,4/5 Trustpilot · Displays JP/FR/CN/KR · 2200+ avis' },
+  { nom:'blazingtail.fr',       url:'https://www.blazingtail.fr',                                     tag:'fr', flag:'🇫🇷', desc:'Paris · Scellé FR, cartes gradées PSA, rachat sous 48h' },
+  { nom:'tradingcardsxxx.fr',   url:'https://tradingcardsxxx.fr',                                     tag:'fr', flag:'🇫🇷', desc:'Scellé FR/JP · Livraison rapide et soignée · Programme fidélité' },
+  { nom:'fantasysphere.net',    url:'https://www.fantasysphere.net',                                  tag:'fr', flag:'🇫🇷', desc:'Toulouse · +11 ans d\'expérience · Boutique physique + ligne' },
+  { nom:'kairyu.fr',            url:'https://kairyu.fr',                                              tag:'fr', flag:'🇫🇷', desc:'Scellé FR/JP · Vérifié FrenchCollect' },
+  { nom:'pokegourou.com',       url:'https://pokegourou.com',                                         tag:'fr', flag:'🇫🇷', desc:'Référence anti-arnaques + boutique fiable' },
+  { nom:'ultrajeux.com',        url:'https://www.ultrajeux.com',                                      tag:'fr', flag:'🇫🇷', desc:'Depuis 2004 · En ligne + physique · Vérifié Pokescam' },
+  { nom:'cardshunter.fr',       url:'https://www.cardshunter.fr',                                     tag:'fr', flag:'🇫🇷', desc:'Singles, scellé · Vérifié Pokescam' },
+  { nom:'hamacards.com',        url:'https://www.hamacards.com',                                      tag:'fr', flag:'🇫🇷', desc:'Scellé, singles · Vérifié Pokescam' },
+  { nom:'dracaugames.com',      url:'https://www.dracaugames.com',                                    tag:'fr', flag:'🇫🇷', desc:'Haute-Marne · Géré par collectionneurs depuis 2019' },
+  { nom:'mgs-shop.fr',          url:'https://mgs-shop.fr',                                            tag:'fr', flag:'🇫🇷', desc:'Scellé, accessoires · Vérifié FrenchCollect' },
+  { nom:'destocktcg.fr',        url:'https://www.destocktcg.fr',                                      tag:'fr', flag:'🇫🇷', desc:'Déstockage · Bonnes affaires sur stock ancien · Vérifié Pokescam' },
+  { nom:'hikarudistribution.com',url:'https://hikarudistribution.com',                                tag:'fr', flag:'🇫🇷', desc:'Distribution scellé · Vérifié Pokescam' },
+  { nom:'hitndrop.com',         url:'https://hitndrop.com',                                           tag:'fr', flag:'🇫🇷', desc:'Drops limités · Vérifié Pokescam' },
+  { nom:'pokemoms.fr',          url:'https://pokemoms.fr',                                            tag:'fr', flag:'🇫🇷', desc:'Active depuis 2019 · Livraison FR/EU · Vérifié Pokescam' },
+  { nom:'maxicartes.com',       url:'https://maxicartes.com',                                         tag:'fr', flag:'🇫🇷', desc:'Scellé, singles · Vérifié Pokescam' },
+  { nom:'pokemart.fr',          url:'https://www.pokemart.fr',                                        tag:'fr', flag:'🇫🇷', desc:'Scellé FR' },
+  { nom:'pokedream.fr',         url:'https://www.pokedream.fr',                                       tag:'fr', flag:'🇫🇷', desc:'Scellé, coffrets' },
+  { nom:'pokebinome.fr',        url:'https://pokebinome.fr',                                          tag:'fr', flag:'🇫🇷', desc:'Singles, master set' },
+  { nom:'relictcg.com',         url:'https://www.relictcg.com',                                       tag:'fr', flag:'🇫🇷', desc:'Cartes rares, singles · Vérifié FrenchCollect' },
+  { nom:'pikastore.fr',         url:'https://www.pikastore.fr',                                       tag:'fr', flag:'🇫🇷', desc:'Scellé FR/JP', warn:'⚠️ Retards précommandes signalés' },
+  { nom:'pika-boutique.fr',     url:'https://pika-boutique.fr',                                       tag:'fr', flag:'🇫🇷', desc:'Scellé · Vérifié Pokescam' },
+  { nom:'vcollect.fr',          url:'https://vcollect.fr',                                            tag:'fr', flag:'🇫🇷', desc:'Ex-pokeseller14 · Scellé FR · Vérifié Pokescam' },
+  { nom:'bcd-jeux.fr',          url:'https://www.bcd-jeux.fr',                                        tag:'fr', flag:'🇫🇷', desc:'En ligne + physique · Vérifié Pokescam' },
+  { nom:'parkage.com',          url:'https://www.parkage.com/fr',                                     tag:'fr', flag:'🇫🇷', desc:'Multi-TCG · Vérifié Pokécardex' },
+  { nom:'ludifolie.com',        url:'https://www.ludifolie.com',                                      tag:'fr', flag:'🇫🇷', desc:'Multi-TCG · Vérifié Pokécardex' },
+  { nom:'lecoindesbarons.com',  url:'https://lecoindesbarons.com',                                    tag:'fr', flag:'🇫🇷', desc:'Scellé, singles · Vérifié Pokescam' },
+  { nom:'lebordelmagique.com',  url:'https://lebordelmagique.com',                                    tag:'fr', flag:'🇫🇷', desc:'Chambly (60) · Boutique physique + ligne · Vérifié Pokescam' },
+  { nom:'lemantcg.fr',          url:'https://lemantcg.fr',                                            tag:'fr', flag:'🇫🇷', desc:'Scellé FR · Vérifié Pokescam' },
+  { nom:'lesgentlemendujeu.com',url:'https://lesgentlemendujeu.com',                                  tag:'fr', flag:'🇫🇷', desc:'Multi-TCG · Vérifié Pokescam' },
+  { nom:'philibertnet.com',     url:'https://www.philibertnet.com',                                   tag:'fr', flag:'🇫🇷', desc:'Jeux de société + TCG · Vérifié Pokescam' },
+  { nom:'play-in.com',          url:'https://play-in.com/fr',                                         tag:'fr', flag:'🇫🇷', desc:'Multi-TCG · Vérifié Pokescam' },
+  { nom:'plazatcg.com',         url:'https://plazatcg.com',                                           tag:'fr', flag:'🇫🇷', desc:'Scellé FR/JP · Vérifié Pokescam' },
+  { nom:'poke-geek.fr',         url:'https://www.poke-geek.fr',                                       tag:'fr', flag:'🇫🇷', desc:'Scellé FR · Vérifié Pokescam' },
+  { nom:'pokuji.fr',            url:'https://pokuji.fr',                                              tag:'fr', flag:'🇫🇷', desc:'403+ avis vérifiés · Livraison soignée' },
+  { nom:'guizettefamily.com',   url:'https://guizettefamily.com',                                     tag:'fr', flag:'🇫🇷', desc:'Scellé · Vérifié Pokescam' },
+  { nom:'fuji-store.fr',        url:'https://fuji-store.fr',                                          tag:'fr', flag:'🇫🇷', desc:'Paris/Lille · Physique + ligne · Gradation PSA', warn:'⚠️ Prix au-dessus du marché signalés' },
+  { nom:'investcollect.com',    url:'https://investcollect.com',                                      tag:'fr', flag:'🇫🇷', desc:'Orienté collectionneur et investisseur TCG' },
   // BE spécialisées
-  { nom:'keytwo.be',         url:'https://keytwo.be', tag:'be', flag:'🇧🇪', desc:'N°1 Belgique · Cartes à l\'unité, ETB, displays' },
-  { nom:'outpostbrussels.be',url:'https://outpostbrussels.be', tag:'be', flag:'🇧🇪', desc:'Bruxelles · Spécialiste TCG historique, salle de jeu' },
-  { nom:'mavapokemon.com',   url:'https://www.mavapokemon.com', tag:'be', flag:'🇧🇪', desc:'Bruxelles · 100% Pokémon · Boutique physique + ligne' },
-  { nom:'belgiumcardsgame.com',url:'https://www.belgiumcardsgame.com', tag:'be', flag:'🇧🇪', desc:'Welkenraedt · En ligne + physique depuis jan. 2025' },
-  { nom:'leptitpoucet.be',   url:'https://www.leptitpoucet.be', tag:'be', flag:'🇧🇪', desc:'Soignies · Revendeur officiel Pokémon FR en Belgique' },
-  { nom:'ilantcgbelgium.com',url:'https://ilantcgbelgium.com', tag:'be', flag:'🇧🇪', desc:'TCG belgique · Précommandes exclusives, livraison EU' },
-  { nom:'fantasysphere.net', url:'https://shop.fantasysphere.net', tag:'be', flag:'🇧🇪', desc:'Grosse plateforme TCG francophone reconnue' },
-  // Enseignes FR
-  { nom:'fnac.com',          url:'https://www.fnac.com/Search/Result.aspx?SearchTerms=pokemon+cartes', tag:'enseigne', flag:'🏬', desc:'Vérifié Pokescam · Large stock officiel · Click & Collect' },
-  { nom:'cultura.com',       url:'https://www.cultura.com/c/cartes-a-collectionner/pokemon', tag:'enseigne', flag:'🏬', desc:'Vérifié Pokescam · Bonne dispo sorties récentes' },
-  { nom:'joueclub.fr',       url:'https://www.joueclub.fr/catalogsearch/result/?q=pokemon', tag:'enseigne', flag:'🏬', desc:'Revendeur officiel · Vérifié Pokescam' },
-  { nom:'lagranderecre.fr',  url:'https://www.lagranderecre.fr/jeux-de-cartes-a-collectionner/pokemon.html', tag:'enseigne', flag:'🏬', desc:'Revendeur officiel · Référencé Tradingcartes' },
-  { nom:'king-jouet.com',    url:'https://www.king-jouet.com/jeux-jouets/pokemon/m2.htm', tag:'enseigne', flag:'🏬', desc:'Revendeur officiel' },
-  { nom:'micromania.fr',     url:'https://www.micromania.fr/cartes-a-collectionner-pokemon', tag:'enseigne', flag:'🏬', desc:'Produits neufs sous blister · Livraison rapide' },
-  { nom:'e.leclerc',         url:'https://www.e.leclerc', tag:'enseigne', flag:'🏬', desc:'Vérifié Pokescam · Bons prix sur sorties courantes' },
-  { nom:'smartoys.be',       url:'https://www.smartoys.be/catalog/category.php?cPath=360', tag:'enseigne', flag:'🏬', desc:'Belgique · Grande chaîne jeux · Pokémon officiel' },
-  { nom:'mediamarkt.be',     url:'https://www.mediamarkt.be/fr/category/carte-pokemon-326.html', tag:'enseigne', flag:'🏬', desc:'Belgique · Livraison le lendemain disponible' },
+  { nom:'keytwo.be',            url:'https://keytwo.be',                                              tag:'be', flag:'🇧🇪', desc:'N°1 Belgique · Cartes à l\'unité, ETB, displays' },
+  { nom:'outpostbrussels.be',   url:'https://outpostbrussels.be',                                     tag:'be', flag:'🇧🇪', desc:'Bruxelles · Spécialiste TCG historique, salle de jeu' },
+  { nom:'mavapokemon.com',      url:'https://www.mavapokemon.com',                                    tag:'be', flag:'🇧🇪', desc:'Bruxelles · 100% Pokémon · Boutique physique + ligne' },
+  { nom:'belgiumcardsgame.com', url:'https://www.belgiumcardsgame.com',                               tag:'be', flag:'🇧🇪', desc:'Welkenraedt · En ligne + physique depuis jan. 2025' },
+  { nom:'leptitpoucet.be',      url:'https://www.leptitpoucet.be',                                    tag:'be', flag:'🇧🇪', desc:'Soignies · Revendeur officiel Pokémon FR en Belgique' },
+  { nom:'ilantcgbelgium.com',   url:'https://ilantcgbelgium.com',                                     tag:'be', flag:'🇧🇪', desc:'Précommandes exclusives · Livraison EU' },
+  { nom:'jelowstore.com',       url:'https://jelowstore.com',                                         tag:'be', flag:'🇧🇪', desc:'Frais de port offerts dès 100€ · Vérifié Pokécardex' },
+  // Enseignes
+  { nom:'fnac.com',             url:'https://www.fnac.com/Search/Result.aspx?SearchTerms=pokemon+cartes', tag:'enseigne', flag:'🏬', desc:'Vérifié Pokescam · Large stock officiel · Click & Collect' },
+  { nom:'cultura.com',          url:'https://www.cultura.com/c/cartes-a-collectionner/pokemon',       tag:'enseigne', flag:'🏬', desc:'Vérifié Pokescam · Bonne dispo sorties récentes' },
+  { nom:'joueclub.fr',          url:'https://www.joueclub.fr/catalogsearch/result/?q=pokemon',        tag:'enseigne', flag:'🏬', desc:'Revendeur officiel · Vérifié Pokescam' },
+  { nom:'maisondelapresse.com', url:'https://www.maisondelapresse.com',                               tag:'enseigne', flag:'🏬', desc:'Revendeur officiel · Vérifié Pokescam' },
+  { nom:'lagranderecre.fr',     url:'https://www.lagranderecre.fr/jeux-de-cartes-a-collectionner/pokemon.html', tag:'enseigne', flag:'🏬', desc:'Revendeur officiel · Vérifié Pokescam' },
+  { nom:'king-jouet.com',       url:'https://www.king-jouet.com/jeux-jouets/pokemon/m2.htm',          tag:'enseigne', flag:'🏬', desc:'Revendeur officiel · Vérifié Pokescam' },
+  { nom:'micromania.fr',        url:'https://www.micromania.fr/cartes-a-collectionner-pokemon',       tag:'enseigne', flag:'🏬', desc:'Produits neufs sous blister · Vérifié Pokescam' },
+  { nom:'e.leclerc',            url:'https://www.e.leclerc',                                          tag:'enseigne', flag:'🏬', desc:'Vérifié Pokescam · Bons prix sur sorties courantes' },
+  { nom:'smythstoys.com',       url:'https://www.smythstoys.com/fr/fr-fr/jeux-et-jouets/pokemon',     tag:'enseigne', flag:'🏬', desc:'Chaîne européenne · Revendeur officiel' },
+  { nom:'smartoys.be',          url:'https://www.smartoys.be/catalog/category.php?cPath=360',         tag:'enseigne', flag:'🏬', desc:'Belgique · Grande chaîne jeux · Pokémon officiel' },
+  { nom:'mediamarkt.be',        url:'https://www.mediamarkt.be/fr/category/carte-pokemon-326.html',   tag:'enseigne', flag:'🏬', desc:'Belgique · Livraison le lendemain disponible' },
   // JP import
-  { nom:'cardotaku.com',     url:'https://cardotaku.com', tag:'jp', flag:'🇯🇵', desc:'Spécialiste TCG japonais en français · Référencé Tradingcartes' },
-  { nom:'meccha-japan.com',  url:'https://meccha-japan.com/fr/', tag:'jp', flag:'🇯🇵', desc:'Import JP · Interface français · Délais à anticiper' },
-  { nom:'plazajapan.com',    url:'https://www.plazajapan.com', tag:'jp', flag:'🇯🇵', desc:'Import JP · Référencé Tradingcartes' },
-  { nom:'solarisjapan.com',  url:'https://solarisjapan.com', tag:'jp', flag:'🇯🇵', desc:'Proxy + achat direct JP · Référencé Tradingcartes' },
-  { nom:'nin-nin-game.com',  url:'https://www.nin-nin-game.com', tag:'jp', flag:'🇯🇵', desc:'Import JP multi-produits · Référencé Tradingcartes' },
-  { nom:'pokeninjapan.store',url:'https://pokeninjapan.store', tag:'jp', flag:'🇯🇵', desc:'Spécialiste Pokémon JP · Référencé Tradingcartes' },
-  { nom:'tokyocards.com',    url:'https://tokyocards.com', tag:'jp', flag:'🇯🇵', desc:'Import JP, singles et scellé · Référencé Tradingcartes' },
+  { nom:'cardotaku.com',        url:'https://cardotaku.com',                                          tag:'jp', flag:'🇯🇵', desc:'Spécialiste TCG japonais en français' },
+  { nom:'meccha-japan.com',     url:'https://meccha-japan.com/fr/',                                   tag:'jp', flag:'🇯🇵', desc:'Import JP · Interface français · Délais à anticiper' },
+  { nom:'plazajapan.com',       url:'https://www.plazajapan.com',                                     tag:'jp', flag:'🇯🇵', desc:'Import JP · Référencé Tradingcartes' },
+  { nom:'solarisjapan.com',     url:'https://solarisjapan.com',                                       tag:'jp', flag:'🇯🇵', desc:'Proxy + achat direct JP' },
+  { nom:'nin-nin-game.com',     url:'https://www.nin-nin-game.com',                                   tag:'jp', flag:'🇯🇵', desc:'Import JP multi-produits' },
+  { nom:'pokeninjapan.store',   url:'https://pokeninjapan.store',                                     tag:'jp', flag:'🇯🇵', desc:'Spécialiste Pokémon JP' },
+  { nom:'tokyocards.com',       url:'https://tokyocards.com',                                         tag:'jp', flag:'🇯🇵', desc:'Import JP, singles et scellé' },
 ];
+
+const BOUTIQUES_PERSO_KEY = 'pk_boutiques_perso';
+const BOUTIQUES_FAVORIS_KEY = 'pk_boutiques_favoris';
+
+function loadBoutiquesPerso(){ try{ const s=localStorage.getItem(BOUTIQUES_PERSO_KEY); return s?JSON.parse(s):[]; }catch(e){ return []; } }
+function saveBoutiquesPerso(list){ try{ localStorage.setItem(BOUTIQUES_PERSO_KEY,JSON.stringify(list)); }catch(e){} }
+function loadFavoris(){ try{ const s=localStorage.getItem(BOUTIQUES_FAVORIS_KEY); return s?JSON.parse(s):[]; }catch(e){ return []; } }
+function saveFavoris(list){ try{ localStorage.setItem(BOUTIQUES_FAVORIS_KEY,JSON.stringify(list)); }catch(e){} }
+
+function toggleFavori(nom, e){
+  e.preventDefault(); e.stopPropagation();
+  let favs = loadFavoris();
+  if(favs.includes(nom)) favs = favs.filter(f=>f!==nom);
+  else favs.push(nom);
+  saveFavoris(favs);
+  renderBoutiques();
+}
+
+function ajouterBoutiquePerso(){
+  const nom = document.getElementById('bperso-nom').value.trim();
+  const url = document.getElementById('bperso-url').value.trim();
+  const tag = document.getElementById('bperso-tag').value;
+  const desc = document.getElementById('bperso-desc').value.trim();
+  if(!nom||!url){ toast('Nom et URL obligatoires'); return; }
+  const list = loadBoutiquesPerso();
+  const flag = {fr:'🇫🇷',be:'🇧🇪',jp:'🇯🇵',enseigne:'🏬',eu:'🌍'}[tag]||'🇫🇷';
+  list.push({ id:Date.now(), nom, url: url.startsWith('http')?url:'https://'+url, tag, flag, desc:desc||'Boutique personnalisée', perso:true });
+  saveBoutiquesPerso(list);
+  document.getElementById('bperso-nom').value='';
+  document.getElementById('bperso-url').value='';
+  document.getElementById('bperso-desc').value='';
+  toast('✅ Boutique ajoutée');
+  renderBoutiques();
+}
+
+function supprimerBoutiquePerso(id, e){
+  e.preventDefault(); e.stopPropagation();
+  const list = loadBoutiquesPerso().filter(b=>b.id!==id);
+  saveBoutiquesPerso(list);
+  renderBoutiques();
+}
 
 let _boutiqueFiltreActif = 'all';
 
@@ -1240,28 +1327,45 @@ function filterBoutiques(tag, el){
 }
 
 function renderBoutiques(){
-  const list = _boutiqueFiltreActif==='all'
-    ? BOUTIQUES
-    : BOUTIQUES.filter(b=> _boutiqueFiltreActif==='eu'
-        ? b.type==='mkt'
-        : b.tag===_boutiqueFiltreActif);
+  const favs = loadFavoris();
+  const perso = loadBoutiquesPerso();
+  const all = [...BOUTIQUES, ...perso];
+
+  let list;
+  if(_boutiqueFiltreActif==='favs'){
+    list = all.filter(b=>favs.includes(b.nom));
+  } else if(_boutiqueFiltreActif==='all'){
+    list = all;
+  } else if(_boutiqueFiltreActif==='eu'){
+    list = all.filter(b=>b.type==='mkt');
+  } else {
+    list = all.filter(b=>b.tag===_boutiqueFiltreActif);
+  }
+
+  // Favoris en tête
+  list = [...list.filter(b=>favs.includes(b.nom)), ...list.filter(b=>!favs.includes(b.nom))];
 
   const tagClass = { fr:'btag-fr', be:'btag-be', jp:'btag-jp', eu:'btag-eu', enseigne:'btag-eu' };
   const tagLabel = { fr:'FR', be:'BE', jp:'JP', eu:'EU', enseigne:'FR/BE' };
 
+  const starSVG = (isFav) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="${isFav?'#FFD700':'none'}" stroke="${isFav?'#FFD700':'rgba(255,255,255,0.25)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+
   const el = document.getElementById('boutiques-list');
   if(!el) return;
-  el.innerHTML = list.map(b=>`
+
+  el.innerHTML = list.length ? list.map(b=>`
     <a class="boutique-item" href="${b.url}" target="_blank" rel="noopener">
       <div class="boutique-flag">${b.flag}</div>
       <div class="boutique-info">
-        <div class="boutique-name">${b.nom}</div>
+        <div class="boutique-name">${b.nom}${b.perso?'<span style="font-size:9px;color:rgba(255,215,0,0.6);margin-left:6px">PERSO</span>':''}</div>
         <div class="boutique-desc">${b.desc}</div>
         ${b.warn?`<div class="boutique-warn">${b.warn}</div>`:''}
       </div>
       <span class="boutique-tag ${tagClass[b.tag]||'btag-fr'}">${tagLabel[b.tag]||'FR'}</span>
-      <span class="boutique-arrow">›</span>
-    </a>`).join('');
+      <button onclick="toggleFavori('${b.nom}',event)" style="background:none;border:none;padding:4px;cursor:pointer;flex-shrink:0">${starSVG(favs.includes(b.nom))}</button>
+      ${b.perso?`<button onclick="supprimerBoutiquePerso(${b.id},event)" style="background:none;border:none;color:rgba(255,255,255,0.2);font-size:13px;cursor:pointer;padding:4px;flex-shrink:0">✕</button>`:'<span class="boutique-arrow">›</span>'}
+    </a>`).join('')
+  : '<div style="padding:24px;text-align:center;font-size:12px;color:rgba(255,255,255,0.25)">Aucune boutique dans cette catégorie</div>';
 }
 
 // ── BASE LOCALE MOBILE ──
@@ -1446,7 +1550,7 @@ function renderHome(){
     <div class="home-tile" onclick="openAchatsModal()">
       <div class="home-tile-icon">${SVG_ACHATS}</div>
       <div class="home-tile-val">${enCours}</div>
-      <div class="home-tile-lbl">Achats en cours</div>
+      <div class="home-tile-lbl">Achats</div>
     </div>
     <div class="home-tile" onclick="openCollOverlay('forsale')">
       <div class="home-tile-icon">${getSVG_VENTE("s"+Date.now())}</div>

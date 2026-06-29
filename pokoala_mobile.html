@@ -550,6 +550,128 @@ body::before{
 ::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+
+/* ── ONGLET ACHATS ── */
+.achat-form{
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:var(--radius);
+  padding:14px;margin-bottom:12px;
+}
+.achat-form-title{
+  font-size:11px;font-weight:800;color:rgba(255,255,255,0.4);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;
+}
+.achat-field{margin-bottom:10px}
+.achat-field label{
+  display:block;font-size:10px;font-weight:700;
+  color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:.06em;
+  margin-bottom:5px;
+}
+.achat-input{
+  width:100%;padding:10px 12px;border-radius:var(--radius-xs);
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  color:#fff;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;
+  outline:none;-webkit-appearance:none;
+}
+.achat-input:focus{border-color:rgba(255,215,0,0.4);background:rgba(255,255,255,0.09)}
+.achat-input::placeholder{color:rgba(255,255,255,0.2);font-weight:400}
+.achat-row{display:flex;gap:8px}
+.achat-row .achat-field{flex:1}
+
+/* Liste commandes */
+.commande-item{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.commande-item:last-child{border-bottom:none}
+.commande-item.recu{opacity:.42}
+.commande-check{
+  width:22px;height:22px;border-radius:6px;flex-shrink:0;
+  border:2px solid rgba(255,215,0,0.45);background:rgba(255,215,0,0.05);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .15s;
+}
+.commande-check.done{
+  background:rgba(74,222,128,0.2);border-color:#4ade80;
+}
+.commande-check svg{display:none}
+.commande-check.done svg{display:block}
+.commande-info{flex:1;min-width:0}
+.commande-produit{
+  font-size:13px;font-weight:700;color:rgba(255,255,255,0.88);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.commande-site{font-size:10px;color:rgba(255,255,255,0.38);margin-top:2px}
+.commande-prix{
+  font-size:13px;font-weight:800;color:var(--yellow2);flex-shrink:0;
+}
+.commande-del{
+  width:28px;height:28px;border-radius:50%;background:none;border:none;
+  color:rgba(255,255,255,0.18);font-size:14px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.commande-del:active{color:#f87171}
+
+/* Section historique */
+.achat-section-hdr{
+  font-size:10px;font-weight:800;color:rgba(255,255,255,0.28);
+  text-transform:uppercase;letter-spacing:.08em;
+  padding:10px 14px 6px;
+}
+
+/* ── ONGLET BOUTIQUES ── */
+.boutique-filters{
+  display:flex;gap:6px;margin-bottom:10px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  padding-bottom:2px;
+}
+.boutique-filters::-webkit-scrollbar{display:none}
+.boutique-pill{
+  flex-shrink:0;padding:5px 13px;border-radius:20px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  font-size:11px;font-weight:800;color:rgba(255,255,255,0.4);cursor:pointer;
+  letter-spacing:.03em;
+}
+.boutique-pill.active{
+  background:rgba(168,24,0,0.25);border-color:rgba(204,0,0,0.5);
+  color:var(--yellow2);
+}
+.boutique-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  cursor:pointer;text-decoration:none;
+}
+.boutique-item:last-child{border-bottom:none}
+.boutique-item:active{background:rgba(255,255,255,0.04)}
+.boutique-flag{
+  width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  background:rgba(255,255,255,0.05);
+}
+.boutique-info{flex:1;min-width:0}
+.boutique-name{
+  font-size:13px;font-weight:700;color:rgba(255,255,255,0.88);
+}
+.boutique-desc{
+  font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.boutique-tag{
+  flex-shrink:0;font-size:9px;font-weight:800;padding:2px 7px;
+  border-radius:8px;letter-spacing:.03em;
+}
+.btag-fr{background:rgba(0,90,200,0.2);color:#7aadff}
+.btag-be{background:rgba(200,0,0,0.15);color:#f87171}
+.btag-jp{background:rgba(0,160,80,0.15);color:#6dc46d}
+.btag-eu{background:rgba(180,130,0,0.18);color:var(--yellow2)}
+.btag-mkt{background:rgba(150,0,200,0.15);color:#e060ff}
+.boutique-arrow{color:rgba(255,255,255,0.18);font-size:12px;flex-shrink:0}
+.boutique-warn{
+  font-size:9px;color:#f4a261;margin-top:2px;
+}
 </style>
 </head>
 <body>
@@ -634,6 +756,26 @@ body::before{
       </div>
     </div>
 
+    <!-- TAB BOUTIQUES -->
+    <div class="tab-page" id="tab-boutiques">
+      <!-- Filtres -->
+      <div class="boutique-filters" id="boutique-filters">
+        <div class="boutique-pill active" onclick="filterBoutiques('all',this)">Tout</div>
+        <div class="boutique-pill" onclick="filterBoutiques('fr',this)">🇫🇷 France</div>
+        <div class="boutique-pill" onclick="filterBoutiques('be',this)">🇧🇪 Belgique</div>
+        <div class="boutique-pill" onclick="filterBoutiques('jp',this)">🇯🇵 Japon</div>
+        <div class="boutique-pill" onclick="filterBoutiques('eu',this)">🌍 Marketplace</div>
+        <div class="boutique-pill" onclick="filterBoutiques('enseigne',this)">🏬 Enseignes</div>
+      </div>
+
+      <!-- Liste boutiques -->
+      <div class="card-block" id="boutiques-list"></div>
+
+      <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.2);margin-top:12px;padding:0 16px;line-height:1.6">
+        Sources : pokescam.com · pokegourou.com · tradingcartes.com<br>Mise à jour juin 2026
+      </div>
+    </div>
+
   </div><!-- /content -->
 
   <!-- BOTTOM NAV -->
@@ -660,6 +802,13 @@ body::before{
         <circle cx="12" cy="13" r="4" stroke="rgba(255,255,255,0.28)" stroke-width="1.8"/>
       </svg>
       Scanner
+    </button>
+    <button class="nav-btn" id="nav-boutiques" onclick="switchTab('boutiques')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="rgba(255,255,255,0.28)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="9 22 9 12 15 12 15 22" stroke="rgba(255,255,255,0.28)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Boutiques
     </button>
   </nav>
 
@@ -845,6 +994,50 @@ body::before{
   </div>
 </div>
 
+<!-- ACHATS MODAL -->
+<div class="modal-bg" id="achats-modal" onclick="if(event.target===this)closeModal('achats-modal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">🛒 Commandes</span>
+      <button class="modal-close" onclick="closeModal('achats-modal')">✕</button>
+    </div>
+
+    <!-- Formulaire -->
+    <div style="padding:4px 16px 12px">
+      <div class="achat-field">
+        <label>Produit</label>
+        <input class="achat-input" id="achat-produit" type="text" placeholder="Display, ETB, Coffret…" autocomplete="off">
+      </div>
+      <div class="achat-row">
+        <div class="achat-field">
+          <label>Site</label>
+          <input class="achat-input" id="achat-site" type="text" placeholder="blazingtail.fr…" autocomplete="off">
+        </div>
+        <div class="achat-field">
+          <label>Prix (€)</label>
+          <input class="achat-input" id="achat-prix" type="number" inputmode="decimal" placeholder="0.00" min="0" step="0.01">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="ajouterCommande()" style="margin-top:8px">
+        Ajouter la commande
+      </button>
+    </div>
+
+    <!-- Commandes en cours -->
+    <div style="border-top:1px solid rgba(255,255,255,0.06)">
+      <div class="achat-section-hdr">En cours</div>
+      <div class="card-block" style="margin:0 12px 10px"><div id="achat-encours-list"></div></div>
+    </div>
+
+    <!-- Historique -->
+    <div style="border-top:1px solid rgba(255,255,255,0.06)">
+      <div class="achat-section-hdr">Historique — Reçu</div>
+      <div class="card-block" style="margin:0 12px 10px"><div id="achat-recu-list"></div></div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -884,6 +1077,7 @@ function switchTab(tab){
   document.body.style.overflow='';
   if(tab==='home') renderHome();
   if(tab==='browse'&&!_seriesData.length) loadSeries();
+  if(tab==='boutiques') renderBoutiques();
 }
 
 // ── HOME ──
@@ -892,6 +1086,184 @@ const SVG_DOUBLES=`<svg width="96" height="70" viewBox="-5 -5 130 100" xmlns="ht
 function getSVG_VALEUR(uid){return`<svg width="80" height="60" viewBox="-15 -10 150 115" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="lG${uid}" cx="35%" cy="30%" r="65%"><stop offset="0%" stop-color="rgba(180,220,255,0.5)"/><stop offset="100%" stop-color="rgba(50,100,180,0.15)"/></radialGradient><radialGradient id="gR${uid}" cx="50%" cy="50%" r="50%"><stop offset="70%" stop-color="#C8A800"/><stop offset="100%" stop-color="#8B6000"/></radialGradient></defs><g transform="rotate(-15, 22, 38) translate(2, 5)"><rect x="0" y="0" width="38" height="52" rx="3" fill="#1a1a2e" stroke="#C8A800" stroke-width="1"/><rect x="2" y="2" width="34" height="48" rx="2" fill="#122d54"/><rect x="2" y="2" width="34" height="9" rx="2" fill="#4a1a8c"/><circle cx="7" cy="6.5" r="3.5" fill="#FF9900" stroke="#C87000" stroke-width="0.4"/><rect x="25" y="3" width="10" height="5" rx="1.5" fill="#CC0000"/><rect x="3" y="13" width="32" height="20" rx="2" fill="#2a3a5a"/><circle cx="15.5" cy="20" r="6.5" fill="#FFD700"/><circle cx="13" cy="18.5" r="1.8" fill="#1a1a1a"/><circle cx="18" cy="18.5" r="1.8" fill="#1a1a1a"/><circle cx="13.7" cy="17.8" r="0.7" fill="white"/><circle cx="18.7" cy="17.8" r="0.7" fill="white"/><ellipse cx="15.5" cy="26" rx="5.5" ry="4" fill="#FFD700"/><rect x="3" y="35" width="32" height="5" rx="1" fill="#2a2a4a"/><rect x="3" y="42" width="32" height="5" rx="1" fill="#2a2a4a"/></g><g transform="translate(41, 2)"><rect x="0" y="0" width="38" height="52" rx="3" fill="#1a1a2e" stroke="#C8A800" stroke-width="1"/><rect x="2" y="2" width="34" height="48" rx="2" fill="#122d54"/><rect x="2" y="2" width="34" height="9" rx="2" fill="#4a1a8c"/><circle cx="7" cy="6.5" r="3.5" fill="#FF9900"/><rect x="25" y="3" width="10" height="5" rx="1.5" fill="#CC0000"/><ellipse cx="19" cy="26" rx="11" ry="7" fill="#EDD9A3"/><ellipse cx="19" cy="26" rx="8" ry="5" fill="#F5EDD0"/><ellipse cx="19" cy="18" rx="7.5" ry="7.5" fill="#B8732A"/><ellipse cx="16.5" cy="18" rx="2.2" ry="3" fill="#1a0a00"/><ellipse cx="21.5" cy="18" rx="2.2" ry="3" fill="#1a0a00"/><circle cx="17.2" cy="17" r="0.9" fill="white"/><circle cx="22.2" cy="17" r="0.9" fill="white"/><rect x="3" y="35" width="32" height="5" rx="1" fill="#2a2a4a"/><rect x="3" y="42" width="32" height="5" rx="1" fill="#2a2a4a"/></g><circle cx="60" cy="62" r="20" fill="none" stroke="url(#gR${uid})" stroke-width="4"/><circle cx="60" cy="62" r="17" fill="url(#lG${uid})"/><ellipse cx="52" cy="54" rx="6" ry="3.5" fill="rgba(255,255,255,0.25)" transform="rotate(-30 52 54)"/><text x="60" y="69" text-anchor="middle" font-family="Arial Black" font-size="16" font-weight="900" fill="#1a3a88">€</text><line x1="75" y1="77" x2="92" y2="88" stroke="#8B6000" stroke-width="6" stroke-linecap="round"/><line x1="75" y1="77" x2="92" y2="88" stroke="#C8A800" stroke-width="4" stroke-linecap="round"/></svg>`;}
 
 function getSVG_VENTE(uid){return`<svg width="58" height="58" viewBox="-5 -5 90 90" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wG${uid}" cx="50%" cy="30%" r="70%"><stop offset="0%" stop-color="#8B5E3C"/><stop offset="100%" stop-color="#5C3A1E"/></radialGradient><linearGradient id="rG${uid}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#6B0000"/><stop offset="100%" stop-color="#3D0000"/></linearGradient><linearGradient id="cG${uid}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#2a2a4a"/><stop offset="100%" stop-color="#111128"/></linearGradient></defs><rect x="11" y="26" width="5" height="46" rx="2" fill="url(#wG${uid})"/><rect x="64" y="26" width="5" height="46" rx="2" fill="url(#wG${uid})"/><path d="M7 32 L73 32 L67 16 L13 16 Z" fill="url(#rG${uid})"/><path d="M7 32 Q11 38 15 32 Q19 38 23 32 Q27 38 31 32 Q35 38 39 32 Q43 38 47 32 Q51 38 55 32 Q59 38 63 32 Q67 38 73 32" fill="#FFD700" stroke="#C8A000" stroke-width="0.5"/><rect x="7" y="31" width="66" height="3" fill="#FFD700"/><rect x="6" y="48" width="68" height="22" rx="3" fill="url(#cG${uid})" stroke="#C8A800" stroke-width="1"/><g transform="rotate(-8 24 52)"><rect x="14" y="38" width="18" height="25" rx="2.5" fill="#0d2444" stroke="#C8A800" stroke-width="1"/><rect x="16" y="40" width="14" height="21" rx="1.5" fill="#122d54"/><path d="M16 49.5 A7 7 0 0 1 30 49.5 Z" fill="#cc0000"/><path d="M16 49.5 A7 7 0 0 0 30 49.5 Z" fill="#f0f0f0"/><circle cx="23" cy="49.5" r="3" fill="white" stroke="#111" stroke-width="1"/><circle cx="23" cy="49.5" r="1.5" fill="#ddd"/></g><g transform="translate(31, 36)"><rect x="0" y="0" width="18" height="25" rx="2.5" fill="#0d2444" stroke="#C8A800" stroke-width="1"/><rect x="2" y="2" width="14" height="21" rx="1.5" fill="#122d54"/><path d="M2 12.5 A7 7 0 0 1 16 12.5 Z" fill="#cc0000"/><path d="M2 12.5 A7 7 0 0 0 16 12.5 Z" fill="#f0f0f0"/><circle cx="9" cy="12.5" r="3" fill="white" stroke="#111" stroke-width="1"/><circle cx="9" cy="12.5" r="1.5" fill="#ddd"/></g><g transform="rotate(8 56 52)"><rect x="48" y="38" width="18" height="25" rx="2.5" fill="#0d2444" stroke="#C8A800" stroke-width="1"/><rect x="50" y="40" width="14" height="21" rx="1.5" fill="#122d54"/><path d="M50 49.5 A7 7 0 0 1 64 49.5 Z" fill="#cc0000"/><path d="M50 49.5 A7 7 0 0 0 64 49.5 Z" fill="#f0f0f0"/><circle cx="57" cy="49.5" r="3" fill="white" stroke="#111" stroke-width="1"/><circle cx="57" cy="49.5" r="1.5" fill="#ddd"/></g><rect x="52" y="14" width="18" height="11" rx="2.5" fill="#FFD700" stroke="#C8A000" stroke-width="0.8"/><text x="61" y="22" text-anchor="middle" font-family="Arial Black" font-size="7" font-weight="900" fill="#1a1a2e">€</text></svg>`;}
+const SVG_ACHATS=`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="70" viewBox="0 0 512 512"><defs><style>.navy{fill:#11294d}.gold{fill:#f4c542}.red{fill:#e53935}.white{fill:#ffffff}.stroke{stroke:#0b1f3b;stroke-width:8;stroke-linejoin:round;stroke-linecap:round}.goldstroke{stroke:#f4c542;stroke-width:6;fill:none}</style></defs><g transform="translate(125 250) rotate(-18)"><rect x="-75" y="-110" width="150" height="220" rx="16" class="navy stroke"/><rect x="-62" y="-97" width="124" height="194" rx="10" class="goldstroke"/><circle cx="0" cy="0" r="42" class="white stroke"/><path d="M-42 0 A42 42 0 0 1 42 0 L42 -2 L-42 -2 Z" class="red"/><line x1="-42" y1="0" x2="42" y2="0" class="stroke"/><circle cx="0" cy="0" r="11" class="white stroke"/></g><g transform="translate(256 210)"><rect x="-75" y="-110" width="150" height="220" rx="16" class="navy stroke"/><rect x="-62" y="-97" width="124" height="194" rx="10" class="goldstroke"/><circle cx="0" cy="0" r="42" class="white stroke"/><path d="M-42 0 A42 42 0 0 1 42 0 L42 -2 L-42 -2 Z" class="red"/><line x1="-42" y1="0" x2="42" y2="0" class="stroke"/><circle cx="0" cy="0" r="11" class="white stroke"/></g><g transform="translate(387 250) rotate(18)"><rect x="-75" y="-110" width="150" height="220" rx="16" class="navy stroke"/><rect x="-62" y="-97" width="124" height="194" rx="10" class="goldstroke"/><circle cx="0" cy="0" r="42" class="white stroke"/><path d="M-42 0 A42 42 0 0 1 42 0 L42 -2 L-42 -2 Z" class="red"/><line x1="-42" y1="0" x2="42" y2="0" class="stroke"/><circle cx="0" cy="0" r="11" class="white stroke"/></g><g transform="translate(355 360)"><circle r="82" class="navy stroke"/><circle r="74" fill="none" stroke="#f4c542" stroke-width="8"/><g transform="translate(-26,-18)" fill="none" stroke="#f4c542" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><polyline points="-18,-18 -8,-18 4,28 56,28"/><polyline points="10,-6 62,-6 54,14 16,14"/><circle cx="18" cy="48" r="6" fill="#f4c542"/><circle cx="50" cy="48" r="6" fill="#f4c542"/></g></g></svg>`;
+
+// ── COMMANDES (localStorage) ──
+const COMMANDES_KEY = 'pk_commandes';
+
+function loadCommandes(){
+  try{ const s=localStorage.getItem(COMMANDES_KEY); return s?JSON.parse(s):[]; }catch(e){ return []; }
+}
+function saveCommandes(list){
+  try{ localStorage.setItem(COMMANDES_KEY, JSON.stringify(list)); }catch(e){}
+}
+
+function openAchatsModal(){
+  openModal('achats-modal');
+  renderAchats();
+}
+
+function ajouterCommande(){
+  const produit = document.getElementById('achat-produit').value.trim();
+  const site    = document.getElementById('achat-site').value.trim();
+  const prix    = parseFloat(document.getElementById('achat-prix').value)||0;
+  if(!produit){ toast('Indique un produit'); return; }
+  const list = loadCommandes();
+  list.unshift({ id: Date.now(), produit, site, prix, recu: false, date: new Date().toISOString() });
+  saveCommandes(list);
+  document.getElementById('achat-produit').value='';
+  document.getElementById('achat-site').value='';
+  document.getElementById('achat-prix').value='';
+  renderAchats();
+  renderHome();
+  toast('✅ Commande ajoutée');
+}
+
+function toggleCommande(id){
+  const list = loadCommandes();
+  const c = list.find(x=>x.id===id);
+  if(c) c.recu = !c.recu;
+  saveCommandes(list);
+  renderAchats();
+  renderHome();
+}
+
+function supprimerCommande(id){
+  const list = loadCommandes().filter(x=>x.id!==id);
+  saveCommandes(list);
+  renderAchats();
+  renderHome();
+}
+
+function renderAchats(){
+  const list = loadCommandes();
+  const enCours = list.filter(c=>!c.recu);
+  const recus   = list.filter(c=>c.recu);
+
+  const checkSVG=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+  function renderItem(c){
+    const dateStr = c.date ? new Date(c.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}) : '';
+    return `<div class="commande-item${c.recu?' recu':''}">
+      <div class="commande-check${c.recu?' done':''}" onclick="toggleCommande(${c.id})">
+        ${c.recu?checkSVG:''}
+      </div>
+      <div class="commande-info">
+        <div class="commande-produit">${c.produit}</div>
+        <div class="commande-site">${c.site||'—'}${dateStr?' · '+dateStr:''}</div>
+      </div>
+      ${c.prix>0?`<div class="commande-prix">${c.prix.toFixed(2)} €</div>`:''}
+      <button class="commande-del" onclick="supprimerCommande(${c.id})">✕</button>
+    </div>`;
+  }
+
+  const elEnCours = document.getElementById('achat-encours-list');
+  const elRecu    = document.getElementById('achat-recu-list');
+  if(!elEnCours||!elRecu) return;
+
+  elEnCours.innerHTML = enCours.length
+    ? enCours.map(renderItem).join('')
+    : '<div style="padding:16px;text-align:center;font-size:12px;color:rgba(255,255,255,0.25)">Aucune commande en cours</div>';
+
+  elRecu.innerHTML = recus.length
+    ? recus.map(renderItem).join('')
+    : '<div style="padding:16px;text-align:center;font-size:12px;color:rgba(255,255,255,0.25)">Aucune commande reçue</div>';
+}
+
+// ── BOUTIQUES ──
+const BOUTIQUES = [
+  // Marketplaces
+  { nom:'cardmarket.com',  url:'https://www.cardmarket.com/fr/Pokemon', tag:'eu',  flag:'🌍', desc:'Référence n°1 en Europe — cartes à l\'unité, protection acheteur', type:'mkt' },
+  { nom:'amazon.fr',       url:'https://www.amazon.fr/s?k=pokemon+cartes', tag:'fr', flag:'🇫🇷', desc:'Choix Pokescam — scellé officiel, vérifier vendeurs tiers', type:'mkt' },
+  { nom:'ebay.fr',         url:'https://www.ebay.fr/b/Cartes-Pokemon/183454', tag:'eu', flag:'🌍', desc:'Cartes rares, gradées, vintage — vérifier historique vendeur', type:'mkt' },
+  // FR spécialisées
+  { nom:'cartespokemon.com', url:'https://cartespokemon.com', tag:'fr', flag:'🇫🇷', desc:'4,4/5 Trustpilot · Displays JP/FR/CN/KR · 2200+ avis' },
+  { nom:'blazingtail.fr',    url:'https://www.blazingtail.fr', tag:'fr', flag:'🇫🇷', desc:'Paris · Scellé FR, cartes gradées PSA, rachat sous 48h' },
+  { nom:'kairyu.fr',         url:'https://kairyu.fr', tag:'fr', flag:'🇫🇷', desc:'Scellé FR/JP · Boutique bien notée communauté' },
+  { nom:'pokegourou.com',    url:'https://pokegourou.com', tag:'fr', flag:'🇫🇷', desc:'Référence anti-arnaques + boutique fiable' },
+  { nom:'ultrajeux.com',     url:'https://www.ultrajeux.com', tag:'fr', flag:'🇫🇷', desc:'Depuis 2004 · En ligne + physique · Vérifié Pokescam' },
+  { nom:'cardshunter.fr',    url:'https://www.cardshunter.fr', tag:'fr', flag:'🇫🇷', desc:'Singles, scellé · Vérifié Pokescam' },
+  { nom:'hamacards.com',     url:'https://www.hamacards.com', tag:'fr', flag:'🇫🇷', desc:'Scellé, singles · Vérifié Pokescam' },
+  { nom:'dracaugames.com',   url:'https://www.dracaugames.com', tag:'fr', flag:'🇫🇷', desc:'Haute-Marne · Géré par collectionneurs depuis 2019' },
+  { nom:'mgs-shop.fr',       url:'https://mgs-shop.fr', tag:'fr', flag:'🇫🇷', desc:'Scellé, accessoires · Vérifié Pokécardex' },
+  { nom:'investcollect.com', url:'https://investcollect.com', tag:'fr', flag:'🇫🇷', desc:'Orienté collectionneur et investisseur TCG' },
+  { nom:'destocktcg.fr',     url:'https://www.destocktcg.fr', tag:'fr', flag:'🇫🇷', desc:'Déstockage · Bonnes affaires sur stock ancien' },
+  { nom:'hikarudistribution.com', url:'https://hikarudistribution.com', tag:'fr', flag:'🇫🇷', desc:'Distribution, scellé · Vérifié Pokescam' },
+  { nom:'hitndrop.com',      url:'https://hitndrop.com', tag:'fr', flag:'🇫🇷', desc:'Drops limités · Vérifié Pokescam' },
+  { nom:'pokemoms.fr',       url:'https://pokemoms.fr', tag:'fr', flag:'🇫🇷', desc:'Active depuis 2019 · Livraison FR/EU · Vérifié Pokescam' },
+  { nom:'maxicartes.com',    url:'https://maxicartes.com', tag:'fr', flag:'🇫🇷', desc:'Scellé, singles · Référencé Tradingcartes' },
+  { nom:'pokemart.fr',       url:'https://www.pokemart.fr', tag:'fr', flag:'🇫🇷', desc:'Scellé FR · Référencé Tradingcartes' },
+  { nom:'pokedream.fr',      url:'https://www.pokedream.fr', tag:'fr', flag:'🇫🇷', desc:'Scellé, coffrets · Référencé Tradingcartes' },
+  { nom:'pokebinome.fr',     url:'https://pokebinome.fr', tag:'fr', flag:'🇫🇷', desc:'Singles, master set · Référencé Tradingcartes' },
+  { nom:'relictcg.com',      url:'https://www.relictcg.com', tag:'fr', flag:'🇫🇷', desc:'Cartes rares, singles · Référencé Tradingcartes' },
+  { nom:'pikastore.fr',      url:'https://www.pikastore.fr', tag:'fr', flag:'🇫🇷', desc:'Scellé FR/JP', warn:'⚠️ Retards précommandes signalés — tester petit panier' },
+  { nom:'bcd-jeux.fr',       url:'https://www.bcd-jeux.fr', tag:'fr', flag:'🇫🇷', desc:'En ligne + physique · Vérifié Pokescam' },
+  { nom:'parkage.com',       url:'https://www.parkage.com/fr', tag:'fr', flag:'🇫🇷', desc:'Multi-TCG, Pokémon inclus · Référencé Pokécardex' },
+  { nom:'ludifolie.com',     url:'https://www.ludifolie.com', tag:'fr', flag:'🇫🇷', desc:'Multi-TCG · Référencé Pokécardex' },
+  { nom:'lecoindesbarons.com',url:'https://lecoindesbarons.com', tag:'fr', flag:'🇫🇷', desc:'Scellé, singles · Référencé Tradingcartes' },
+  { nom:'fuji-store.fr',     url:'https://fuji-store.fr', tag:'fr', flag:'🇫🇷', desc:'Boutique physique Paris/Lille + ligne', warn:'⚠️ Prix jugés élevés par certains clients' },
+  // BE spécialisées
+  { nom:'keytwo.be',         url:'https://keytwo.be', tag:'be', flag:'🇧🇪', desc:'N°1 Belgique · Cartes à l\'unité, ETB, displays' },
+  { nom:'outpostbrussels.be',url:'https://outpostbrussels.be', tag:'be', flag:'🇧🇪', desc:'Bruxelles · Spécialiste TCG historique, salle de jeu' },
+  { nom:'mavapokemon.com',   url:'https://www.mavapokemon.com', tag:'be', flag:'🇧🇪', desc:'Bruxelles · 100% Pokémon · Boutique physique + ligne' },
+  { nom:'belgiumcardsgame.com',url:'https://www.belgiumcardsgame.com', tag:'be', flag:'🇧🇪', desc:'Welkenraedt · En ligne + physique depuis jan. 2025' },
+  { nom:'leptitpoucet.be',   url:'https://www.leptitpoucet.be', tag:'be', flag:'🇧🇪', desc:'Soignies · Revendeur officiel Pokémon FR en Belgique' },
+  { nom:'ilantcgbelgium.com',url:'https://ilantcgbelgium.com', tag:'be', flag:'🇧🇪', desc:'TCG belgique · Précommandes exclusives, livraison EU' },
+  { nom:'fantasysphere.net', url:'https://shop.fantasysphere.net', tag:'be', flag:'🇧🇪', desc:'Grosse plateforme TCG francophone reconnue' },
+  // Enseignes FR
+  { nom:'fnac.com',          url:'https://www.fnac.com/Search/Result.aspx?SearchTerms=pokemon+cartes', tag:'enseigne', flag:'🏬', desc:'Vérifié Pokescam · Large stock officiel · Click & Collect' },
+  { nom:'cultura.com',       url:'https://www.cultura.com/c/cartes-a-collectionner/pokemon', tag:'enseigne', flag:'🏬', desc:'Vérifié Pokescam · Bonne dispo sorties récentes' },
+  { nom:'joueclub.fr',       url:'https://www.joueclub.fr/catalogsearch/result/?q=pokemon', tag:'enseigne', flag:'🏬', desc:'Revendeur officiel · Vérifié Pokescam' },
+  { nom:'lagranderecre.fr',  url:'https://www.lagranderecre.fr/jeux-de-cartes-a-collectionner/pokemon.html', tag:'enseigne', flag:'🏬', desc:'Revendeur officiel · Référencé Tradingcartes' },
+  { nom:'king-jouet.com',    url:'https://www.king-jouet.com/jeux-jouets/pokemon/m2.htm', tag:'enseigne', flag:'🏬', desc:'Revendeur officiel' },
+  { nom:'micromania.fr',     url:'https://www.micromania.fr/cartes-a-collectionner-pokemon', tag:'enseigne', flag:'🏬', desc:'Produits neufs sous blister · Livraison rapide' },
+  { nom:'e.leclerc',         url:'https://www.e.leclerc', tag:'enseigne', flag:'🏬', desc:'Vérifié Pokescam · Bons prix sur sorties courantes' },
+  { nom:'smartoys.be',       url:'https://www.smartoys.be/catalog/category.php?cPath=360', tag:'enseigne', flag:'🏬', desc:'Belgique · Grande chaîne jeux · Pokémon officiel' },
+  { nom:'mediamarkt.be',     url:'https://www.mediamarkt.be/fr/category/carte-pokemon-326.html', tag:'enseigne', flag:'🏬', desc:'Belgique · Livraison le lendemain disponible' },
+  // JP import
+  { nom:'cardotaku.com',     url:'https://cardotaku.com', tag:'jp', flag:'🇯🇵', desc:'Spécialiste TCG japonais en français · Référencé Tradingcartes' },
+  { nom:'meccha-japan.com',  url:'https://meccha-japan.com/fr/', tag:'jp', flag:'🇯🇵', desc:'Import JP · Interface français · Délais à anticiper' },
+  { nom:'plazajapan.com',    url:'https://www.plazajapan.com', tag:'jp', flag:'🇯🇵', desc:'Import JP · Référencé Tradingcartes' },
+  { nom:'solarisjapan.com',  url:'https://solarisjapan.com', tag:'jp', flag:'🇯🇵', desc:'Proxy + achat direct JP · Référencé Tradingcartes' },
+  { nom:'nin-nin-game.com',  url:'https://www.nin-nin-game.com', tag:'jp', flag:'🇯🇵', desc:'Import JP multi-produits · Référencé Tradingcartes' },
+  { nom:'pokeninjapan.store',url:'https://pokeninjapan.store', tag:'jp', flag:'🇯🇵', desc:'Spécialiste Pokémon JP · Référencé Tradingcartes' },
+  { nom:'tokyocards.com',    url:'https://tokyocards.com', tag:'jp', flag:'🇯🇵', desc:'Import JP, singles et scellé · Référencé Tradingcartes' },
+];
+
+let _boutiqueFiltreActif = 'all';
+
+function filterBoutiques(tag, el){
+  _boutiqueFiltreActif = tag;
+  document.querySelectorAll('.boutique-pill').forEach(p=>p.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderBoutiques();
+}
+
+function renderBoutiques(){
+  const list = _boutiqueFiltreActif==='all'
+    ? BOUTIQUES
+    : BOUTIQUES.filter(b=> _boutiqueFiltreActif==='eu'
+        ? b.type==='mkt'
+        : b.tag===_boutiqueFiltreActif);
+
+  const tagClass = { fr:'btag-fr', be:'btag-be', jp:'btag-jp', eu:'btag-eu', enseigne:'btag-eu' };
+  const tagLabel = { fr:'FR', be:'BE', jp:'JP', eu:'EU', enseigne:'FR/BE' };
+
+  const el = document.getElementById('boutiques-list');
+  if(!el) return;
+  el.innerHTML = list.map(b=>`
+    <a class="boutique-item" href="${b.url}" target="_blank" rel="noopener">
+      <div class="boutique-flag">${b.flag}</div>
+      <div class="boutique-info">
+        <div class="boutique-name">${b.nom}</div>
+        <div class="boutique-desc">${b.desc}</div>
+        ${b.warn?`<div class="boutique-warn">${b.warn}</div>`:''}
+      </div>
+      <span class="boutique-tag ${tagClass[b.tag]||'btag-fr'}">${tagLabel[b.tag]||'FR'}</span>
+      <span class="boutique-arrow">›</span>
+    </a>`).join('');
+}
+
 // ── BASE LOCALE MOBILE ──
 const MOBILE_DB_KEY = 'pk_db_light';
 const MOBILE_DB_DATE_KEY = 'pk_db_light_date';
@@ -1057,8 +1429,9 @@ function escId(id){ return(id||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 function renderHome(){
   const uniq=col.length;
   const doubles=col.reduce((s,c)=>s+Math.max(0,(c.qty||1)-1),0);
-  const val=col.reduce((s,c)=>s+(c.price||0)*condMul(c.cond)*(c.qty||1),0);
   const forsale=col.filter(c=>c.for_sale).length;
+  const commandes=loadCommandes();
+  const enCours=commandes.filter(c=>!c.recu).length;
   document.getElementById('home-grid').innerHTML=`
     <div class="home-tile" onclick="openCollOverlay('all')">
       <div class="home-tile-icon">${SVG_CARTES}</div>
@@ -1070,10 +1443,10 @@ function renderHome(){
       <div class="home-tile-val">${doubles}</div>
       <div class="home-tile-lbl">Doubles</div>
     </div>
-    <div class="home-tile" onclick="openCollOverlay('value')">
-      <div class="home-tile-icon">${getSVG_VALEUR("v"+Date.now())}</div>
-      <div class="home-tile-val" style="font-size:${val>9999?'15px':'22px'}">${val>0?val.toFixed(0)+' €':'—'}</div>
-      <div class="home-tile-lbl">Valeur</div>
+    <div class="home-tile" onclick="openAchatsModal()">
+      <div class="home-tile-icon">${SVG_ACHATS}</div>
+      <div class="home-tile-val">${enCours}</div>
+      <div class="home-tile-lbl">Achats en cours</div>
     </div>
     <div class="home-tile" onclick="openCollOverlay('forsale')">
       <div class="home-tile-icon">${getSVG_VENTE("s"+Date.now())}</div>
@@ -1790,7 +2163,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '1.9';
+const APP_VERSION = '3.0';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -1873,18 +2246,6 @@ async function analyzePhoto(input){
       return;
     }
 
-    // Debug temporaire
-    result.innerHTML = `<div class="card-block" style="padding:12px">
-      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:6px">TEXTE DÉTECTÉ :</div>
-      <div style="font-size:12px;color:#fff;white-space:pre-wrap;word-break:break-all">${text.substring(0,300)}</div>
-    </div>`;
-
-    // Debug temporaire — affiche le texte brut
-    result.innerHTML = `<div class="card-block" style="padding:12px">
-      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:6px">TEXTE DÉTECTÉ :</div>
-      <div style="font-size:12px;color:#fff;white-space:pre-wrap;word-break:break-all">${text.substring(0,300)}</div>
-    </div>`;
-
     // Parser le texte
     parseScanText(text, result);
 
@@ -1897,15 +2258,29 @@ async function analyzePhoto(input){
 }
 
 function parseScanText(text, resultEl){
-  // Chercher le numéro de carte (ex: 199/165, 001/086)
-  const numMatch = text.match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
+  // Chercher le numéro — format standard XXX/YYY ou format promo sans slash
+  const numMatch = text.match(/(\d{1,3})\s*\/\s*(\d{1,3})/) ||
+                   text.match(/\b([A-Z]{2,5})\s+(?:FR|EN|JP)?\s*(\d{1,3})\b/i);
   // Chercher les codes d'extension connus
   const words = text.toUpperCase().match(/\b([A-Z]{2,5})\b/g) || [];
 
   let cardNum = null, setId = null, setCode = null;
 
   if(numMatch){
-    cardNum = String(parseInt(numMatch[1]));
+    // Format standard : groupe 1 est le numéro
+    // Format promo "MEP FR 073" : groupe 1 est le code, groupe 2 est le numéro
+    if(numMatch[0].includes('/')){
+      cardNum = String(parseInt(numMatch[1]));
+    } else {
+      // Format promo — extraire le code et le numéro
+      const promoCode = numMatch[1].toUpperCase();
+      const promoNum = numMatch[2];
+      if(codeMap[promoCode] && !setId){
+        setCode = promoCode;
+        setId = codeMap[promoCode];
+      }
+      cardNum = String(parseInt(promoNum));
+    }
   }
 
   // Utiliser la map depuis la base mobile si disponible, sinon le dictionnaire statique

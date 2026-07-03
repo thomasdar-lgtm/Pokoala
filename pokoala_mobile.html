@@ -1107,7 +1107,11 @@ function switchTab(tab){
   if(_scanStream) closeScanner();
   document.body.style.overflow='';
   if(tab==='home') renderHome();
-  if(tab==='browse'&&!_seriesData.length) loadSeries();
+  if(tab==='browse'){
+    const el = document.getElementById('series-list');
+    if(!_seriesData.length) loadSeries();
+    else if(el && !el.querySelector('.serie-block')) renderSeries();
+  }
   if(tab==='boutiques') renderBoutiques();
 }
 
@@ -2322,7 +2326,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.11';
+const APP_VERSION = '3.12';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

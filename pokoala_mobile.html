@@ -1991,18 +1991,17 @@ async function loadSeries(){
     return;
   }
 
-  // 2. Cache localStorage — affichage immédiat hors ligne
+  // 2. Cache localStorage — affichage immédiat
   const cached = loadSeriesFromCache();
-  if(cached){
+  if(cached && cached.length){
     _seriesData = cached;
     renderSeries();
-    showOfflineBanner();
-    // Tentative de mise à jour en arrière-plan
+    // Mise à jour silencieuse en arrière-plan
     _refreshSeriesInBackground();
     return;
   }
 
-  // 3. Pas de cache — afficher le loader et charger en ligne
+  // 3. Pas de cache — loader + fetch réseau
   document.getElementById('series-list').innerHTML='<div class="loader">Chargement des séries…</div>';
   await _fetchSeriesOnline();
 }
@@ -2036,7 +2035,7 @@ async function _refreshSeriesInBackground(){
 async function _fetchSeriesOnline(){
   // Serveur local
   try{
-    const r = await fetch(`${LOCAL}/api/series`, {signal: AbortSignal.timeout(3000)});
+    const r = await fetch(`${LOCAL}/api/series`, {signal: AbortSignal.timeout(300)});
     const d = await r.json();
     if(!d.loading && d.series?.length){
       _seriesData = d.series;
@@ -2326,7 +2325,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.12';
+const APP_VERSION = '3.13';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

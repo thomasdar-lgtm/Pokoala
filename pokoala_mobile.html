@@ -2033,7 +2033,7 @@ async function _refreshSeriesInBackground(){
 }
 
 async function _fetchSeriesOnline(){
-  // Serveur local
+  // Serveur local (PC avec serveur Python)
   try{
     const r = await fetch(`${LOCAL}/api/series`, {signal: AbortSignal.timeout(300)});
     const d = await r.json();
@@ -2046,15 +2046,28 @@ async function _fetchSeriesOnline(){
     if(d.loading){ setTimeout(loadSeries, 2000); return; }
   }catch(e){}
 
-  // TCGdex en ligne
+  // TCGdex : /series retourne seulement id/name/logo (pas les sets)
+  // On charge d'abord la liste des séries, puis chaque série individuellement en parallèle
   try{
     const r = await fetch(`${TCGDEX_FR}/series`);
-    const list = await r.json();
-    _seriesData = list.filter(s => s.sets?.length > 0).reverse();
+    const seriesList = await r.json(); // [{id, name, logo}, ...]
+
+    // Charger toutes les séries en parallèle pour avoir les sets
+    const detailRequests = seriesList.map(s =>
+      fetch(`${TCGDEX_FR}/series/${s.id}`)
+        .then(r => r.json())
+        .catch(() => null)
+    );
+    const details = await Promise.all(detailRequests);
+
+    _seriesData = details
+      .filter(s => s && s.sets?.length > 0)
+      .reverse();
+
     saveSeriesCache(_seriesData);
     renderSeries();
   }catch(e){
-    document.getElementById('series-list').innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Séries non disponibles.<br>Connecte-toi pour charger les données.</div>`;
+    document.getElementById('series-list').innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Séries non disponibles.<br>Vérifie ta connexion internet.</div>`;
   }
 }
 
@@ -2325,7 +2338,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.13';
+const APP_VERSION = '3.15';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

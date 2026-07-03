@@ -1962,14 +1962,14 @@ function renderSearchResults(cards){
     const owned=col.find(x=>x.id===c.id);
     const img=c.images?.small||`https://assets.tcgdex.net/fr/${c.set?.id||''}/${c.number||''}/low.webp`;
     const cj=JSON.stringify(c).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return`<div class="search-result">
+    return`<div class="search-result" onclick="openCardModalFromSearch('${cj}')">
       ${img?`<img class="search-result-img" src="${img}" loading="lazy">`:'<div class="search-result-img"></div>'}
       <div class="search-result-info">
         <div class="search-result-name">${c.name}</div>
         <div class="search-result-sub">${c.set?.name||''} · N°${c.number||'—'} · ${c.rarity||'—'}</div>
         ${owned?`<div style="font-size:10px;color:var(--yellow2);margin-top:2px;font-weight:700">✓ Dans la collection (${owned.qty}×)</div>`:''}
       </div>
-      <div class="add-btn" onclick="addCardFromJson('${cj}')">
+      <div class="add-btn" onclick="event.stopPropagation();addCardFromJson('${cj}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--red2)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </div>
     </div>`;
@@ -1978,6 +1978,51 @@ function renderSearchResults(cards){
 
 function addCardFromJson(jsonStr){
   try{ addCard(JSON.parse(jsonStr)); }catch(e){ toast('Erreur ajout'); }
+}
+
+function openCardModalFromSearch(jsonStr){
+  let c;
+  try{ c = JSON.parse(jsonStr); }catch(e){ return; }
+
+  const owned = col.find(x=>x.id===c.id);
+  const img = c.images?.small || `https://assets.tcgdex.net/fr/${c.set?.id||''}/${c.number||''}/low.webp`;
+  const nameEn = c.nameEn || c.name;
+  const num = c.number || c.localId || '';
+  const setName = c.set?.name || c.set || '';
+  const cj = JSON.stringify(c).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+
+  document.getElementById('card-modal-content').innerHTML=`
+    <div class="modal-header">
+      <span class="modal-title" style="font-size:15px;max-width:calc(100% - 50px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
+      <button class="modal-close" onclick="closeModal('card-modal')">✕</button>
+    </div>
+    ${img?`<div class="modal-img-wrap"><img src="${img}" onerror="this.style.display='none'"></div>`:''}
+    <div class="modal-section">
+      <label>Extension</label>
+      <div class="val">${setName}${num?' · N°'+num:''}</div>
+      ${c.rarity?`<div style="margin-top:4px">${rareBadge(c.rarity)}</div>`:''}
+    </div>
+    ${owned?`
+    <div class="modal-section">
+      <label>Dans ta collection</label>
+      <div class="val" style="color:var(--yellow2)">✓ ${owned.qty}× · État ${owned.cond||'NM'}</div>
+    </div>`:''}
+    <div class="btn-row">
+      ${owned
+        ? `<button class="btn btn-secondary" style="flex:1" onclick="closeModal('card-modal');openCardModal('${escId(c.id)}')">
+            Voir dans la collection
+           </button>`
+        : `<button class="btn btn-primary" style="flex:1" onclick="addCardFromJson('${cj}');closeModal('card-modal')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Ajouter
+           </button>`
+      }
+      <button class="btn btn-secondary" style="flex:1" onclick="openCM('${escId(nameEn)}','${escId(num)}')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Cardmarket
+      </button>
+    </div>`;
+  openModal('card-modal');
 }
 
 // ── SYMBOLES EXTENSIONS (identiques à la version PC) ──
@@ -2368,7 +2413,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.18';
+const APP_VERSION = '3.19';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

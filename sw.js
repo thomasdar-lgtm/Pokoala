@@ -1,5 +1,6 @@
-const CACHE_SHELL = 'pokoala-shell-v1';
-const CACHE_IMAGES = 'pokoala-images-v1';
+const CACHE_VERSION = '3.29';
+const CACHE_SHELL = `pokoala-shell-${CACHE_VERSION}`;
+const CACHE_IMAGES = `pokoala-images-${CACHE_VERSION}`;
 
 const SHELL_FILES = [
   './pokoala_mobile.html',
@@ -56,14 +57,21 @@ self.addEventListener('fetch', e => {
   }
 
   // APIs Google (Drive, OAuth) : toujours réseau
-  if(url.hostname.includes('googleapis.com') || 
+  if(url.hostname.includes('googleapis.com') ||
      url.hostname.includes('accounts.google.com') ||
      url.hostname.includes('gstatic.com') && url.pathname.includes('gsi')){
     return;
   }
 
-  // Shell (HTML, Logo) : cache-first avec fallback réseau
+  // Shell (HTML, Logo) : network-first pour toujours récupérer la dernière version
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request)
+      .then(response => {
+        if(response.ok){
+          caches.open(CACHE_SHELL).then(cache => cache.put(e.request, response.clone()));
+        }
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });

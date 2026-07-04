@@ -2427,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.35';
+const APP_VERSION = '3.36';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2887,17 +2887,25 @@ async function captureAndScan(){
 
 
 function getCardImg(card, size='low'){
-  // Si img est présent et non vide, l'utiliser
+  // Si img est présent et non vide, l'utiliser (format TCGdex sans extension)
   if(card.img){
     const base = card.img.replace('/low.webp','').replace('/high.webp','');
     return `${base}/${size}.webp`;
   }
-  // Construire l'URL depuis setId et number
-  // Format : https://assets.tcgdex.net/fr/{serie}/{setId}/{number}/low.webp
+  // Fallback pokemontcg.io — fonctionne pour la plupart des sets dont TG/GG
   const setId = card.setId || '';
   const number = card.number || '';
-  const serie = setId.match(/^([a-z]+)/i)?.[1] || '';
-  return `https://assets.tcgdex.net/fr/${serie}/${setId}/${number}/${size}.webp`;
+  if(size === 'high') return `https://images.pokemontcg.io/${setId}/${number}_hires.png`;
+  return `https://images.pokemontcg.io/${setId}/${number}.png`;
+}
+
+function getCardNameFR(card){
+  // Pour les cartes dont name = nameEn (anglais uniquement), chercher le nom FR dans la base
+  if(!card.nameEn || card.name !== card.nameEn) return card.name;
+  const frCard = _mobileDB?.cards?.find(c =>
+    c.nameEn === card.nameEn && c.name !== c.nameEn
+  );
+  return frCard?.name || card.name;
 }
 
 function showScanResult(card, setCode, cardNum){
@@ -2905,14 +2913,15 @@ function showScanResult(card, setCode, cardNum){
   const imgLow  = getCardImg(card, 'low');
   const imgHigh = getCardImg(card, 'high');
   const owned = col.find(c => c.id === card.id);
+  const displayName = getCardNameFR(card);
   const scanResult = document.getElementById('scan-result');
   scanResult.innerHTML = `
     <div class="card-block" style="text-align:left;overflow:hidden">
       <div style="display:flex;gap:12px;padding:12px">
         <img src="${imgHigh}" style="width:80px;border-radius:6px;object-fit:contain"
-          onerror="this.src='${imgLow}'">
+          onerror="this.src='${imgLow}';this.onerror=null;">
         <div style="flex:1">
-          <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">${card.name}</div>
+          <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">${displayName}</div>
           <div style="font-size:12px;color:rgba(255,255,255,0.5)">${card.setName||''} · N°${cardNum}</div>
           ${card.rarity ? `<div style="margin-top:6px">${rareBadge(card.rarity)}</div>` : ''}
           ${owned ? `<div style="margin-top:6px;font-size:12px;color:var(--yellow2);font-weight:700">✓ Déjà dans ta collection (${owned.qty}×)</div>` : ''}
@@ -2932,7 +2941,7 @@ function addCardFromScan(cardId){
   if(!card) return;
   addCard({
     id: card.id,
-    name: card.name,
+    name: getCardNameFR(card),
     number: card.number,
     rarity: card.rarity,
     set: {id: card.setId, name: card.setName},
@@ -2943,7 +2952,7 @@ function addCardFromScan(cardId){
   });
   document.getElementById('scan-result').innerHTML = `
     <div style="text-align:center;padding:16px;color:#4ade80;font-weight:700;font-size:15px">
-      ✅ ${card.name} ajoutée !<br>
+      ✅ ${getCardNameFR(card)} ajoutée !<br>
       <button class="btn btn-secondary" style="margin-top:12px" onclick="openScanner()">Scanner une autre carte</button>
     </div>`;
 }

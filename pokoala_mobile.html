@@ -2427,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.30';
+const APP_VERSION = '3.31';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2616,7 +2616,27 @@ function parseScanText(text, resultEl){
 
     if(card){ showScanResult(card, setId, cardNum); return; }
 
-    // ── 6. Recherche par nom ──
+    // ── Recherche spéciale sets TG/GG/KJ ──
+    // Ces sets ont un setId comme swsh9tg, swsh12pt5gg — non dans codeMap
+    // On cherche directement par numéro dans tous les sets de ce type
+    if(cardNum && /^(TG|GG|KJ)/i.test(cardNum)){
+      const tgCards = _mobileDB.cards.filter(c =>
+        c.number?.toUpperCase() === cardNum.toUpperCase() &&
+        (c.setId?.includes('tg') || c.setId?.includes('gg') || c.setId?.includes('kj'))
+      );
+      if(tgCards.length === 1){ showScanResult(tgCards[0], tgCards[0].setId, tgCards[0].number); return; }
+      if(tgCards.length > 1){
+        // Affiner par nom si possible
+        const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>=3&&l.length<=25);
+        for(const line of lines){
+          const norm = line.toLowerCase().replace(/[^a-zàâçéèêëîïôûùüÿñæœ\s\-']/gi,'').trim();
+          const byName = tgCards.filter(c => c.name?.toLowerCase().includes(norm) || norm.includes(c.name?.toLowerCase()));
+          if(byName.length === 1){ showScanResult(byName[0], byName[0].setId, byName[0].number); return; }
+        }
+        showScanChoices(tgCards, resultEl);
+        return;
+      }
+    }
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length >= 3 && l.length <= 30);
     let nameCandidates = [];
 

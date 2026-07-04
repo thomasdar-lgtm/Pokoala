@@ -777,36 +777,6 @@ body::before{
       <!-- Liste boutiques -->
       <div class="card-block" id="boutiques-list"></div>
 
-      <!-- Formulaire ajout -->
-      <div class="achat-form" style="margin-top:12px">
-        <div class="achat-form-title">➕ Ajouter une boutique</div>
-        <div class="achat-field">
-          <label>Nom du site</label>
-          <input class="achat-input" id="bperso-nom" type="text" placeholder="masuperboutique.fr" autocomplete="off">
-        </div>
-        <div class="achat-field">
-          <label>URL</label>
-          <input class="achat-input" id="bperso-url" type="url" placeholder="https://..." autocomplete="off">
-        </div>
-        <div class="achat-row">
-          <div class="achat-field">
-            <label>Pays</label>
-            <select class="achat-input" id="bperso-tag">
-              <option value="fr">🇫🇷 France</option>
-              <option value="be">🇧🇪 Belgique</option>
-              <option value="jp">🇯🇵 Japon</option>
-              <option value="enseigne">🏬 Enseigne</option>
-              <option value="eu">🌍 Marketplace</option>
-            </select>
-          </div>
-          <div class="achat-field">
-            <label>Description</label>
-            <input class="achat-input" id="bperso-desc" type="text" placeholder="Optionnel" autocomplete="off">
-          </div>
-        </div>
-        <button class="btn btn-primary btn-full" onclick="ajouterBoutiquePerso()" style="margin-top:4px">Ajouter</button>
-      </div>
-
       <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.2);margin-top:12px;padding:0 16px;line-height:1.6">
         Sources : pokescam.com · pokegourou.com · tradingcartes.com<br>Mise à jour juin 2026
       </div>
@@ -1074,6 +1044,44 @@ body::before{
   </div>
 </div>
 
+<!-- MODAL AJOUT BOUTIQUE -->
+<div class="modal-bg" id="boutique-add-modal" onclick="if(event.target===this)closeModal('boutique-add-modal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">➕ Ajouter une boutique</span>
+      <button class="modal-close" onclick="closeModal('boutique-add-modal')">✕</button>
+    </div>
+    <div style="padding:4px 16px 16px">
+      <div class="achat-field">
+        <label>Nom du site</label>
+        <input class="achat-input" id="bperso-nom" type="text" placeholder="masuperboutique.fr" autocomplete="off">
+      </div>
+      <div class="achat-field">
+        <label>URL</label>
+        <input class="achat-input" id="bperso-url" type="url" placeholder="https://..." autocomplete="off">
+      </div>
+      <div class="achat-row">
+        <div class="achat-field">
+          <label>Pays</label>
+          <select class="achat-input" id="bperso-tag">
+            <option value="fr">🇫🇷 France</option>
+            <option value="be">🇧🇪 Belgique</option>
+            <option value="jp">🇯🇵 Japon</option>
+            <option value="enseigne">🏬 Enseigne</option>
+            <option value="eu">🌍 Marketplace</option>
+          </select>
+        </div>
+        <div class="achat-field">
+          <label>Description</label>
+          <input class="achat-input" id="bperso-desc" type="text" placeholder="Optionnel" autocomplete="off">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="ajouterBoutiquePerso()" style="margin-top:8px">Ajouter</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -1118,6 +1126,7 @@ function switchTab(tab){
     else if(el && !el.querySelector('.serie-block')) renderSeries();
   }
   if(tab==='scan') updateScanDBStatus();
+  if(tab==='boutiques') renderBoutiques();
 }
 
 // ── HOME ──
@@ -1342,6 +1351,7 @@ function ajouterBoutiquePerso(){
   document.getElementById('bperso-nom').value='';
   document.getElementById('bperso-url').value='';
   document.getElementById('bperso-desc').value='';
+  closeModal('boutique-add-modal');
   toast('✅ Boutique ajoutée');
   renderBoutiques();
 }
@@ -1389,7 +1399,7 @@ function renderBoutiques(){
   const el = document.getElementById('boutiques-list');
   if(!el) return;
 
-  el.innerHTML = list.length ? list.map(b=>`
+  el.innerHTML = (list.length ? list.map(b=>`
     <a class="boutique-item" href="${b.url}" target="_blank" rel="noopener">
       <div class="boutique-flag">${b.flag}</div>
       <div class="boutique-info">
@@ -1401,7 +1411,11 @@ function renderBoutiques(){
       <button onclick="toggleFavori('${b.nom}',event)" style="background:none;border:none;padding:4px;cursor:pointer;flex-shrink:0">${starSVG(favs.includes(b.nom))}</button>
       ${b.perso?`<button onclick="supprimerBoutiquePerso(${b.id},event)" style="background:none;border:none;color:rgba(255,255,255,0.2);font-size:13px;cursor:pointer;padding:4px;flex-shrink:0">✕</button>`:'<span class="boutique-arrow">›</span>'}
     </a>`).join('')
-  : '<div style="padding:24px;text-align:center;font-size:12px;color:rgba(255,255,255,0.25)">Aucune boutique dans cette catégorie</div>';
+  : '<div style="padding:16px;text-align:center;font-size:12px;color:rgba(255,255,255,0.25)">Aucune boutique dans cette catégorie</div>')
+  + `<div onclick="openModal('boutique-add-modal')" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;cursor:pointer;color:rgba(255,215,0,0.6);font-size:12px;font-weight:700;border-top:1px solid rgba(255,255,255,0.06);-webkit-user-select:none;user-select:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,215,0,0.6)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Ajouter une boutique
+    </div>`;
 }
 
 // ── BASE LOCALE MOBILE ──
@@ -2417,7 +2431,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.22';
+const APP_VERSION = '3.23';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

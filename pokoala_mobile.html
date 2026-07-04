@@ -2427,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.29';
+const APP_VERSION = '3.30';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2518,22 +2518,43 @@ async function analyzePhoto(input){
   input.value = '';
 }
 
+function normalizeOCR(str){
+  // Corrections OCR courantes sur les lettres/chiffres
+  return str
+    .replace(/0/g,'O').replace(/1/g,'I').replace(/8/g,'B')
+    .replace(/5/g,'S').replace(/6/g,'G').replace(/2/g,'Z');
+}
+
 function parseScanText(text, resultEl){
   const codeMap = _mobileDB?.ptcgoMap || SET_CODE_MAP;
   const T = text.toUpperCase();
 
   let cardNum = null, setId = null, total = null;
 
-  // ── Formats spéciaux préfixés ──
-  // TG06/TG30, GG05/GG70, SV094/SV094, KJ01/KJ30...
-  const specialMatch = T.match(/\b([A-Z]{2,4})(\d{2,3})\s*\/\s*[A-Z]{0,4}(\d{2,3})\b/);
-  if(specialMatch){
-    const prefix = specialMatch[1];
-    cardNum = prefix + specialMatch[2]; // ex: TG06
-    total   = parseInt(specialMatch[3]);
+  // ── 1. Formats spéciaux préfixés : TG06/TG30, GG05/GG70 ──
+  // Tolérance OCR : D→T, O→0, etc. Vision lit parfois DTC06/30 au lieu de TG06/TG30
+  const specialRaw = T.match(/\b([A-Z]{1,4})(\d{2,3})\s*\/\s*[A-Z]{0,4}(\d{2,3})\b/);
+  if(specialRaw){
+    const rawPrefix = specialRaw[1];
+    const num = specialRaw[2];
+    const tot = parseInt(specialRaw[3]);
+    // Tenter correction OCR : DT→TG, D→T en début
+    const corrected = rawPrefix
+      .replace(/^D(?=T|G)/,'T')  // DT→TT→TG, DG→TG
+      .replace(/DT/,'TG')
+      .replace(/^DTC$/,'TG')
+      .replace(/^TC$/,'TG')
+      .replace(/^GC$/,'GG');
+    // Préfixes spéciaux connus
+    const SPECIAL_PREFIXES = new Set(['TG','GG','KJ','ACE','SV','PR','BW','XY','SM','DP','EX']);
+    const finalPrefix = SPECIAL_PREFIXES.has(corrected) ? corrected : (SPECIAL_PREFIXES.has(rawPrefix) ? rawPrefix : null);
+    if(finalPrefix){
+      cardNum = finalPrefix + num.padStart(2,'0');
+      total   = tot;
+    }
   }
 
-  // ── Format standard : 158/131 ──
+  // ── 2. Format standard : 158/131 ──
   if(!cardNum){
     const stdMatch = T.match(/\b(\d{1,3})\s*\/\s*(\d{1,3})\b/);
     if(stdMatch){
@@ -2542,58 +2563,49 @@ function parseScanText(text, resultEl){
     }
   }
 
-  // ── Format promo swsh : SWSH001, SM001, XY001 ──
+  // ── 3. Format promo : SWSH001, SM001 ──
   if(!cardNum){
-    const promoMatch = T.match(/\b(SWSH|SM|XY|SV|DP|BW|HGSS|POP|BW|HS)(\d{2,3})\b/);
-    if(promoMatch){
-      cardNum = promoMatch[1] + promoMatch[2];
-    }
+    const promoMatch = T.match(/\b(SWSH|HGSS|SM|XY|SV|DP|BW|HS|POP)(\d{2,3})\b/);
+    if(promoMatch){ cardNum = promoMatch[1] + promoMatch[2]; }
   }
 
-  // ── Chercher le code d'extension ──
-  // 1. Adjacent au numéro : "CRI 073/086" ou "073/086 CRI"
+  // ── 4. Chercher le code d'extension ──
+  // Adjacent au numéro
   const nearMatch = T.match(/([A-Z]{2,6})\s+\d{1,3}\s*\/|\d{1,3}\s*\/\s*\d{1,3}\s+([A-Z]{2,6})/);
   if(nearMatch){
     const candidate = (nearMatch[1] || nearMatch[2] || '').trim();
-    if(candidate && codeMap[candidate]){ setId = codeMap[candidate]; }
+    if(candidate && codeMap[candidate]) setId = codeMap[candidate];
   }
 
-  // 2. Chercher dans tous les mots
+  // Dans tous les mots
   if(!setId){
-    const IGNORE = new Set(['PV','EX','GX','VX','HP','LV','XY','SV','DP','BW','SM','AP','AR','SAR','RR','SR','CSR','CHR','UR','ACE','TAG','GEM','SIR','IR','HR','TCG','NEO','POP','GYM','TG','GG','KJ','ACE','SWSH','HGSS']);
+    const IGNORE = new Set(['PV','EX','GX','VX','HP','LV','XY','SV','DP','BW','SM','AP','AR','SAR','RR','SR','CSR','CHR','UR','ACE','TAG','GEM','SIR','IR','HR','TCG','NEO','POP','GYM','TG','GG','KJ','SWSH','HGSS','DTC','TC']);
     const words = T.match(/\b([A-Z]{2,6})\b/g) || [];
     for(const word of words){
       if(!IGNORE.has(word) && codeMap[word]){ setId = codeMap[word]; break; }
     }
   }
 
-  // 3. Fallback total → setId pour anciennes extensions
-  if(!setId && total && TOTAL_TO_SET[total]){
-    setId = TOTAL_TO_SET[total];
-  }
+  // Fallback total → setId
+  if(!setId && total && TOTAL_TO_SET[total]) setId = TOTAL_TO_SET[total];
 
-  if(!cardNum && !setId){
-    resultEl.innerHTML = `<div class="empty-state"><span class="big">❓</span>Carte non identifiée<br><small style="color:rgba(255,255,255,0.35);font-size:10px">${text.substring(0,120)}</small></div>`;
-    return;
-  }
-
-  // ── Chercher dans la base ──
+  // ── 5. Recherche dans la base ──
   if(_mobileDB?.cards?.length){
     let card = null;
 
-    // Recherche exacte numéro + setId
+    // Numéro + setId
     if(setId && cardNum){
       card = _mobileDB.cards.find(c =>
         c.setId === setId && (
           c.number === cardNum ||
           c.number === cardNum.padStart(3,'0') ||
-          String(parseInt(c.number||'')) === cardNum ||
-          c.number?.toUpperCase() === cardNum
+          c.number?.toUpperCase() === cardNum ||
+          String(parseInt(c.number||'')) === String(parseInt(cardNum)||'')
         )
       );
     }
 
-    // Recherche par id direct
+    // ID direct
     if(!card && setId && cardNum){
       card = _mobileDB.cards.find(c =>
         c.id === `${setId}-${cardNum}` ||
@@ -2602,51 +2614,81 @@ function parseScanText(text, resultEl){
       );
     }
 
-    // Recherche numéro seul dans le setId trouvé par total
-    if(!card && cardNum && total && setId){
-      card = _mobileDB.cards.find(c =>
-        c.setId === setId &&
-        String(parseInt(c.number||'')) === String(parseInt(cardNum)||'')
-      );
+    if(card){ showScanResult(card, setId, cardNum); return; }
+
+    // ── 6. Recherche par nom ──
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length >= 3 && l.length <= 30);
+    let nameCandidates = [];
+
+    for(const line of lines){
+      const norm = line.toLowerCase().replace(/[^a-zàâçéèêëîïôûùüÿñæœ\s\-']/gi,'').trim();
+      if(norm.length < 3) continue;
+      const found = _mobileDB.cards.filter(c => {
+        const name = c.name?.toLowerCase() || '';
+        return name === norm || name.includes(norm) || norm.includes(name);
+      });
+      if(found.length) nameCandidates = [...nameCandidates, ...found];
     }
 
-    if(card){
-      showScanResult(card, setId, cardNum);
+    // Dédupliquer
+    nameCandidates = [...new Map(nameCandidates.map(c=>[c.id,c])).values()];
+
+    // Filtrer par setId si dispo
+    const filtered = setId ? nameCandidates.filter(c => c.setId === setId) : nameCandidates;
+
+    // Résultat unique → direct
+    if(filtered.length === 1){ showScanResult(filtered[0], setId, filtered[0].number); return; }
+
+    // Affiner par numéro
+    if(filtered.length > 1 && cardNum){
+      const exact = filtered.find(c =>
+        c.number === cardNum ||
+        c.number?.toUpperCase() === cardNum ||
+        String(parseInt(c.number||'')) === String(parseInt(cardNum)||'')
+      );
+      if(exact){ showScanResult(exact, setId, exact.number); return; }
+    }
+
+    // Plusieurs résultats → liste de choix
+    if(filtered.length > 1 && filtered.length <= 12){
+      showScanChoices(filtered, resultEl);
       return;
     }
 
-    // Recherche par nom si toujours pas trouvé
-    // Vision lit le nom de la carte en gros — on extrait les mots significatifs
-    if(_mobileDB?.cards?.length){
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-      for(const line of lines){
-        const normalized = line.toLowerCase().replace(/[^a-zàâçéèêëîïôûùüÿñæœ\s-]/gi,'').trim();
-        if(normalized.length < 3) continue;
-        const candidates = _mobileDB.cards.filter(c =>
-          c.name?.toLowerCase().includes(normalized) ||
-          normalized.includes(c.name?.toLowerCase())
-        );
-        // Si on a un setId, filtrer par setId
-        const filtered = setId ? candidates.filter(c => c.setId === setId) : candidates;
-        if(filtered.length === 1){
-          showScanResult(filtered[0], setId, filtered[0].number);
-          return;
-        }
-        // Si plusieurs résultats et qu'on a un numéro, affiner
-        if(filtered.length > 1 && cardNum){
-          const exact = filtered.find(c =>
-            c.number === cardNum ||
-            c.number?.toUpperCase() === cardNum ||
-            String(parseInt(c.number||'')) === String(parseInt(cardNum)||'')
-          );
-          if(exact){ showScanResult(exact, setId, exact.number); return; }
-        }
-      }
+    // Trop de résultats ou aucun
+    if(nameCandidates.length > 0 && nameCandidates.length <= 12){
+      showScanChoices(nameCandidates, resultEl);
+      return;
     }
   }
 
-  // Résultat partiel
+  // Aucun résultat
   resultEl.innerHTML = `<div class="empty-state"><span class="big">🔍</span>Non trouvé en base<br><small style="color:rgba(255,255,255,0.4)">${cardNum?'N°'+cardNum:''} ${setId?'· '+setId:''} ${total?'/ '+total:''}</small><br><small style="color:rgba(255,255,255,0.25);font-size:10px">${text.substring(0,100)}</small></div>`;
+}
+
+function showScanChoices(cards, resultEl){
+  resultEl.innerHTML = `
+    <div class="card-block" style="overflow:hidden">
+      <div style="padding:10px 14px 6px;font-size:11px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.06em">
+        Plusieurs cartes trouvées — laquelle ?
+      </div>
+      ${cards.map(c => {
+        const img = getCardImg(c,'low');
+        return `<div onclick="showScanResult_byId('${c.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid rgba(255,255,255,0.05);cursor:pointer;-webkit-user-select:none;user-select:none">
+          <img src="${img}" style="width:36px;height:50px;object-fit:contain;border-radius:4px;flex-shrink:0" onerror="this.style.opacity='.2'">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:#fff">${c.name}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px">${c.setName||c.setId} · N°${c.number}</div>
+          </div>
+          <span style="color:rgba(255,255,255,0.2);font-size:16px">›</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function showScanResult_byId(cardId){
+  const card = _mobileDB?.cards?.find(c => c.id === cardId);
+  if(card) showScanResult(card, card.setId, card.number);
 }
 
 const TOTAL_TO_SET = {

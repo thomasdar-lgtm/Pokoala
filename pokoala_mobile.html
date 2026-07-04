@@ -960,22 +960,25 @@ body::before{
     <video id="scan-video" autoplay playsinline style="width:100%;height:100%;object-fit:cover" onclick="tapToFocus(event)"></video>
     <canvas id="scan-canvas" style="display:none"></canvas>
 
-    <!-- Cadre de visée -->
-    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:18%">
-      <div style="position:relative;width:85%;height:56px">
-        <!-- Zone de scan en bas de carte -->
-        <div style="position:absolute;inset:0;border:2px solid rgba(255,215,0,0.8);border-radius:6px;box-shadow:0 0 0 2000px rgba(0,0,0,0.5)"></div>
-        <!-- Coins animés -->
-        <div style="position:absolute;top:-2px;left:-2px;width:20px;height:20px;border-top:3px solid var(--yellow2);border-left:3px solid var(--yellow2)"></div>
-        <div style="position:absolute;top:-2px;right:-2px;width:20px;height:20px;border-top:3px solid var(--yellow2);border-right:3px solid var(--yellow2)"></div>
-        <div style="position:absolute;bottom:-2px;left:-2px;width:20px;height:20px;border-bottom:3px solid var(--yellow2);border-left:3px solid var(--yellow2)"></div>
-        <div style="position:absolute;bottom:-2px;right:-2px;width:20px;height:20px;border-bottom:3px solid var(--yellow2);border-right:3px solid var(--yellow2)"></div>
+    <!-- Overlay sombre avec découpe pour la carte -->
+    <div id="scan-frame-overlay" style="position:absolute;inset:0;pointer-events:none">
+      <!-- Zones sombres autour du cadre -->
+      <div id="scan-mask-top"    style="position:absolute;left:0;right:0;top:0;background:rgba(0,0,0,0.55)"></div>
+      <div id="scan-mask-bottom" style="position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55)"></div>
+      <div id="scan-mask-left"   style="position:absolute;top:0;bottom:0;left:0;background:rgba(0,0,0,0.55)"></div>
+      <div id="scan-mask-right"  style="position:absolute;top:0;bottom:0;right:0;background:rgba(0,0,0,0.55)"></div>
+      <!-- Cadre doré -->
+      <div id="scan-frame-box" style="position:absolute;border:2px solid rgba(255,215,0,0.9);border-radius:10px;box-sizing:border-box">
+        <!-- Coins -->
+        <div style="position:absolute;top:-3px;left:-3px;width:22px;height:22px;border-top:4px solid var(--yellow2);border-left:4px solid var(--yellow2);border-radius:3px 0 0 0"></div>
+        <div style="position:absolute;top:-3px;right:-3px;width:22px;height:22px;border-top:4px solid var(--yellow2);border-right:4px solid var(--yellow2);border-radius:0 3px 0 0"></div>
+        <div style="position:absolute;bottom:-3px;left:-3px;width:22px;height:22px;border-bottom:4px solid var(--yellow2);border-left:4px solid var(--yellow2);border-radius:0 0 0 3px"></div>
+        <div style="position:absolute;bottom:-3px;right:-3px;width:22px;height:22px;border-bottom:4px solid var(--yellow2);border-right:4px solid var(--yellow2);border-radius:0 0 3px 0"></div>
       </div>
-      <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,0.7);font-weight:600">Cadre le bas de la carte ici</div>
     </div>
 
     <!-- Status -->
-    <div id="scan-status" style="position:absolute;top:20px;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#fff;padding:8px;background:rgba(0,0,0,0.5)">Prêt à scanner</div>
+    <div id="scan-status" style="position:absolute;top:20px;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#fff;padding:8px;background:rgba(0,0,0,0.5)">Place la carte dans le cadre</div>
   </div>
 
   <!-- Contrôles -->
@@ -2424,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.27';
+const APP_VERSION = '3.29';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2458,7 +2461,7 @@ async function analyzePhoto(input){
   result.innerHTML = `<div class="loader">Analyse en cours…</div>`;
 
   try{
-    // Convertir en base64 avec redimensionnement
+    // Convertir en base64 — image complète sans recadrage
     const base64 = await new Promise((res, rej) => {
       const img = new Image();
       img.onload = () => {
@@ -2469,13 +2472,10 @@ async function analyzePhoto(input){
           if(w > h){ h = Math.round(h * maxSize/w); w = maxSize; }
           else { w = Math.round(w * maxSize/h); h = maxSize; }
         }
-        // Recadrer sur les 30% inférieurs
-        const cropH = Math.floor(h * 0.30);
-        const cropY = h - cropH;
         canvas.width = w;
-        canvas.height = cropH;
+        canvas.height = h;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, cropY * (img.height/h), img.width, img.height * 0.30, 0, 0, w, cropH);
+        ctx.drawImage(img, 0, 0, w, h);
         res(canvas.toDataURL('image/jpeg', 0.9).split(',')[1]);
       };
       img.onerror = rej;
@@ -2518,8 +2518,136 @@ async function analyzePhoto(input){
   input.value = '';
 }
 
-// Table total → setId pour les anciennes extensions sans code texte
-const TOTAL_TO_SET = {
+function parseScanText(text, resultEl){
+  const codeMap = _mobileDB?.ptcgoMap || SET_CODE_MAP;
+  const T = text.toUpperCase();
+
+  let cardNum = null, setId = null, total = null;
+
+  // ── Formats spéciaux préfixés ──
+  // TG06/TG30, GG05/GG70, SV094/SV094, KJ01/KJ30...
+  const specialMatch = T.match(/\b([A-Z]{2,4})(\d{2,3})\s*\/\s*[A-Z]{0,4}(\d{2,3})\b/);
+  if(specialMatch){
+    const prefix = specialMatch[1];
+    cardNum = prefix + specialMatch[2]; // ex: TG06
+    total   = parseInt(specialMatch[3]);
+  }
+
+  // ── Format standard : 158/131 ──
+  if(!cardNum){
+    const stdMatch = T.match(/\b(\d{1,3})\s*\/\s*(\d{1,3})\b/);
+    if(stdMatch){
+      cardNum = String(parseInt(stdMatch[1]));
+      total   = parseInt(stdMatch[2]);
+    }
+  }
+
+  // ── Format promo swsh : SWSH001, SM001, XY001 ──
+  if(!cardNum){
+    const promoMatch = T.match(/\b(SWSH|SM|XY|SV|DP|BW|HGSS|POP|BW|HS)(\d{2,3})\b/);
+    if(promoMatch){
+      cardNum = promoMatch[1] + promoMatch[2];
+    }
+  }
+
+  // ── Chercher le code d'extension ──
+  // 1. Adjacent au numéro : "CRI 073/086" ou "073/086 CRI"
+  const nearMatch = T.match(/([A-Z]{2,6})\s+\d{1,3}\s*\/|\d{1,3}\s*\/\s*\d{1,3}\s+([A-Z]{2,6})/);
+  if(nearMatch){
+    const candidate = (nearMatch[1] || nearMatch[2] || '').trim();
+    if(candidate && codeMap[candidate]){ setId = codeMap[candidate]; }
+  }
+
+  // 2. Chercher dans tous les mots
+  if(!setId){
+    const IGNORE = new Set(['PV','EX','GX','VX','HP','LV','XY','SV','DP','BW','SM','AP','AR','SAR','RR','SR','CSR','CHR','UR','ACE','TAG','GEM','SIR','IR','HR','TCG','NEO','POP','GYM','TG','GG','KJ','ACE','SWSH','HGSS']);
+    const words = T.match(/\b([A-Z]{2,6})\b/g) || [];
+    for(const word of words){
+      if(!IGNORE.has(word) && codeMap[word]){ setId = codeMap[word]; break; }
+    }
+  }
+
+  // 3. Fallback total → setId pour anciennes extensions
+  if(!setId && total && TOTAL_TO_SET[total]){
+    setId = TOTAL_TO_SET[total];
+  }
+
+  if(!cardNum && !setId){
+    resultEl.innerHTML = `<div class="empty-state"><span class="big">❓</span>Carte non identifiée<br><small style="color:rgba(255,255,255,0.35);font-size:10px">${text.substring(0,120)}</small></div>`;
+    return;
+  }
+
+  // ── Chercher dans la base ──
+  if(_mobileDB?.cards?.length){
+    let card = null;
+
+    // Recherche exacte numéro + setId
+    if(setId && cardNum){
+      card = _mobileDB.cards.find(c =>
+        c.setId === setId && (
+          c.number === cardNum ||
+          c.number === cardNum.padStart(3,'0') ||
+          String(parseInt(c.number||'')) === cardNum ||
+          c.number?.toUpperCase() === cardNum
+        )
+      );
+    }
+
+    // Recherche par id direct
+    if(!card && setId && cardNum){
+      card = _mobileDB.cards.find(c =>
+        c.id === `${setId}-${cardNum}` ||
+        c.id === `${setId}-${cardNum.padStart(3,'0')}` ||
+        c.id?.toUpperCase() === `${setId}-${cardNum}`
+      );
+    }
+
+    // Recherche numéro seul dans le setId trouvé par total
+    if(!card && cardNum && total && setId){
+      card = _mobileDB.cards.find(c =>
+        c.setId === setId &&
+        String(parseInt(c.number||'')) === String(parseInt(cardNum)||'')
+      );
+    }
+
+    if(card){
+      showScanResult(card, setId, cardNum);
+      return;
+    }
+
+    // Recherche par nom si toujours pas trouvé
+    // Vision lit le nom de la carte en gros — on extrait les mots significatifs
+    if(_mobileDB?.cards?.length){
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+      for(const line of lines){
+        const normalized = line.toLowerCase().replace(/[^a-zàâçéèêëîïôûùüÿñæœ\s-]/gi,'').trim();
+        if(normalized.length < 3) continue;
+        const candidates = _mobileDB.cards.filter(c =>
+          c.name?.toLowerCase().includes(normalized) ||
+          normalized.includes(c.name?.toLowerCase())
+        );
+        // Si on a un setId, filtrer par setId
+        const filtered = setId ? candidates.filter(c => c.setId === setId) : candidates;
+        if(filtered.length === 1){
+          showScanResult(filtered[0], setId, filtered[0].number);
+          return;
+        }
+        // Si plusieurs résultats et qu'on a un numéro, affiner
+        if(filtered.length > 1 && cardNum){
+          const exact = filtered.find(c =>
+            c.number === cardNum ||
+            c.number?.toUpperCase() === cardNum ||
+            String(parseInt(c.number||'')) === String(parseInt(cardNum)||'')
+          );
+          if(exact){ showScanResult(exact, setId, exact.number); return; }
+        }
+      }
+    }
+  }
+
+  // Résultat partiel
+  resultEl.innerHTML = `<div class="empty-state"><span class="big">🔍</span>Non trouvé en base<br><small style="color:rgba(255,255,255,0.4)">${cardNum?'N°'+cardNum:''} ${setId?'· '+setId:''} ${total?'/ '+total:''}</small><br><small style="color:rgba(255,255,255,0.25);font-size:10px">${text.substring(0,100)}</small></div>`;
+}
   // Wizards of the Coast — Base
   102: 'base1',   // Base Set
   64:  'base2',   // Jungle
@@ -2703,6 +2831,32 @@ function parseScanText(text, resultEl){
   resultEl.innerHTML = `<div class="empty-state"><span class="big">🔍</span>Carte non trouvée en base<br><small style="color:rgba(255,255,255,0.4)">${info || 'Aucune info extraite'}</small><br><small style="color:rgba(255,255,255,0.3);font-size:10px">${text.substring(0,80)}</small></div>`;
 }
 
+function positionScanFrame(){
+  // Cadre ratio carte Pokémon (2.5 × 3.5) centré dans la zone vidéo
+  const overlay = document.getElementById('scan-overlay');
+  const videoArea = overlay.querySelector('div'); // premier div = zone vidéo
+  const W = overlay.clientWidth;
+  const H = overlay.clientHeight - 120; // soustraire les contrôles en bas
+
+  // Largeur = 80% de la largeur écran
+  const fw = Math.round(W * 0.80);
+  const fh = Math.round(fw * 3.5 / 2.5);
+  const fx = Math.round((W - fw) / 2);
+  const fy = Math.round((H - fh) / 2);
+
+  const frame = document.getElementById('scan-frame-box');
+  frame.style.left   = fx + 'px';
+  frame.style.top    = fy + 'px';
+  frame.style.width  = fw + 'px';
+  frame.style.height = fh + 'px';
+
+  // Masques
+  document.getElementById('scan-mask-top').style.height    = fy + 'px';
+  document.getElementById('scan-mask-bottom').style.height = (H - fy - fh) + 'px';
+  document.getElementById('scan-mask-left').style.cssText  += `;top:${fy}px;height:${fh}px;width:${fx}px`;
+  document.getElementById('scan-mask-right').style.cssText += `;top:${fy}px;height:${fh}px;width:${fx}px;left:auto;right:0`;
+}
+
 async function openScanner(){
   const overlay = document.getElementById('scan-overlay');
   overlay.style.display = 'flex';
@@ -2733,6 +2887,7 @@ async function openScanner(){
     const video = document.getElementById('scan-video');
     video.srcObject = _scanStream;
     await video.play();
+    positionScanFrame();
     // Activer l'autofocus continu
     const track = _scanStream.getVideoTracks()[0];
     try{
@@ -2797,23 +2952,13 @@ async function captureAndScan(){
   status.textContent = '📸 Capture en cours…';
   document.getElementById('scan-btn').disabled = true;
 
-  // Capturer le frame vidéo
+  // Capturer le frame vidéo complet
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0);
 
-  // Rogner la zone du bas de la carte (30% inférieur)
-  const cropH = Math.floor(canvas.height * 0.25);
-  const cropY = canvas.height - cropH;
-  const cropCanvas = document.createElement('canvas');
-  cropCanvas.width = canvas.width;
-  cropCanvas.height = cropH;
-  const cropCtx = cropCanvas.getContext('2d');
-  cropCtx.drawImage(canvas, 0, cropY, canvas.width, cropH, 0, 0, canvas.width, cropH);
-
-  const base64 = cropCanvas.toDataURL('image/jpeg', 0.9).split(',')[1];
-
+  const base64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
   status.textContent = '🔍 Analyse en cours…';
 
   try{

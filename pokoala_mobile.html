@@ -2427,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.31';
+const APP_VERSION = '3.32';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2570,8 +2570,8 @@ function parseScanText(text, resultEl){
   }
 
   // ── 4. Chercher le code d'extension ──
-  // Adjacent au numéro
-  const nearMatch = T.match(/([A-Z]{2,6})\s+\d{1,3}\s*\/|\d{1,3}\s*\/\s*\d{1,3}\s+([A-Z]{2,6})/);
+  // Adjacent au numéro — \b pour éviter de capturer le point avant le code
+  const nearMatch = T.match(/(?:^|[\s,])([A-Z]{2,6})\s+\d{1,3}\s*\/|\d{1,3}\s*\/\s*\d{1,3}\s+([A-Z]{2,6})(?:\s|$)/);
   if(nearMatch){
     const candidate = (nearMatch[1] || nearMatch[2] || '').trim();
     if(candidate && codeMap[candidate]) setId = codeMap[candidate];
@@ -2626,11 +2626,17 @@ function parseScanText(text, resultEl){
       );
       if(tgCards.length === 1){ showScanResult(tgCards[0], tgCards[0].setId, tgCards[0].number); return; }
       if(tgCards.length > 1){
-        // Affiner par nom si possible
+        // Affiner par nom (name FR ou nameEn)
         const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>=3&&l.length<=25);
         for(const line of lines){
           const norm = line.toLowerCase().replace(/[^a-zàâçéèêëîïôûùüÿñæœ\s\-']/gi,'').trim();
-          const byName = tgCards.filter(c => c.name?.toLowerCase().includes(norm) || norm.includes(c.name?.toLowerCase()));
+          if(norm.length < 3) continue;
+          const byName = tgCards.filter(c =>
+            c.name?.toLowerCase().includes(norm) ||
+            norm.includes(c.name?.toLowerCase()) ||
+            c.nameEn?.toLowerCase().includes(norm) ||
+            norm.includes(c.nameEn?.toLowerCase())
+          );
           if(byName.length === 1){ showScanResult(byName[0], byName[0].setId, byName[0].number); return; }
         }
         showScanChoices(tgCards, resultEl);
@@ -2906,11 +2912,17 @@ async function captureAndScan(){
 
 
 function getCardImg(card, size='low'){
-  // card.img dans pokoala_db_light.json = "https://assets.tcgdex.net/fr/hgss/hgss4/1" (sans extension)
-  const base = card.img || card.images?.small ||
-    `https://assets.tcgdex.net/fr/${card.setId||''}/${card.number||''}`;
-  const clean = base.replace('/low.webp','').replace('/high.webp','');
-  return `${clean}/${size}.webp`;
+  // Si img est présent et non vide, l'utiliser
+  if(card.img){
+    const base = card.img.replace('/low.webp','').replace('/high.webp','');
+    return `${base}/${size}.webp`;
+  }
+  // Construire l'URL depuis setId et number
+  // Format : https://assets.tcgdex.net/fr/{serie}/{setId}/{number}/low.webp
+  const setId = card.setId || '';
+  const number = card.number || '';
+  const serie = setId.match(/^([a-z]+)/i)?.[1] || '';
+  return `https://assets.tcgdex.net/fr/${serie}/${setId}/${number}/${size}.webp`;
 }
 
 function showScanResult(card, setCode, cardNum){

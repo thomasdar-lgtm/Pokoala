@@ -2410,14 +2410,14 @@ async function driveLoad(silent=false){
     _driveFileId=fileId;
     const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,{headers:{'Authorization':'Bearer '+_driveToken}});
     const d=await r.json();
-    if(d.collection&&d.collection.length>0){ col=d.collection; save(); renderCollOverlay(); toast(`✅ ${col.length} cartes chargées depuis Drive !`); }
+    if(d.collection&&d.collection.length>0){ col=d.collection; save(); renderHome(); renderCollOverlay(); toast(`✅ ${col.length} cartes chargées depuis Drive !`); }
     else if(!silent) toast('Aucune collection sur Drive');
     if(!silent) closeModal('drive-modal');
   }catch(e){ if(!silent) toast('Erreur récupération Drive'); }
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.21';
+const APP_VERSION = '3.22';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

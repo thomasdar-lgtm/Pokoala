@@ -397,8 +397,10 @@ body::before{
   display:flex;align-items:center;gap:10px;
   padding:9px 12px;
   border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;
+  -webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;
 }
-.search-result:active{background:rgba(255,255,255,0.04)}
+.search-result:active{background:rgba(255,255,255,0.06)}
 .search-result-img{width:34px;height:48px;object-fit:contain;border-radius:3px;flex-shrink:0;background:rgba(255,255,255,0.03)}
 .search-result-info{flex:1;min-width:0}
 .search-result-name{font-weight:700;font-size:13px;color:rgba(255,255,255,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1965,14 +1967,14 @@ function renderSearchResults(cards){
   res.innerHTML=cards.map((c,i)=>{
     const owned=col.find(x=>x.id===c.id);
     const img=c.images?.small||`https://assets.tcgdex.net/fr/${c.set?.id||''}/${c.number||''}/low.webp`;
-    return`<div class="search-result" onclick="openCardModalFromSearch(${i})">
+    return`<div class="search-result" data-idx="${i}">
       ${img?`<img class="search-result-img" src="${img}" loading="lazy">`:'<div class="search-result-img"></div>'}
       <div class="search-result-info">
         <div class="search-result-name">${c.name}</div>
         <div class="search-result-sub">${c.set?.name||''} · N°${c.number||'—'} · ${c.rarity||'—'}</div>
         ${owned?`<div style="font-size:10px;color:var(--yellow2);margin-top:2px;font-weight:700">✓ Dans la collection (${owned.qty}×)</div>`:''}
       </div>
-      <div class="add-btn" onclick="event.stopPropagation();addCard(_searchCardMap.get(${i}));toast('✅ Ajoutée')">
+      <div class="add-btn" data-add="${i}">
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--red2)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </div>
     </div>`;
@@ -2415,7 +2417,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.20';
+const APP_VERSION = '3.21';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2901,6 +2903,22 @@ async function init(){
       else { _driveToken=null; localStorage.removeItem('drive_token'); updateDriveUI(); }
     }catch(e){ _driveToken=null; localStorage.removeItem('drive_token'); updateDriveUI(); }
   }
+  // Délégation d'événements sur les résultats de recherche
+  document.getElementById('search-results').addEventListener('click', function(e){
+    const addBtn = e.target.closest('[data-add]');
+    if(addBtn){
+      const idx = parseInt(addBtn.dataset.add);
+      const c = _searchCardMap.get(idx);
+      if(c){ addCard(c); toast('✅ Ajoutée'); }
+      return;
+    }
+    const row = e.target.closest('[data-idx]');
+    if(row){
+      const idx = parseInt(row.dataset.idx);
+      openCardModalFromSearch(idx);
+    }
+  });
+
   // Charger la base mobile en arrière-plan
   await loadMobileDB();
   updateScanDBStatus();

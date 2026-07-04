@@ -2427,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.34';
+const APP_VERSION = '3.35';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2606,20 +2606,25 @@ function parseScanText(text, resultEl){
       );
       if(tgCards.length === 1){ showScanResult(tgCards[0], tgCards[0].setId, tgCards[0].number); return; }
       if(tgCards.length > 1){
-        // Affiner par nom (FR et EN)
         const SKIP = /copyright|nintendo|creatures|game.?freak|illus\.|©|faiblesse|résistance|retraite|talent|évolution|niveau|base/i;
         const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>=3&&l.length<=25&&!SKIP.test(l));
         for(const line of lines){
           const norm = line.toLowerCase().replace(/[^a-zàâçéèêëîïôûùüÿñæœ\s\-']/gi,'').trim();
           if(norm.length < 3) continue;
-          const byName = tgCards.filter(c =>
-            c.name?.toLowerCase() === norm ||
-            c.name?.toLowerCase().includes(norm) ||
-            norm.includes(c.name?.toLowerCase()) ||
-            c.nameEn?.toLowerCase() === norm ||
-            c.nameEn?.toLowerCase().includes(norm) ||
-            norm.includes(c.nameEn?.toLowerCase())
+
+          // Chercher d'abord le nameEn correspondant au nom FR dans les autres cartes
+          const frCard = _mobileDB.cards.find(c =>
+            c.name?.toLowerCase() === norm && c.nameEn && c.nameEn !== c.name
           );
+          const nameEnFromFR = frCard?.nameEn?.toLowerCase();
+
+          const byName = tgCards.filter(c => {
+            const nameLow = c.name?.toLowerCase() || '';
+            const nameEnLow = c.nameEn?.toLowerCase() || '';
+            return nameLow === norm || nameLow.includes(norm) || norm.includes(nameLow) ||
+                   nameEnLow === norm || nameEnLow.includes(norm) || norm.includes(nameEnLow) ||
+                   (nameEnFromFR && (nameEnLow === nameEnFromFR || nameEnLow.includes(nameEnFromFR)));
+          });
           if(byName.length === 1){ showScanResult(byName[0], byName[0].setId, byName[0].number); return; }
         }
         showScanChoices(tgCards, resultEl);
@@ -2666,10 +2671,14 @@ function showScanChoices(cards, resultEl){
       </div>
       ${cards.map(c => {
         const img = getCardImg(c,'low');
+        // Trouver le nom FR si la carte a un nom anglais
+        const nameFR = c.name && c.nameEn && c.name !== c.nameEn ? c.name :
+          (_mobileDB?.cards?.find(x => x.nameEn === c.nameEn && x.name !== x.nameEn)?.name || c.name);
+        const displayName = nameFR || c.name;
         return `<div onclick="showScanResult_byId('${c.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid rgba(255,255,255,0.05);cursor:pointer;-webkit-user-select:none;user-select:none">
           <img src="${img}" style="width:36px;height:50px;object-fit:contain;border-radius:4px;flex-shrink:0" onerror="this.style.opacity='.2'">
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:700;color:#fff">${c.name}</div>
+            <div style="font-size:13px;font-weight:700;color:#fff">${displayName}</div>
             <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px">${c.setName||c.setId} · N°${c.number}</div>
           </div>
           <span style="color:rgba(255,255,255,0.2);font-size:16px">›</span>

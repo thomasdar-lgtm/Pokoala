@@ -2424,7 +2424,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.25';
+const APP_VERSION = '3.27';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2846,18 +2846,28 @@ async function captureAndScan(){
 }
 
 
+function getCardImg(card, size='low'){
+  // card.img dans pokoala_db_light.json = "https://assets.tcgdex.net/fr/hgss/hgss4/1" (sans extension)
+  const base = card.img || card.images?.small ||
+    `https://assets.tcgdex.net/fr/${card.setId||''}/${card.number||''}`;
+  const clean = base.replace('/low.webp','').replace('/high.webp','');
+  return `${clean}/${size}.webp`;
+}
+
 function showScanResult(card, setCode, cardNum){
   closeScanner();
-  const img = card.img ? card.img.replace('/low.webp','/high.webp') : '';
+  const imgLow  = getCardImg(card, 'low');
+  const imgHigh = getCardImg(card, 'high');
   const owned = col.find(c => c.id === card.id);
   const scanResult = document.getElementById('scan-result');
   scanResult.innerHTML = `
     <div class="card-block" style="text-align:left;overflow:hidden">
       <div style="display:flex;gap:12px;padding:12px">
-        ${img ? `<img src="${img}" style="width:80px;border-radius:6px;object-fit:contain" onerror="this.style.display='none'">` : ''}
+        <img src="${imgHigh}" style="width:80px;border-radius:6px;object-fit:contain"
+          onerror="this.src='${imgLow}'">
         <div style="flex:1">
           <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">${card.name}</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.5)">${card.setName} · N°${cardNum}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5)">${card.setName||''} · N°${cardNum}</div>
           ${card.rarity ? `<div style="margin-top:6px">${rareBadge(card.rarity)}</div>` : ''}
           ${owned ? `<div style="margin-top:6px;font-size:12px;color:var(--yellow2);font-weight:700">✓ Déjà dans ta collection (${owned.qty}×)</div>` : ''}
         </div>
@@ -2868,8 +2878,6 @@ function showScanResult(card, setCode, cardNum){
         </button>
       </div>
     </div>`;
-
-  // Scroll vers le résultat
   scanResult.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
@@ -2883,8 +2891,8 @@ function addCardFromScan(cardId){
     rarity: card.rarity,
     set: {id: card.setId, name: card.setName},
     images: {
-      small: card.img || '',
-      large: card.img ? card.img.replace('/low.webp','/high.webp') : ''
+      small: getCardImg(card, 'low'),
+      large: getCardImg(card, 'high')
     }
   });
   document.getElementById('scan-result').innerHTML = `

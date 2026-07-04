@@ -2427,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.32';
+const APP_VERSION = '3.34';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2518,40 +2518,21 @@ async function analyzePhoto(input){
   input.value = '';
 }
 
-function normalizeOCR(str){
-  // Corrections OCR courantes sur les lettres/chiffres
-  return str
-    .replace(/0/g,'O').replace(/1/g,'I').replace(/8/g,'B')
-    .replace(/5/g,'S').replace(/6/g,'G').replace(/2/g,'Z');
-}
-
 function parseScanText(text, resultEl){
   const codeMap = _mobileDB?.ptcgoMap || SET_CODE_MAP;
   const T = text.toUpperCase();
 
   let cardNum = null, setId = null, total = null;
 
-  // ── 1. Formats spéciaux préfixés : TG06/TG30, GG05/GG70 ──
-  // Tolérance OCR : D→T, O→0, etc. Vision lit parfois DTC06/30 au lieu de TG06/TG30
-  const specialRaw = T.match(/\b([A-Z]{1,4})(\d{2,3})\s*\/\s*[A-Z]{0,4}(\d{2,3})\b/);
-  if(specialRaw){
-    const rawPrefix = specialRaw[1];
-    const num = specialRaw[2];
-    const tot = parseInt(specialRaw[3]);
-    // Tenter correction OCR : DT→TG, D→T en début
-    const corrected = rawPrefix
-      .replace(/^D(?=T|G)/,'T')  // DT→TT→TG, DG→TG
-      .replace(/DT/,'TG')
-      .replace(/^DTC$/,'TG')
-      .replace(/^TC$/,'TG')
-      .replace(/^GC$/,'GG');
-    // Préfixes spéciaux connus
-    const SPECIAL_PREFIXES = new Set(['TG','GG','KJ','ACE','SV','PR','BW','XY','SM','DP','EX']);
-    const finalPrefix = SPECIAL_PREFIXES.has(corrected) ? corrected : (SPECIAL_PREFIXES.has(rawPrefix) ? rawPrefix : null);
-    if(finalPrefix){
-      cardNum = finalPrefix + num.padStart(2,'0');
-      total   = tot;
-    }
+  // ── 1. Formats TG/GG préfixés : TG06/TG30, DTC06/30 (erreur OCR de TG) ──
+  // On détecte spécifiquement les préfixes TG/GG/KJ et leurs erreurs OCR courantes
+  const tgMatch = T.match(/\b(TG|GG|KJ|DTC|DT|TC)(\d{2,3})\s*\/\s*(?:TG|GG|KJ|DTC|DT|TC)?(\d{2,3})\b/);
+  if(tgMatch){
+    // Corriger le préfixe OCR
+    const rawPfx = tgMatch[1];
+    const pfx = rawPfx === 'DTC' || rawPfx === 'DT' || rawPfx === 'TC' ? 'TG' : rawPfx;
+    cardNum = pfx + tgMatch[2].padStart(2,'0');
+    total   = parseInt(tgMatch[3]);
   }
 
   // ── 2. Format standard : 158/131 ──
@@ -2569,31 +2550,32 @@ function parseScanText(text, resultEl){
     if(promoMatch){ cardNum = promoMatch[1] + promoMatch[2]; }
   }
 
-  // ── 4. Chercher le code d'extension ──
-  // Adjacent au numéro — \b pour éviter de capturer le point avant le code
-  const nearMatch = T.match(/(?:^|[\s,])([A-Z]{2,6})\s+\d{1,3}\s*\/|\d{1,3}\s*\/\s*\d{1,3}\s+([A-Z]{2,6})(?:\s|$)/);
+  // ── 4. Chercher le code d'extension dans le texte ──
+  // Adjacent au numéro (ex: "CRI 073/086" ou "073/086 CRI")
+  // On utilise \b pour éviter de capturer un point avant le code
+  const nearMatch = T.match(/\b([A-Z]{2,6})\s+\d{1,3}\s*\/\s*\d{1,3}|\d{1,3}\s*\/\s*\d{1,3}\s+\b([A-Z]{2,6})\b/);
   if(nearMatch){
     const candidate = (nearMatch[1] || nearMatch[2] || '').trim();
     if(candidate && codeMap[candidate]) setId = codeMap[candidate];
   }
 
-  // Dans tous les mots
+  // Dans tous les mots du texte
   if(!setId){
-    const IGNORE = new Set(['PV','EX','GX','VX','HP','LV','XY','SV','DP','BW','SM','AP','AR','SAR','RR','SR','CSR','CHR','UR','ACE','TAG','GEM','SIR','IR','HR','TCG','NEO','POP','GYM','TG','GG','KJ','SWSH','HGSS','DTC','TC']);
+    const IGNORE = new Set(['PV','EX','GX','VX','HP','LV','XY','SV','DP','BW','SM','AP','AR','SAR','RR','SR','CSR','CHR','UR','ACE','TAG','GEM','SIR','IR','HR','TCG','NEO','POP','GYM','TG','GG','KJ','SWSH','HGSS','DTC','TC','DT','BASE','NIVEAU','GAME','FREAK','ILLUS','RETRAITE','FAIBLESSE','RESISTANCE','TALENT','NINTENDO','CREATURES','POKEMON']);
     const words = T.match(/\b([A-Z]{2,6})\b/g) || [];
     for(const word of words){
       if(!IGNORE.has(word) && codeMap[word]){ setId = codeMap[word]; break; }
     }
   }
 
-  // Fallback total → setId
+  // Fallback total → setId (anciennes extensions)
   if(!setId && total && TOTAL_TO_SET[total]) setId = TOTAL_TO_SET[total];
 
   // ── 5. Recherche dans la base ──
   if(_mobileDB?.cards?.length){
     let card = null;
 
-    // Numéro + setId
+    // a. Numéro + setId exact
     if(setId && cardNum){
       card = _mobileDB.cards.find(c =>
         c.setId === setId && (
@@ -2605,7 +2587,7 @@ function parseScanText(text, resultEl){
       );
     }
 
-    // ID direct
+    // b. ID direct
     if(!card && setId && cardNum){
       card = _mobileDB.cards.find(c =>
         c.id === `${setId}-${cardNum}` ||
@@ -2616,24 +2598,25 @@ function parseScanText(text, resultEl){
 
     if(card){ showScanResult(card, setId, cardNum); return; }
 
-    // ── Recherche spéciale sets TG/GG/KJ ──
-    // Ces sets ont un setId comme swsh9tg, swsh12pt5gg — non dans codeMap
-    // On cherche directement par numéro dans tous les sets de ce type
+    // c. Recherche spéciale TG/GG/KJ — numéro dans tous les sets de ce type
     if(cardNum && /^(TG|GG|KJ)/i.test(cardNum)){
       const tgCards = _mobileDB.cards.filter(c =>
         c.number?.toUpperCase() === cardNum.toUpperCase() &&
-        (c.setId?.includes('tg') || c.setId?.includes('gg') || c.setId?.includes('kj'))
+        (c.setId?.endsWith('tg') || c.setId?.endsWith('gg') || c.setId?.includes('kj'))
       );
       if(tgCards.length === 1){ showScanResult(tgCards[0], tgCards[0].setId, tgCards[0].number); return; }
       if(tgCards.length > 1){
-        // Affiner par nom (name FR ou nameEn)
-        const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>=3&&l.length<=25);
+        // Affiner par nom (FR et EN)
+        const SKIP = /copyright|nintendo|creatures|game.?freak|illus\.|©|faiblesse|résistance|retraite|talent|évolution|niveau|base/i;
+        const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>=3&&l.length<=25&&!SKIP.test(l));
         for(const line of lines){
           const norm = line.toLowerCase().replace(/[^a-zàâçéèêëîïôûùüÿñæœ\s\-']/gi,'').trim();
           if(norm.length < 3) continue;
           const byName = tgCards.filter(c =>
+            c.name?.toLowerCase() === norm ||
             c.name?.toLowerCase().includes(norm) ||
             norm.includes(c.name?.toLowerCase()) ||
+            c.nameEn?.toLowerCase() === norm ||
             c.nameEn?.toLowerCase().includes(norm) ||
             norm.includes(c.nameEn?.toLowerCase())
           );
@@ -2643,52 +2626,35 @@ function parseScanText(text, resultEl){
         return;
       }
     }
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length >= 3 && l.length <= 30);
-    let nameCandidates = [];
 
+    // d. Recherche par nom sur toutes les cartes
+    const SKIP_LINES = /copyright|nintendo|creatures|game.?freak|illus\.|©|faiblesse|résistance|retraite|talent|évolution|niveau|base/i;
+    const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>=3&&l.length<=25&&!SKIP_LINES.test(l));
+    let nameCandidates = [];
     for(const line of lines){
       const norm = line.toLowerCase().replace(/[^a-zàâçéèêëîïôûùüÿñæœ\s\-']/gi,'').trim();
       if(norm.length < 3) continue;
       const found = _mobileDB.cards.filter(c => {
         const name = c.name?.toLowerCase() || '';
-        return name === norm || name.includes(norm) || norm.includes(name);
+        return name === norm || (name.length > 3 && norm.includes(name)) || (norm.length > 3 && name.includes(norm));
       });
       if(found.length) nameCandidates = [...nameCandidates, ...found];
     }
-
-    // Dédupliquer
     nameCandidates = [...new Map(nameCandidates.map(c=>[c.id,c])).values()];
-
-    // Filtrer par setId si dispo
     const filtered = setId ? nameCandidates.filter(c => c.setId === setId) : nameCandidates;
 
-    // Résultat unique → direct
     if(filtered.length === 1){ showScanResult(filtered[0], setId, filtered[0].number); return; }
-
-    // Affiner par numéro
     if(filtered.length > 1 && cardNum){
       const exact = filtered.find(c =>
-        c.number === cardNum ||
-        c.number?.toUpperCase() === cardNum ||
+        c.number === cardNum || c.number?.toUpperCase() === cardNum ||
         String(parseInt(c.number||'')) === String(parseInt(cardNum)||'')
       );
       if(exact){ showScanResult(exact, setId, exact.number); return; }
     }
-
-    // Plusieurs résultats → liste de choix
-    if(filtered.length > 1 && filtered.length <= 12){
-      showScanChoices(filtered, resultEl);
-      return;
-    }
-
-    // Trop de résultats ou aucun
-    if(nameCandidates.length > 0 && nameCandidates.length <= 12){
-      showScanChoices(nameCandidates, resultEl);
-      return;
-    }
+    if(filtered.length > 1 && filtered.length <= 10){ showScanChoices(filtered, resultEl); return; }
+    if(nameCandidates.length > 0 && nameCandidates.length <= 10){ showScanChoices(nameCandidates, resultEl); return; }
   }
 
-  // Aucun résultat
   resultEl.innerHTML = `<div class="empty-state"><span class="big">🔍</span>Non trouvé en base<br><small style="color:rgba(255,255,255,0.4)">${cardNum?'N°'+cardNum:''} ${setId?'· '+setId:''} ${total?'/ '+total:''}</small><br><small style="color:rgba(255,255,255,0.25);font-size:10px">${text.substring(0,100)}</small></div>`;
 }
 

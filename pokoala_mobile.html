@@ -2427,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.36';
+const APP_VERSION = '3.37';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2535,6 +2535,12 @@ function parseScanText(text, resultEl){
     total   = parseInt(tgMatch[3]);
   }
 
+  // Fallback : TG/GG seul sans slash (Vision ne lit pas toujours le "/TG30")
+  if(!cardNum){
+    const tgAlone = T.match(/\b(TG|GG|KJ)(\d{2,3})\b/);
+    if(tgAlone){ cardNum = tgAlone[1] + tgAlone[2].padStart(2,'0'); }
+  }
+
   // ── 2. Format standard : 158/131 ──
   if(!cardNum){
     const stdMatch = T.match(/\b(\d{1,3})\s*\/\s*(\d{1,3})\b/);
@@ -2606,7 +2612,7 @@ function parseScanText(text, resultEl){
       );
       if(tgCards.length === 1){ showScanResult(tgCards[0], tgCards[0].setId, tgCards[0].number); return; }
       if(tgCards.length > 1){
-        const SKIP = /copyright|nintendo|creatures|game.?freak|illus\.|©|faiblesse|résistance|retraite|talent|évolution|niveau|base/i;
+        const SKIP = /^(copyright|nintendo|creatures|game.?freak|illus\.|©|faiblesse|résistance|retraite|©2[0-9]{3})/i;
         const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>=3&&l.length<=25&&!SKIP.test(l));
         for(const line of lines){
           const norm = line.toLowerCase().replace(/[^a-zàâçéèêëîïôûùüÿñæœ\s\-']/gi,'').trim();
@@ -2633,7 +2639,7 @@ function parseScanText(text, resultEl){
     }
 
     // d. Recherche par nom sur toutes les cartes
-    const SKIP_LINES = /copyright|nintendo|creatures|game.?freak|illus\.|©|faiblesse|résistance|retraite|talent|évolution|niveau|base/i;
+    const SKIP_LINES = /^(copyright|nintendo|creatures|game.?freak|illus\.|©|faiblesse|résistance|retraite|©2[0-9]{3})/i;
     const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>=3&&l.length<=25&&!SKIP_LINES.test(l));
     let nameCandidates = [];
     for(const line of lines){

@@ -2427,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.40';
+const APP_VERSION = '3.41';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2859,25 +2859,37 @@ async function openScanner(){
   document.getElementById('scan-status').textContent = 'Activation de la caméra…';
 
   try{
-    // Essayer d'abord avec zoom x2 pour meilleur focus de près
+    // Essayer d'abord en haute résolution (4K) avec zoom x2
     try{
       _scanStream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: {exact: 'environment'},
-          width: {ideal: 1920},
-          height: {ideal: 1080},
+          width: {ideal: 3840},
+          height: {ideal: 2160},
           zoom: 2.0
         }
       });
     }catch(e){
-      // Fallback sans zoom
-      _scanStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: {exact: 'environment'},
-          width: {ideal: 1920},
-          height: {ideal: 1080}
-        }
-      });
+      // Fallback 1080p avec zoom
+      try{
+        _scanStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: {exact: 'environment'},
+            width: {ideal: 1920},
+            height: {ideal: 1080},
+            zoom: 2.0
+          }
+        });
+      }catch(e2){
+        // Fallback sans zoom
+        _scanStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: {exact: 'environment'},
+            width: {ideal: 1920},
+            height: {ideal: 1080}
+          }
+        });
+      }
     }
     const video = document.getElementById('scan-video');
     video.srcObject = _scanStream;

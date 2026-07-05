@@ -2427,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.39';
+const APP_VERSION = '3.40';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3053,7 +3053,7 @@ function addCardFromScan(cardId){
   document.getElementById('scan-result').innerHTML = `
     <div style="text-align:center;padding:16px;color:#4ade80;font-weight:700;font-size:15px">
       ✅ ${getCardNameFR(card)} ajoutée !<br>
-      <button class="btn btn-secondary" style="margin-top:12px" onclick="openScanner()">Scanner une autre carte</button>
+      <button class="btn btn-secondary" style="margin-top:12px" onclick="document.getElementById('photo-input').click()">📷 Scanner une autre carte</button>
     </div>`;
 }
 

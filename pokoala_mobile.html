@@ -2427,7 +2427,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.38';
+const APP_VERSION = '3.39';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2597,13 +2597,14 @@ function extractScanSignals(text){
   const sig = { cardNums: [], total: null, setIds: [], nameCandidates: [] };
   const codeMap = _mobileDB?.ptcgoMap || SET_CODE_MAP;
 
-  // ── Numéros spéciaux TG/GG/KJ (avec tolérance OCR DTC/DT/TC→TG) ──
+  // ── Numéros spéciaux TG/GG/KJ (tolérance OCR : lettre collée devant, O/I/B→0/1/8) ──
   let m;
-  const reTG = /\b(TG|GG|KJ|DTC|DT|TC)\s?(\d{2,3})(?:\s*\/\s*(?:TG|GG|KJ|DTC|DT|TC)?\s?(\d{2,3}))?\b/g;
+  const reTG = /\b[A-Z]?(TG|GG|KJ|DTC|DT|TC)\s?([0-9OIlB]{2,3})(?:\s*\/\s*[A-Z]{0,4}\s?([0-9OIlB]{2,3}))?/g;
+  const fixDigits = s => s.replace(/O/g,'0').replace(/[Il]/g,'1').replace(/B/g,'8');
   while((m = reTG.exec(T))){
     const pfx = (m[1]==='DTC'||m[1]==='DT'||m[1]==='TC') ? 'TG' : m[1];
-    sig.cardNums.push(pfx + m[2].padStart(2,'0'));
-    if(m[3]) sig.total = parseInt(m[3]);
+    sig.cardNums.push(pfx + fixDigits(m[2]).padStart(2,'0'));
+    if(m[3]) sig.total = parseInt(fixDigits(m[3]));
   }
 
   // ── Numéro standard XXX/YYY ──

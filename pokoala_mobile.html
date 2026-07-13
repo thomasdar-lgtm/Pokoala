@@ -1116,7 +1116,33 @@ let _collFilter='', _activeTab='home', _searchTimer=null;
 
 // ── PERSISTENCE ──
 function save(){ try{ localStorage.setItem('pk_col',JSON.stringify(col)); }catch(e){} scheduleSave(); }
-function load(){ try{ const s=localStorage.getItem('pk_col'); if(s) col=JSON.parse(s); }catch(e){ col=[]; } }
+function load(){
+  try{
+    const s=localStorage.getItem('pk_col');
+    if(s) col=JSON.parse(s);
+    // Migration : si une carte n'a pas copies[], le générer depuis qty/cond
+    col.forEach(c=>{
+      if(!c.copies){
+        const qty = c.qty||1;
+        const cond = c.cond||'NM';
+        c.copies = Array.from({length: qty}, (_,i)=>({
+          cond,
+          for_sale: i < (c.qty_for_sale||0)
+        }));
+      }
+      // Recalculer les champs dérivés depuis copies
+      _syncFromCopies(c);
+    });
+  }catch(e){ col=[]; }
+}
+
+function _syncFromCopies(c){
+  c.qty = c.copies.length;
+  c.qty_for_sale = c.copies.filter(x=>x.for_sale).length;
+  c.for_sale = c.qty_for_sale > 0;
+  // cond = état du premier exemplaire (pour rétrocompatibilité affichage)
+  c.cond = c.copies[0]?.cond || 'NM';
+}
 let _saveTimer;
 function scheduleSave(){
   if(!_driveToken) return;
@@ -1827,13 +1853,23 @@ function rareBadge(r){
 }
 
 // ── CARD MODAL ──
+const CONDS = ['M','NM','EX','GD','LP','PL','PO'];
+
 function openCardModal(id){
   const c=col.find(x=>x.id===id);
   if(!c) return;
-  const img=cardImg(c);
-  const mul=condMul(c.cond);
-  const price=c.priceManual!=null?c.priceManual:(c.price?+(c.price*mul).toFixed(2):null);
-  const sid=escId(id);
+  _renderCardModal(c);
+  openModal('card-modal');
+}
+
+function _renderCardModal(c){
+  const img = cardImg(c);
+  const sid = escId(c.id);
+  const copies = c.copies || [{cond:c.cond||'NM', for_sale:false}];
+  const totalSale = copies.filter(x=>x.for_sale).length;
+  const mul = condMul(copies[0]?.cond||'NM');
+  const price = c.priceManual!=null ? c.priceManual : (c.price ? +(c.price*mul).toFixed(2) : null);
+
   document.getElementById('card-modal-content').innerHTML=`
     <div class="modal-header">
       <span class="modal-title" style="font-size:15px;max-width:calc(100% - 50px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
@@ -1845,65 +1881,87 @@ function openCardModal(id){
       <div class="val">${c.set||'—'}${c.num?' · N°'+c.num:''}</div>
       ${c.rarity?`<div style="margin-top:4px">${rareBadge(c.rarity)}</div>`:''}
     </div>
-    <div class="modal-section">
-      <label>Quantité</label>
-      <div class="qty-ctrl">
-        <button onclick="updQty('${sid}',-1)">−</button>
-        <div class="qty-val" id="m-qty">${c.qty}</div>
-        <button onclick="updQty('${sid}',1)">+</button>
+    <div class="modal-section" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <label>Exemplaires</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <div style="font-size:22px;font-weight:900;color:#fff">${copies.length}</div>
+          <button onclick="addCopy('${sid}')" style="width:32px;height:32px;border-radius:50%;background:var(--red2);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">+</button>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <label>En vente</label>
+        <div style="font-size:22px;font-weight:900;color:${totalSale>0?'var(--yellow2)':'rgba(255,255,255,0.3)'};margin-top:4px">${totalSale}</div>
       </div>
     </div>
-    <div class="modal-section">
-      <label>État</label>
-      <select class="mob-select" onchange="updCond('${sid}',this.value)">
-        ${[['M','Mint'],['NM','Near Mint'],['EX','Excellent'],['GD','Good'],['LP','Light Played'],['PL','Played'],['PO','Poor']].map(([v,l])=>`<option value="${v}"${c.cond===v?' selected':''}>${v} — ${l}</option>`).join('')}
-      </select>
-    </div>
-    <div class="modal-section">
-      <label>Prix estimé</label>
-      <div class="val" style="color:var(--yellow2)">${price?price.toFixed(2)+' €':'—'}</div>
-    </div>
-    <div class="modal-section">
-      <label>Quantité en vente</label>
-      <div class="qty-ctrl">
-        <button onclick="updSale('${sid}',-1)">−</button>
-        <div class="qty-val" id="m-sale">${c.qty_for_sale||0}</div>
-        <button onclick="updSale('${sid}',1)">+</button>
+    <div class="modal-section" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div>
+        <label>Prix estimé</label>
+        <div class="val" style="color:var(--yellow2)">${price?price.toFixed(2)+' €':'—'}</div>
       </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-danger" style="flex:1" onclick="removeCard('${sid}')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-        Retirer
-      </button>
-      <button class="btn btn-secondary" style="flex:1" onclick="openCM('${escId(c.nameEn||c.name)}','${escId(c.num||'')}')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      <button class="btn btn-secondary" style="flex-shrink:0;padding:8px 12px;font-size:12px" onclick="openCM('${escId(c.nameEn||c.name)}','${escId(c.num||'')}')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         Cardmarket
       </button>
+    </div>
+    <div id="modal-copies" style="margin-top:4px">
+      ${copies.map((copy,i)=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06)">
+          <div style="font-size:11px;color:rgba(255,255,255,0.3);width:20px;flex-shrink:0">#${i+1}</div>
+          <div style="display:flex;gap:4px;flex:1;flex-wrap:wrap">
+            ${CONDS.map(v=>`
+              <button onclick="setCopyCond('${sid}',${i},'${v}')"
+                style="padding:4px 7px;border-radius:6px;border:1px solid ${copy.cond===v?'var(--yellow2)':'rgba(255,255,255,0.12)'};background:${copy.cond===v?'rgba(255,215,0,0.15)':'transparent'};color:${copy.cond===v?'var(--yellow2)':'rgba(255,255,255,0.5)'};font-size:11px;font-weight:700;cursor:pointer">
+                ${v}
+              </button>`).join('')}
+          </div>
+          <button onclick="toggleCopyForSale('${sid}',${i})"
+            style="flex-shrink:0;padding:5px 8px;border-radius:8px;border:1px solid ${copy.for_sale?'var(--yellow2)':'rgba(255,255,255,0.12)'};background:${copy.for_sale?'rgba(255,215,0,0.15)':'transparent'};color:${copy.for_sale?'var(--yellow2)':'rgba(255,255,255,0.4)'};font-size:10px;font-weight:700;cursor:pointer">
+            Vente
+          </button>
+          <button onclick="removeCopy('${sid}',${i})"
+            style="width:28px;height:28px;border-radius:50%;background:rgba(255,0,0,0.15);border:1px solid rgba(255,0,0,0.2);color:rgba(255,80,80,0.8);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            ✕
+          </button>
+        </div>`).join('')}
     </div>`;
-  openModal('card-modal');
+}
+
+function addCopy(id){
+  const c=col.find(x=>x.id===id); if(!c) return;
+  c.copies = c.copies||[];
+  c.copies.push({cond:'NM', for_sale:false});
+  _syncFromCopies(c); save(); renderHome(); _renderCardModal(c);
+}
+
+function removeCopy(id, idx){
+  const c=col.find(x=>x.id===id); if(!c) return;
+  c.copies = c.copies||[];
+  if(c.copies.length<=1){ col=col.filter(x=>x.id!==id); closeModal('card-modal'); save(); renderCollOverlay(); renderHome(); toast('Carte retirée'); return; }
+  c.copies.splice(idx,1);
+  _syncFromCopies(c); save(); renderHome(); renderCollOverlay(); _renderCardModal(c);
+}
+
+function setCopyCond(id, idx, cond){
+  const c=col.find(x=>x.id===id); if(!c) return;
+  c.copies[idx].cond = cond;
+  _syncFromCopies(c); save(); _renderCardModal(c);
+}
+
+function toggleCopyForSale(id, idx){
+  const c=col.find(x=>x.id===id); if(!c) return;
+  c.copies[idx].for_sale = !c.copies[idx].for_sale;
+  _syncFromCopies(c); save(); renderCollOverlay(); _renderCardModal(c);
 }
 
 function updQty(id,d){
-  const c=col.find(x=>x.id===id); if(!c) return;
-  c.qty=Math.max(0,(c.qty||1)+d);
-  if(c.qty===0){ col.splice(col.indexOf(c),1); closeModal('card-modal'); save(); if(document.getElementById('grid-overlay').classList.contains('open')) renderGrid(); return; }
-  const el=document.getElementById('m-qty'); if(el) el.textContent=c.qty;
-  save();
-  if(document.getElementById('grid-overlay').classList.contains('open')) renderGrid();
+  // Gardé pour rétrocompatibilité — délégue vers addCopy/removeCopy
+  if(d>0) addCopy(id);
+  // d<0 ne fait rien (suppression individuelle via removeCopy)
 }
-function updCond(id,v){ const c=col.find(x=>x.id===id); if(c){ c.cond=v; save(); renderCollOverlay(); } }
-function updSale(id,d){
-  const c=col.find(x=>x.id===id); if(!c) return;
-  c.qty_for_sale=Math.max(0,Math.min((c.qty_for_sale||0)+d,c.qty));
-  c.for_sale=c.qty_for_sale>0;
-  const el=document.getElementById('m-sale'); if(el) el.textContent=c.qty_for_sale;
-  save(); renderCollOverlay();
-}
-function removeCard(id){
-  col=col.filter(x=>x.id!==id);
-  closeModal('card-modal'); save(); renderCollOverlay(); toast('Carte retirée');
-}
+function updCond(id,v){ const c=col.find(x=>x.id===id); if(!c) return; if(c.copies?.length) c.copies[0].cond=v; _syncFromCopies(c); save(); renderCollOverlay(); }
+function updSale(id,d){ /* remplacé par toggleCopyForSale */ }
+function removeCard(id){ col=col.filter(x=>x.id!==id); closeModal('card-modal'); save(); renderCollOverlay(); renderHome(); toast('Carte retirée'); }
 function openCM(name,num){
   window.open('https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString='+encodeURIComponent(name+' '+num),'_blank');
 }
@@ -1911,27 +1969,31 @@ function openCM(name,num){
 // ── ADD CARD ──
 function addCard(cardData){
   const ex=col.find(c=>c.id===cardData.id);
-  if(ex){ ex.qty=(ex.qty||1)+1; toast(`+1 · ${ex.name} (${ex.qty}×)`); }
-  else{
-    // Utiliser les images fournies par l'API en priorité
+  if(ex){
+    ex.copies = ex.copies||[];
+    ex.copies.push({cond:'NM', for_sale:false});
+    _syncFromCopies(ex);
+    toast(`+1 · ${ex.name} (${ex.qty}×)`);
+  } else {
     let img = cardData.images?.small || '';
     let imgL = cardData.images?.large || '';
-    // Ajouter .webp si URL TCGdex sans extension
     if(img.includes('assets.tcgdex.net') && !img.includes('.webp')) img += '.webp';
     if(imgL.includes('assets.tcgdex.net') && !imgL.includes('.webp')) imgL += '.webp';
-    col.push({
+    const newCard = {
       id:cardData.id, name:cardData.name, nameEn:cardData.name,
       set:cardData.set?.name||cardData.set||'',
       setId:cardData.set?.id||'',
       num:cardData.number||'',
       rarity:cardData.rarity||'',
       img, imgLarge:imgL,
-      price:null, priceManual:null, cond:'NM',
-      qty:1, qty_for_sale:0, for_sale:false
-    });
+      price:null, priceManual:null,
+      copies:[{cond:'NM', for_sale:false}]
+    };
+    _syncFromCopies(newCard);
+    col.push(newCard);
     toast(`✅ ${cardData.name} ajoutée !`);
   }
-  save(); renderCollOverlay();
+  save(); renderCollOverlay(); renderHome();
 }
 
 // ── SEARCH ──
@@ -2444,7 +2506,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.43';
+const APP_VERSION = '3.45';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2789,11 +2851,10 @@ function showScanChoices(cards, resultEl){
       </div>
       ${cards.map(c => {
         const img = getCardImg(c,'low');
-        // Trouver le nom FR si la carte a un nom anglais
         const nameFR = c.name && c.nameEn && c.name !== c.nameEn ? c.name :
           (_mobileDB?.cards?.find(x => x.nameEn === c.nameEn && x.name !== x.nameEn)?.name || c.name);
         const displayName = nameFR || c.name;
-        return `<div onclick="showScanResult_byId('${c.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid rgba(255,255,255,0.05);cursor:pointer;-webkit-user-select:none;user-select:none">
+        return `<div onclick="openScanCardDetail('${escId(c.id)}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid rgba(255,255,255,0.05);cursor:pointer;-webkit-user-select:none;user-select:none">
           <img src="${img}" style="width:36px;height:50px;object-fit:contain;border-radius:4px;flex-shrink:0" onerror="this.style.opacity='.2'">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:700;color:#fff">${displayName}</div>
@@ -3120,14 +3181,16 @@ function timeSince(ts){
 
 function showScanResult(card, setCode, cardNum){
   closeScanner();
-  vibrate(60); // vibration courte : carte trouvée
+  vibrate(60);
   const imgLow  = getCardImg(card, 'low');
   const imgHigh = getCardImg(card, 'high');
   const owned = col.find(c => c.id === card.id);
   const displayName = getCardNameFR(card);
   const scanResult = document.getElementById('scan-result');
+  // Stocker la carte scannée pour le clic
+  _lastScannedCard = card;
   scanResult.innerHTML = `
-    <div class="card-block" style="text-align:left;overflow:hidden">
+    <div class="card-block" style="text-align:left;overflow:hidden;cursor:pointer" onclick="openScanCardDetail('${escId(card.id)}')">
       <div style="display:flex;gap:12px;padding:12px">
         <img src="${imgHigh}" style="width:80px;border-radius:6px;object-fit:contain"
           onerror="this.src='${imgLow}';this.onerror=null;">
@@ -3137,21 +3200,52 @@ function showScanResult(card, setCode, cardNum){
           ${card.rarity ? `<div style="margin-top:6px">${rareBadge(card.rarity)}</div>` : ''}
           ${owned ? `<div style="margin-top:6px;font-size:12px;color:var(--yellow2);font-weight:700">✓ Déjà dans ta collection (${owned.qty}×)</div>` : ''}
         </div>
-      </div>
-      <div class="btn-row" style="padding-bottom:12px">
-        <button class="btn btn-primary btn-full" onclick="addCardFromScan('${escId(card.id)}')">
-          ${owned ? `+1 (total ${(owned.qty||0)+1}×)` : '➕ Ajouter à ma collection'}
-        </button>
+        <div style="color:rgba(255,255,255,0.2);font-size:20px;align-self:center">›</div>
       </div>
     </div>`;
   scanResult.scrollIntoView({behavior:'smooth', block:'center'});
   pushScanHistory(card);
 }
 
+let _lastScannedCard = null;
+const _scanCardMap = new Map(); // id → card (depuis base mobile)
+
+function openScanCardDetail(cardId){
+  // Si la carte est déjà en collection, ouvrir l'overlay collection
+  const inCol = col.find(c => c.id === cardId);
+  if(inCol){ openCardModal(cardId); return; }
+  // Sinon, construire un overlay "avant ajout" avec bouton ajouter
+  const card = _mobileDB?.cards?.find(c => c.id === cardId) || _lastScannedCard;
+  if(!card) return;
+  const imgHigh = getCardImg(card, 'high');
+  const imgLow  = getCardImg(card, 'low');
+  const displayName = getCardNameFR(card);
+  document.getElementById('card-modal-content').innerHTML=`
+    <div class="modal-header">
+      <span class="modal-title" style="font-size:15px;max-width:calc(100% - 50px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${displayName}</span>
+      <button class="modal-close" onclick="closeModal('card-modal')">✕</button>
+    </div>
+    <div class="modal-img-wrap"><img src="${imgHigh}" onerror="this.src='${imgLow}';this.onerror=null;"></div>
+    <div class="modal-section">
+      <label>Extension</label>
+      <div class="val">${card.setName||'—'} · N°${card.number||'—'}</div>
+      ${card.rarity?`<div style="margin-top:4px">${rareBadge(card.rarity)}</div>`:''}
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" style="flex:1" onclick="addCardFromScan('${escId(card.id)}');closeModal('card-modal')">
+        ➕ Ajouter à ma collection
+      </button>
+      <button class="btn btn-secondary" style="flex:1" onclick="openCM('${escId(displayName)}','${escId(card.number||'')}')">
+        Cardmarket
+      </button>
+    </div>`;
+  openModal('card-modal');
+}
+
 function addCardFromScan(cardId){
   const card = _mobileDB?.cards?.find(c => c.id === cardId);
   if(!card) return;
-  vibrate([40,30,40]); // double vibration courte : ajout confirmé
+  vibrate([40,30,40]);
   addCard({
     id: card.id,
     name: getCardNameFR(card),
@@ -3163,12 +3257,7 @@ function addCardFromScan(cardId){
       large: getCardImg(card, 'high')
     }
   });
-  document.getElementById('scan-result').innerHTML = `
-    <div style="text-align:center;padding:16px;color:#4ade80;font-weight:700;font-size:15px;animation:scanResultIn .3s ease">
-      ✅ ${getCardNameFR(card)} ajoutée !<br>
-      <button class="btn btn-primary btn-full" style="margin-top:14px" onclick="document.getElementById('photo-input').click()">📷 Scanner la carte suivante</button>
-      <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="openScanner()">Viewfinder</button>
-    </div>`;
+  openCardModal(card.id);
 }
 
 let _tt;

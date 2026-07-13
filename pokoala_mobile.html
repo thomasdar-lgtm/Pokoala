@@ -272,7 +272,7 @@ body::before{
   background:rgba(255,255,255,0.04);
 }
 .grid-card img{width:100%;height:100%;object-fit:cover;display:block}
-.grid-card.not-owned{filter:grayscale(80%) brightness(0.5)}
+.grid-card.not-owned{filter:grayscale(60%) brightness(0.72) opacity(0.75)}
 .grid-card-num{
   position:absolute;bottom:3px;left:0;right:0;text-align:center;
   font-size:9px;font-weight:700;color:rgba(255,255,255,0.7);
@@ -345,11 +345,12 @@ body::before{
 }
 /* Card modal : hauteur fixe pour ne pas grandir avec les exemplaires */
 #card-modal .modal-sheet{
-  height:82vh;
-  max-height:82vh;
+  height:100vh;
+  max-height:100vh;
   overflow-y:hidden;
   display:flex;
   flex-direction:column;
+  border-radius:0;
 }
 #card-modal-content{
   flex:1;
@@ -2321,7 +2322,7 @@ async function _fetchSeriesOnline(){
 }
 
 function renderSeries(){
-  const TCGDEX_TO_PTCG = {"me01":"me1","me02":"me2","me02.5":"me2pt5","me03":"me3","me04":"me4","sv01":"sv1","sv02":"sv2","sv03":"sv3","sv03.5":"sv3pt5","sv04":"sv4","sv04.5":"sv4pt5","sv05":"sv5","sv06":"sv6","sv06.5":"sv6pt5","sv07":"sv7","sv08":"sv8","sv08.5":"sv8pt5","sv09":"sv9","sv10":"sv10","sv10.5w":"rsv10pt5","sv10.5b":"zsv10pt5","swsh12.5":"swsh12pt5","sm7.5":"sm75","sm3.5":"sm35","sm11.5":"sm115"};
+  const TCGDEX_TO_PTCG = {"me01":"me1","me02":"me2","me02.5":"me2pt5","me03":"me3","me04":"me4","sv01":"sv1","sv02":"sv2","sv03":"sv3","sv03.5":"sv3pt5","sv04":"sv4","sv04.5":"sv4pt5","sv05":"sv5","sv06":"sv6","sv06.5":"sv6pt5","sv07":"sv7","sv08":"sv8","sv08.5":"sv8pt5","sv09":"sv9","sv10":"sv10","sv10.5w":"rsv10pt5","sv10.5b":"zsv10pt5","swsh12.5":"swsh12pt5","swsh12.5gg":"swsh12pt5gg","sm7.5":"sm75","sm3.5":"sm35","sm11.5":"sm115"};
 
   // Index de la collection par setId pour calcul rapide
   const collBySet = {};
@@ -2587,7 +2588,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.56';
+const APP_VERSION = '3.59';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

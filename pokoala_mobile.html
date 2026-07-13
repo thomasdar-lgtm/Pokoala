@@ -2233,23 +2233,8 @@ function saveSeriesCache(data){
 }
 
 function injectTGSets(seriesData){
-  const TG_SETS = [
-    {id:'swsh9tg',    name:'Stars Étincelantes : Galerie des Dresseurs',  cardCount:{official:30,total:30}},
-    {id:'swsh10tg',   name:'Astres Radieux : Galerie des Dresseurs',       cardCount:{official:30,total:30}},
-    {id:'swsh11tg',   name:'Origine Perdue : Galerie des Dresseurs',       cardCount:{official:30,total:30}},
-    {id:'swsh12tg',   name:'Tempête Argentée : Galerie des Dresseurs',     cardCount:{official:30,total:30}},
-    {id:'swsh12pt5gg',name:'Zénith Suprême : Galerie de Galar',            cardCount:{official:70,total:70}},
-  ];
-  const swshSerie = seriesData.find(s => s.id === 'swsh');
-  if(swshSerie){
-    TG_SETS.forEach(tg => {
-      const alreadyIn = swshSerie.sets.some(st =>
-        st.id === tg.id || st.id === tg.id.replace('swsh12pt5gg','swsh12.5gg') ||
-        st.name === tg.name
-      );
-      if(!alreadyIn) swshSerie.sets.push(tg);
-    });
-  }
+  // Les sets TG/GG sont maintenant chargés dans openGrid avec le set parent
+  // On ne les liste plus comme sets séparés dans Parcourir
   return seriesData;
 }
 
@@ -2387,6 +2372,16 @@ function toggleSerie(i){
   if(a) a.classList.toggle('open',o);
 }
 
+// Correspondance set parent → set TG/GG associé
+const PARENT_TO_TG = {
+  'swsh9':    'swsh9tg',
+  'swsh10':   'swsh10tg',
+  'swsh11':   'swsh11tg',
+  'swsh12':   'swsh12tg',
+  'swsh12.5': 'swsh12pt5gg',
+  'swsh12pt5':'swsh12pt5gg',
+};
+
 async function openGrid(setId,setName){
   _gridSetId=setId;
   document.getElementById('grid-title').textContent=setName||setId;
@@ -2399,6 +2394,25 @@ async function openGrid(setId,setName){
     const r=await fetch(`${TCGDEX_FR}/sets/${setId}`);
     const d=await r.json();
     _gridCards=d.cards||[];
+
+    // Charger aussi les cartes TG/GG du set parent si applicable
+    const tgSetId = PARENT_TO_TG[setId];
+    if(tgSetId){
+      try{
+        const r2=await fetch(`${TCGDEX_FR}/sets/${tgSetId}`);
+        const d2=await r2.json();
+        if(d2.cards?.length){
+          // Adapter les IDs pour correspondre à la base locale
+          const tgCards = d2.cards.map(c=>({
+            ...c,
+            id: `${tgSetId}-${c.localId}`,
+            _tgSetId: tgSetId
+          }));
+          _gridCards = [..._gridCards, ...tgCards];
+        }
+      }catch(e){}
+    }
+
     renderGrid();
   }catch(e){
     document.getElementById('card-grid').innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Erreur chargement</div>`;
@@ -2420,9 +2434,10 @@ function renderGrid(){
 
   const isLocal = window.location.hostname === 'localhost';
   document.getElementById('card-grid').innerHTML=_gridCards.map(c=>{
-    const id=c.id||(_gridSetId+'-'+c.localId);
+    const effectiveSetId = c._tgSetId || _gridSetId;
+    const id=c.id||(effectiveSetId+'-'+c.localId);
     const oc=ownedMap.get(id);
-    const tcgdexImg=c.image?c.image+'/low.webp':`https://assets.tcgdex.net/fr/${_gridSetId}/${c.localId}/low.webp`;
+    const tcgdexImg=c.image?c.image+'/low.webp':`https://assets.tcgdex.net/fr/${effectiveSetId}/${c.localId}/low.webp`;
     const localImg=isLocal?`${LOCAL}/images/${id}.png`:null;
     const sid=escId(id);
     const cname=escId(c.name||'');
@@ -2606,7 +2621,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.65';
+const APP_VERSION = '3.66';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

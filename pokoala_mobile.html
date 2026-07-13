@@ -1848,17 +1848,13 @@ function renderCollOverlay(){
 }
 
 function cardImg(c){
+  // 1. URL TCGdex déjà dans la base → l'utiliser directement
   let url = c.imgLarge || c.img || '';
-  // Ignorer pokemontcg.io — on essaie d'abord TCGdex FR
-  const isPoke = url.includes('pokemontcg.io');
-  if(!isPoke && url){
-    if(url.includes('assets.tcgdex.net') && !url.endsWith('.webp')){
-      url = url.replace('/high','/high.webp').replace('/low','/high.webp');
-      if(!url.endsWith('.webp')) url += '.webp';
-    }
+  if(url && url.includes('assets.tcgdex.net')){
+    if(!url.endsWith('.webp')) url += '/high.webp';
     return url;
   }
-  // Construire URL TCGdex FR depuis l'ID
+  // 2. Construire URL TCGdex FR depuis l'ID de la carte
   if(c.id){
     const p = c.id.split('-');
     if(p.length >= 2){
@@ -1868,9 +1864,8 @@ function cardImg(c){
       return `https://assets.tcgdex.net/fr/${serie}/${setId}/${num}/high.webp`;
     }
   }
-  // Fallback pokemontcg.io si rien d'autre
-  if(isPoke) return url;
-  return '';
+  // 3. Fallback : URL stockée (pokemontcg.io ou autre)
+  return url;
 }
 
 
@@ -1924,7 +1919,7 @@ function _renderCardModal(c){
       <span class="modal-title" style="font-size:15px;max-width:calc(100% - 50px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
       <button class="modal-close" onclick="closeModal('card-modal')">✕</button>
     </div>
-    ${img?`<div class="modal-img-wrap"><img src="${img}" onerror="this.style.display='none'"></div>`:''}
+    ${img?`<div class="modal-img-wrap"><img src="${img}" onerror="if(!this.dataset.fb){this.dataset.fb='1';this.src='https://images.pokemontcg.io/${escId(c.setId||'')}/${escId(c.num||'')}_hires.png'}else{this.style.display='none'}"></div>`:''}
     <div class="modal-section">
       <label>Extension</label>
       <div class="val">${setNameFR(c.setId, c.set||'—')}${c.num?' · N°'+c.num:''}</div>
@@ -2592,7 +2587,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.55';
+const APP_VERSION = '3.56';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

@@ -1943,7 +1943,7 @@ function _renderCardModal(c){
     </div>
 
     <!-- Liste des exemplaires — hauteur fixe, scroll interne -->
-    <div style="height:210px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex-shrink:0">
+    <div style="height:280px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex-shrink:0">
       ${copies.map((copy,i)=>`
         <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06)">
           <div style="font-size:11px;color:rgba(255,255,255,0.3);width:20px;flex-shrink:0;text-align:center">#${i+1}</div>
@@ -1951,7 +1951,7 @@ function _renderCardModal(c){
             ${CONDS.map(v=>`<option value="${v}"${copy.cond===v?' selected':''}>${v}</option>`).join('')}
           </select>
           <button onclick="toggleCopyForSale('${sid}',${i})"
-            style="flex:1;padding:5px 10px;border-radius:8px;border:1px solid ${copy.for_sale?'var(--yellow2)':'rgba(255,255,255,0.12)'};background:${copy.for_sale?'rgba(255,215,0,0.15)':'transparent'};color:${copy.for_sale?'var(--yellow2)':'rgba(255,255,255,0.4)'};font-size:11px;font-weight:700;cursor:pointer">
+            style="flex-shrink:0;padding:5px 10px;border-radius:8px;border:1px solid ${copy.for_sale?'var(--yellow2)':'rgba(255,255,255,0.12)'};background:${copy.for_sale?'rgba(255,215,0,0.15)':'transparent'};color:${copy.for_sale?'var(--yellow2)':'rgba(255,255,255,0.4)'};font-size:11px;font-weight:700;cursor:pointer">
             Vente
           </button>
           <button onclick="removeCopy('${sid}',${i})"
@@ -2573,7 +2573,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.48';
+const APP_VERSION = '3.49';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

@@ -1893,6 +1893,16 @@ function rareBadge(r){
 // ── CARD MODAL ──
 const CONDS = ['M','NM','EX','GD','LP','PL','PO'];
 
+// Noms FR officiels des sets (source : pokemon.com/fr) pour les sets dont la base a le nom EN
+const SET_NAME_FR = {
+  'swsh9tg':    'Stars Étincelantes : Galerie des Dresseurs',
+  'swsh10tg':   'Astres Radieux : Galerie des Dresseurs',
+  'swsh11tg':   'Origine Perdue : Galerie des Dresseurs',
+  'swsh12tg':   'Tempête Argentée : Galerie des Dresseurs',
+  'swsh12pt5gg':'Zénith Suprême : Galerie de Galar',
+};
+function setNameFR(setId, fallback){ return SET_NAME_FR[setId] || fallback || setId; }
+
 function openCardModal(id){
   const c=col.find(x=>x.id===id);
   if(!c) return;
@@ -1917,7 +1927,7 @@ function _renderCardModal(c){
     ${img?`<div class="modal-img-wrap"><img src="${img}" onerror="this.style.display='none'"></div>`:''}
     <div class="modal-section">
       <label>Extension</label>
-      <div class="val">${c.set||'—'}${c.num?' · N°'+c.num:''}</div>
+      <div class="val">${setNameFR(c.setId, c.set||'—')}${c.num?' · N°'+c.num:''}</div>
       ${c.rarity?`<div style="margin-top:4px">${rareBadge(c.rarity)}</div>`:''}
     </div>
 
@@ -2582,7 +2592,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.54';
+const APP_VERSION = '3.55';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3304,7 +3314,7 @@ function openScanCardDetail(cardId){
     <div class="modal-img-wrap"><img src="${imgHigh}" onerror="this.src='${imgLow}';this.onerror=null;"></div>
     <div class="modal-section">
       <label>Extension</label>
-      <div class="val">${card.setName||'—'} · N°${card.number||'—'}</div>
+      <div class="val">${setNameFR(card.setId, card.setName||'—')} · N°${card.number||'—'}</div>
       ${card.rarity?`<div style="margin-top:4px">${rareBadge(card.rarity)}</div>`:''}
     </div>
     <div class="btn-row">
@@ -3327,7 +3337,7 @@ function addCardFromScan(cardId){
     name: getCardNameFR(card),
     number: card.number,
     rarity: card.rarity,
-    set: {id: card.setId, name: card.setName},
+    set: {id: card.setId, name: setNameFR(card.setId, card.setName)},
     images: {
       small: getCardImg(card, 'low'),
       large: getCardImg(card, 'high')

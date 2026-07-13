@@ -1849,10 +1849,17 @@ function renderCollOverlay(){
 
 function cardImg(c){
   let url = c.imgLarge || c.img || '';
-  // Ignorer pokemontcg.io — images en anglais
-  if(url.includes('pokemontcg.io')) url = '';
-  if(!url && c.id){
-    // Construire l'URL TCGdex : fr/{serie}/{setId}/{number}/high.webp
+  // Ignorer pokemontcg.io — on essaie d'abord TCGdex FR
+  const isPoke = url.includes('pokemontcg.io');
+  if(!isPoke && url){
+    if(url.includes('assets.tcgdex.net') && !url.endsWith('.webp')){
+      url = url.replace('/high','/high.webp').replace('/low','/high.webp');
+      if(!url.endsWith('.webp')) url += '.webp';
+    }
+    return url;
+  }
+  // Construire URL TCGdex FR depuis l'ID
+  if(c.id){
     const p = c.id.split('-');
     if(p.length >= 2){
       const setId = p.slice(0,-1).join('-');
@@ -1861,12 +1868,9 @@ function cardImg(c){
       return `https://assets.tcgdex.net/fr/${serie}/${setId}/${num}/high.webp`;
     }
   }
-  // Corriger les URLs TCGdex sans .webp
-  if(url.includes('assets.tcgdex.net') && !url.endsWith('.webp')){
-    url = url.replace('/high','/high.webp').replace('/low','/high.webp');
-    if(!url.endsWith('.webp')) url += '.webp';
-  }
-  return url;
+  // Fallback pokemontcg.io si rien d'autre
+  if(isPoke) return url;
+  return '';
 }
 
 
@@ -2578,7 +2582,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.53';
+const APP_VERSION = '3.54';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

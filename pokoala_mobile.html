@@ -2607,7 +2607,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.62';
+const APP_VERSION = '3.63';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3401,7 +3401,9 @@ init();
 
 // PWA Service Worker
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW:', e));
+  navigator.serviceWorker.register('./sw.js', {updateViaCache: 'none'})
+    .then(reg => reg.update())
+    .catch(e => console.log('SW:', e));
 }
 
 </script>

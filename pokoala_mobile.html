@@ -2218,7 +2218,7 @@ function getSymbol(setId, setName){
 }
 
 
-const SERIES_CACHE_KEY = 'pk_series_cache_v3';
+const SERIES_CACHE_KEY = 'pk_series_cache_v4';
 
 function loadSeriesFromCache(){
   try{
@@ -2232,10 +2232,31 @@ function saveSeriesCache(data){
   try{ localStorage.setItem(SERIES_CACHE_KEY, JSON.stringify(data)); }catch(e){}
 }
 
+function injectTGSets(seriesData){
+  const TG_SETS = [
+    {id:'swsh9tg',    name:'Stars Étincelantes : Galerie des Dresseurs',  cardCount:{official:30,total:30}},
+    {id:'swsh10tg',   name:'Astres Radieux : Galerie des Dresseurs',       cardCount:{official:30,total:30}},
+    {id:'swsh11tg',   name:'Origine Perdue : Galerie des Dresseurs',       cardCount:{official:30,total:30}},
+    {id:'swsh12tg',   name:'Tempête Argentée : Galerie des Dresseurs',     cardCount:{official:30,total:30}},
+    {id:'swsh12pt5gg',name:'Zénith Suprême : Galerie de Galar',            cardCount:{official:70,total:70}},
+  ];
+  const swshSerie = seriesData.find(s => s.id === 'swsh');
+  if(swshSerie){
+    TG_SETS.forEach(tg => {
+      const alreadyIn = swshSerie.sets.some(st =>
+        st.id === tg.id || st.id === tg.id.replace('swsh12pt5gg','swsh12.5gg') ||
+        st.name === tg.name
+      );
+      if(!alreadyIn) swshSerie.sets.push(tg);
+    });
+  }
+  return seriesData;
+}
+
 async function loadSeries(){
   // 1. Base mobile locale
   if(_mobileDB?.series?.length){
-    _seriesData = _mobileDB.series;
+    _seriesData = injectTGSets(_mobileDB.series);
     saveSeriesCache(_seriesData);
     renderSeries();
     return;
@@ -2244,7 +2265,7 @@ async function loadSeries(){
   // 2. Cache localStorage — affichage immédiat
   const cached = loadSeriesFromCache();
   if(cached && cached.length){
-    _seriesData = cached;
+    _seriesData = injectTGSets(cached);
     renderSeries();
     // Mise à jour silencieuse en arrière-plan
     _refreshSeriesInBackground();
@@ -2273,7 +2294,7 @@ async function _refreshSeriesInBackground(){
     const list = await r.json();
     const fresh = list.filter(s => s.sets?.length > 0).reverse();
     if(fresh.length){
-      _seriesData = fresh;
+      _seriesData = injectTGSets(fresh);
       saveSeriesCache(_seriesData);
       // Pas de re-render si l'utilisateur est encore sur browse
       const banner = document.getElementById('offline-banner');
@@ -2288,7 +2309,7 @@ async function _fetchSeriesOnline(){
     const r = await fetch(`${LOCAL}/api/series`, {signal: AbortSignal.timeout(300)});
     const d = await r.json();
     if(!d.loading && d.series?.length){
-      _seriesData = d.series;
+      _seriesData = injectTGSets(d.series);
       saveSeriesCache(_seriesData);
       renderSeries();
       return;
@@ -2310,29 +2331,7 @@ async function _fetchSeriesOnline(){
     );
     const details = await Promise.all(detailRequests);
 
-    _seriesData = details
-      .filter(s => s && s.sets?.length > 0)
-      .reverse();
-
-    // TCGdex n'inclut pas les sets TG/GG dans la série swsh
-    // On les injecte manuellement dans la série Épée et Bouclier
-    const TG_SETS = [
-      {id:'swsh9tg',    name:'Stars Étincelantes : Galerie des Dresseurs',  cardCount:{official:30,total:30}},
-      {id:'swsh10tg',   name:'Astres Radieux : Galerie des Dresseurs',       cardCount:{official:30,total:30}},
-      {id:'swsh11tg',   name:'Origine Perdue : Galerie des Dresseurs',       cardCount:{official:30,total:30}},
-      {id:'swsh12tg',   name:'Tempête Argentée : Galerie des Dresseurs',     cardCount:{official:30,total:30}},
-      {id:'swsh12pt5gg',name:'Zénith Suprême : Galerie de Galar',            cardCount:{official:70,total:70}},
-    ];
-    const swshSerie = _seriesData.find(s => s.id === 'swsh');
-    if(swshSerie){
-      // Ajouter les sets TG/GG s'ils ne sont pas déjà présents
-      TG_SETS.forEach(tg => {
-        if(!swshSerie.sets.some(st => st.id === tg.id || st.id === tg.id.replace('pt5','12.5').replace('swsh12pt5gg','swsh12.5gg'))){
-          swshSerie.sets.push(tg);
-        }
-      });
-    }
-
+    _seriesData = injectTGSets(details.filter(s => s && s.sets?.length > 0).reverse());
     saveSeriesCache(_seriesData);
     renderSeries();
   }catch(e){
@@ -2607,7 +2606,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.63';
+const APP_VERSION = '3.65';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

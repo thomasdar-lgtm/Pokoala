@@ -2313,12 +2313,13 @@ async function _fetchSeriesOnline(){
     const details = await Promise.all(detailRequests);
 
     const TG_GG_IDS = new Set(['swsh9tg','swsh10tg','swsh11tg','swsh12tg','swsh12pt5gg','swsh12.5gg']);
-    const filtered = details.filter(s => s && s.sets?.length > 0).map(s => ({
-      ...s,
-      sets: (s.sets||[]).filter(st => !TG_GG_IDS.has(st.id))
-    })).filter(s => s.sets.length > 0).reverse();
+    const filtered = details
+      .filter(s => s && s.sets?.length > 0)
+      .map(s => ({...s, sets:(s.sets||[]).filter(st => !TG_GG_IDS.has(st.id))}))
+      .filter(s => s.sets.length > 0)
+      .reverse();
 
-    _seriesData = injectTGSets(filtered);
+    _seriesData = filtered;
     saveSeriesCache(_seriesData);
     renderSeries();
   }catch(e){
@@ -2623,7 +2624,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.69';
+const APP_VERSION = '3.70';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

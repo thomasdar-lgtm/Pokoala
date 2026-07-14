@@ -2218,7 +2218,7 @@ function getSymbol(setId, setName){
 }
 
 
-const SERIES_CACHE_KEY = 'pk_series_cache_v4';
+const SERIES_CACHE_KEY = 'pk_series_cache_v5';
 
 function loadSeriesFromCache(){
   try{
@@ -2232,11 +2232,7 @@ function saveSeriesCache(data){
   try{ localStorage.setItem(SERIES_CACHE_KEY, JSON.stringify(data)); }catch(e){}
 }
 
-function injectTGSets(seriesData){
-  // Les sets TG/GG sont maintenant chargés dans openGrid avec le set parent
-  // On ne les liste plus comme sets séparés dans Parcourir
-  return seriesData;
-}
+function injectTGSets(seriesData){ return seriesData; }
 
 async function loadSeries(){
   // 1. Base mobile locale
@@ -2621,7 +2617,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.67';
+const APP_VERSION = '3.68';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

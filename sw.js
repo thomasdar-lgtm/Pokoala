@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.70';
+const CACHE_VERSION = '3.71';
 const CACHE_SHELL = `pokoala-shell-${CACHE_VERSION}`;
 const CACHE_IMAGES = `pokoala-images-${CACHE_VERSION}`;
 
@@ -23,7 +23,7 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// Activation : nettoyage des anciens caches
+// Activation : nettoyage des anciens caches + rechargement des clients
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -31,9 +31,10 @@ self.addEventListener('activate', e => {
         .filter(k => k !== CACHE_SHELL && k !== CACHE_IMAGES)
         .map(k => caches.delete(k))
       )
-    )
+    ).then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({type:'window'}))
+      .then(clients => clients.forEach(c => c.postMessage({type:'SW_UPDATED'})))
   );
-  self.clients.claim();
 });
 
 // Fetch : stratégie cache-first pour les images, network-first pour le reste

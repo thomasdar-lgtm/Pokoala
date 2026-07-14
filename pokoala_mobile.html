@@ -2624,7 +2624,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.70';
+const APP_VERSION = '3.71';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3421,6 +3421,9 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js', {updateViaCache: 'none'})
     .then(reg => reg.update())
     .catch(e => console.log('SW:', e));
+  navigator.serviceWorker.addEventListener('message', e => {
+    if(e.data?.type === 'SW_UPDATED') window.location.reload();
+  });
 }
 
 </script>

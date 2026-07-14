@@ -2401,19 +2401,28 @@ async function openGrid(setId,setName){
     // Charger aussi les cartes TG/GG du set parent si applicable
     const tgSetId = PARENT_TO_TG[setId];
     if(tgSetId){
-      try{
-        const r2=await fetch(`${TCGDEX_FR}/sets/${tgSetId}`);
-        const d2=await r2.json();
-        if(d2.cards?.length){
-          // Adapter les IDs pour correspondre à la base locale
-          const tgCards = d2.cards.map(c=>({
-            ...c,
-            id: `${tgSetId}-${c.localId}`,
+      // Chercher d'abord dans _mobileDB (évite un appel TCGdex qui peut échouer)
+      if(_mobileDB?.cards?.length){
+        const tgCards = _mobileDB.cards
+          .filter(c => c.setId === tgSetId)
+          .map(c => ({
+            id: c.id,
+            localId: c.number,
+            name: c.name,
+            image: c.img || '',
             _tgSetId: tgSetId
           }));
-          _gridCards = [..._gridCards, ...tgCards];
-        }
-      }catch(e){}
+        if(tgCards.length) _gridCards = [..._gridCards, ...tgCards];
+      } else {
+        try{
+          const r2=await fetch(`${TCGDEX_FR}/sets/${tgSetId}`);
+          const d2=await r2.json();
+          if(d2.cards?.length){
+            const tgCards = d2.cards.map(c=>({...c, id:`${tgSetId}-${c.localId}`, _tgSetId:tgSetId}));
+            _gridCards = [..._gridCards, ...tgCards];
+          }
+        }catch(e){}
+      }
     }
 
     renderGrid();
@@ -2624,7 +2633,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.71';
+const APP_VERSION = '3.72';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

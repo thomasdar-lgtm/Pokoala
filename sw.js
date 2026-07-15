@@ -1,11 +1,6 @@
-const CACHE_VERSION = '3.77';
+const CACHE_VERSION = '3.78';
 const CACHE_SHELL = `pokoala-shell-${CACHE_VERSION}`;
 const CACHE_IMAGES = `pokoala-images-${CACHE_VERSION}`;
-
-const SHELL_FILES = [
-  './pokoala_mobile.html',
-  './Logo.png'
-];
 
 const IMAGE_HOSTS = [
   'assets.tcgdex.net',
@@ -15,12 +10,10 @@ const IMAGE_HOSTS = [
   'fonts.gstatic.com'
 ];
 
-// Installation : skipWaiting immédiat sans précache du shell
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// Activation : nettoyage des anciens caches
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -32,7 +25,6 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch : stratégie cache-first pour les images, network-first pour le reste
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
@@ -52,14 +44,14 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // APIs Google (Drive, OAuth) : toujours réseau
+  // APIs Google : toujours réseau
   if(url.hostname.includes('googleapis.com') ||
      url.hostname.includes('accounts.google.com') ||
-     url.hostname.includes('gstatic.com') && url.pathname.includes('gsi')){
+     (url.hostname.includes('gstatic.com') && url.pathname.includes('gsi'))){
     return;
   }
 
-  // Shell (HTML, Logo) : network-first pour toujours récupérer la dernière version
+  // Shell : network-first
   e.respondWith(
     fetch(e.request)
       .then(response => {

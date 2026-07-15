@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.74';
+const CACHE_VERSION = '3.76';
 const CACHE_SHELL = `pokoala-shell-${CACHE_VERSION}`;
 const CACHE_IMAGES = `pokoala-images-${CACHE_VERSION}`;
 
@@ -23,7 +23,7 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// Activation : nettoyage des anciens caches + rechargement des clients
+// Activation : nettoyage des anciens caches
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -32,8 +32,6 @@ self.addEventListener('activate', e => {
         .map(k => caches.delete(k))
       )
     ).then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({type:'window'}))
-      .then(clients => clients.forEach(c => c.postMessage({type:'SW_UPDATED'})))
   );
 });
 

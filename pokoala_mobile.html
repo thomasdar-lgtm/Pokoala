@@ -1855,7 +1855,7 @@ function cardImg(c){
     if(!url.endsWith('.webp')) url += '/high.webp';
     return url;
   }
-  // 2. Construire URL TCGdex FR depuis l'ID de la carte
+  // 2. Construire URL TCGdex FR depuis l'ID (ignore pokemontcg.io — images en anglais)
   if(c.id){
     const p = c.id.split('-');
     if(p.length >= 2){
@@ -1865,7 +1865,6 @@ function cardImg(c){
       return `https://assets.tcgdex.net/fr/${serie}/${setId}/${num}/high.webp`;
     }
   }
-  // 3. Fallback : URL stockée (pokemontcg.io ou autre)
   return url;
 }
 
@@ -2406,32 +2405,24 @@ async function openGrid(setId,setName){
     if(tgSetId){
       const PTCG_TO_TCGDEX_TG = {'swsh12pt5gg':'swsh12.5gg'};
       const tcgdexTgId = PTCG_TO_TCGDEX_TG[tgSetId] || tgSetId;
-
-      // 1. Récupérer les données depuis _mobileDB
       let tgCards = [];
-      if(_mobileDB?.cards?.length){
-        tgCards = _mobileDB.cards
-          .filter(c => c.setId === tgSetId)
-          .map(c => ({id:c.id, localId:c.number, name:c.name, image:'', _tgSetId:tgSetId}));
-      }
 
-      // 2. Récupérer les images depuis TCGdex et les injecter
       try{
         const r2=await fetch(`${TCGDEX_FR}/sets/${tcgdexTgId}`);
         if(r2.ok){
           const d2=await r2.json();
           if(d2.cards?.length){
-            // Si _mobileDB n'avait pas les cartes, utiliser celles de TCGdex
-            if(!tgCards.length){
-              tgCards = d2.cards.map(c=>({...c, id:`${tgSetId}-${c.localId}`, _tgSetId:tgSetId}));
-            } else {
-              // Injecter les images TCGdex dans les cartes _mobileDB
-              const imgMap = new Map(d2.cards.map(c=>[c.localId, c.image]));
-              tgCards = tgCards.map(c=>({...c, image: imgMap.get(c.localId) || ''}));
-            }
+            tgCards = d2.cards.map(c=>({...c, id:`${tgSetId}-${c.localId}`, _tgSetId:tgSetId}));
           }
         }
       }catch(e){}
+
+      // Fallback _mobileDB si TCGdex échoue ou retourne vide
+      if(!tgCards.length && _mobileDB?.cards?.length){
+        tgCards = _mobileDB.cards
+          .filter(c => c.setId === tgSetId)
+          .map(c => ({id:c.id, localId:c.number, name:c.name, image:'', _tgSetId:tgSetId}));
+      }
 
       if(tgCards.length) _gridCards = [..._gridCards, ...tgCards];
     }
@@ -2648,7 +2639,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.83';
+const APP_VERSION = '3.84';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

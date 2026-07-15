@@ -2244,9 +2244,14 @@ async function loadSeries(){
   }
 
   // 2. Cache localStorage — affichage immédiat
+  const TG_GG_IDS = new Set(['swsh9tg','swsh10tg','swsh11tg','swsh12tg','swsh12pt5gg','swsh12.5gg']);
+  function filterTGSets(data){
+    return data.map(s=>({...s,sets:(s.sets||[]).filter(st=>!TG_GG_IDS.has(st.id))})).filter(s=>s.sets?.length>0);
+  }
+
   const cached = loadSeriesFromCache();
   if(cached && cached.length){
-    _seriesData = injectTGSets(cached);
+    _seriesData = filterTGSets(cached);
     renderSeries();
     // Mise à jour silencieuse en arrière-plan
     _refreshSeriesInBackground();
@@ -2633,7 +2638,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.73';
+const APP_VERSION = '3.74';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

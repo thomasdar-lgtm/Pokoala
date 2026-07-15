@@ -2223,7 +2223,7 @@ function filterTGSets(data){
   return data.map(s=>({...s,sets:(s.sets||[]).filter(st=>!TG_GG_IDS.has(st.id))})).filter(s=>s.sets?.length>0);
 }
 
-const SERIES_CACHE_KEY = 'pk_series_cache_v6';
+const SERIES_CACHE_KEY = 'pk_series_cache_v7';
 
 function loadSeriesFromCache(){
   try{
@@ -2237,12 +2237,11 @@ function saveSeriesCache(data){
   try{ localStorage.setItem(SERIES_CACHE_KEY, JSON.stringify(data)); }catch(e){}
 }
 
-function injectTGSets(seriesData){ return seriesData; }
 
 async function loadSeries(){
   // 1. Base mobile locale
   if(_mobileDB?.series?.length){
-    _seriesData = injectTGSets(_mobileDB.series);
+    _seriesData = filterTGSets(_mobileDB.series);
     saveSeriesCache(_seriesData);
     renderSeries();
     return;
@@ -2252,8 +2251,8 @@ async function loadSeries(){
   const cached = loadSeriesFromCache();
   if(cached && cached.length){
     _seriesData = filterTGSets(cached);
+    saveSeriesCache(_seriesData);
     renderSeries();
-    // Mise à jour silencieuse en arrière-plan
     _refreshSeriesInBackground();
     return;
   }
@@ -2280,7 +2279,7 @@ async function _refreshSeriesInBackground(){
     const list = await r.json();
     const fresh = list.filter(s => s.sets?.length > 0).reverse();
     if(fresh.length){
-      _seriesData = injectTGSets(fresh);
+      _seriesData = filterTGSets(fresh);
       saveSeriesCache(_seriesData);
       // Pas de re-render si l'utilisateur est encore sur browse
       const banner = document.getElementById('offline-banner');
@@ -2295,7 +2294,7 @@ async function _fetchSeriesOnline(){
     const r = await fetch(`${LOCAL}/api/series`, {signal: AbortSignal.timeout(300)});
     const d = await r.json();
     if(!d.loading && d.series?.length){
-      _seriesData = injectTGSets(d.series);
+      _seriesData = filterTGSets(d.series);
       saveSeriesCache(_seriesData);
       renderSeries();
       return;
@@ -2637,7 +2636,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.78';
+const APP_VERSION = '3.80';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

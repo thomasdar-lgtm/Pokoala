@@ -2401,30 +2401,29 @@ async function openGrid(setId,setName){
     const d=await r.json();
     _gridCards=d.cards||[];
 
-    // Charger aussi les cartes TG/GG du set parent si applicable
+    // Charger les cartes TG/GG du set parent
     const tgSetId = PARENT_TO_TG[setId];
     if(tgSetId){
-      // Chercher d'abord dans _mobileDB (évite un appel TCGdex qui peut échouer)
-      if(_mobileDB?.cards?.length){
-        const tgCards = _mobileDB.cards
-          .filter(c => c.setId === tgSetId)
-          .map(c => ({
-            id: c.id,
-            localId: c.number,
-            name: c.name,
-            image: c.img || '',
-            _tgSetId: tgSetId
-          }));
-        if(tgCards.length) _gridCards = [..._gridCards, ...tgCards];
-      } else {
-        try{
-          const r2=await fetch(`${TCGDEX_FR}/sets/${tgSetId}`);
-          const d2=await r2.json();
-          if(d2.cards?.length){
-            const tgCards = d2.cards.map(c=>({...c, id:`${tgSetId}-${c.localId}`, _tgSetId:tgSetId}));
-            _gridCards = [..._gridCards, ...tgCards];
-          }
-        }catch(e){}
+      // ID TCGdex peut différer de l'ID local (ex: swsh12pt5gg → swsh12.5gg)
+      const PTCG_TO_TCGDEX_TG = {
+        'swsh12pt5gg': 'swsh12.5gg',
+      };
+      const tcgdexTgId = PTCG_TO_TCGDEX_TG[tgSetId] || tgSetId;
+      try{
+        const r2=await fetch(`${TCGDEX_FR}/sets/${tcgdexTgId}`);
+        const d2=await r2.json();
+        if(d2.cards?.length){
+          const tgCards = d2.cards.map(c=>({...c, id:`${tgSetId}-${c.localId}`, _tgSetId:tgSetId}));
+          _gridCards = [..._gridCards, ...tgCards];
+        }
+      }catch(e){
+        // Fallback _mobileDB si TCGdex échoue
+        if(_mobileDB?.cards?.length){
+          const tgCards = _mobileDB.cards
+            .filter(c => c.setId === tgSetId)
+            .map(c => ({id:c.id, localId:c.number, name:c.name, image:c.img||'', _tgSetId:tgSetId}));
+          if(tgCards.length) _gridCards = [..._gridCards, ...tgCards];
+        }
       }
     }
 
@@ -2640,7 +2639,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.81';
+const APP_VERSION = '3.82';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

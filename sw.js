@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.76';
+const CACHE_VERSION = '3.77';
 const CACHE_SHELL = `pokoala-shell-${CACHE_VERSION}`;
 const CACHE_IMAGES = `pokoala-images-${CACHE_VERSION}`;
 
@@ -15,11 +15,8 @@ const IMAGE_HOSTS = [
   'fonts.gstatic.com'
 ];
 
-// Installation : mise en cache du shell
+// Installation : skipWaiting immédiat sans précache du shell
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_SHELL).then(cache => cache.addAll(SHELL_FILES))
-  );
   self.skipWaiting();
 });
 

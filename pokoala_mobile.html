@@ -2404,27 +2404,36 @@ async function openGrid(setId,setName){
     // Charger les cartes TG/GG du set parent
     const tgSetId = PARENT_TO_TG[setId];
     if(tgSetId){
-      // ID TCGdex peut différer de l'ID local (ex: swsh12pt5gg → swsh12.5gg)
-      const PTCG_TO_TCGDEX_TG = {
-        'swsh12pt5gg': 'swsh12.5gg',
-      };
+      const PTCG_TO_TCGDEX_TG = {'swsh12pt5gg':'swsh12.5gg'};
       const tcgdexTgId = PTCG_TO_TCGDEX_TG[tgSetId] || tgSetId;
+
+      // 1. Récupérer les données depuis _mobileDB
+      let tgCards = [];
+      if(_mobileDB?.cards?.length){
+        tgCards = _mobileDB.cards
+          .filter(c => c.setId === tgSetId)
+          .map(c => ({id:c.id, localId:c.number, name:c.name, image:'', _tgSetId:tgSetId}));
+      }
+
+      // 2. Récupérer les images depuis TCGdex et les injecter
       try{
         const r2=await fetch(`${TCGDEX_FR}/sets/${tcgdexTgId}`);
-        const d2=await r2.json();
-        if(d2.cards?.length){
-          const tgCards = d2.cards.map(c=>({...c, id:`${tgSetId}-${c.localId}`, _tgSetId:tgSetId}));
-          _gridCards = [..._gridCards, ...tgCards];
+        if(r2.ok){
+          const d2=await r2.json();
+          if(d2.cards?.length){
+            // Si _mobileDB n'avait pas les cartes, utiliser celles de TCGdex
+            if(!tgCards.length){
+              tgCards = d2.cards.map(c=>({...c, id:`${tgSetId}-${c.localId}`, _tgSetId:tgSetId}));
+            } else {
+              // Injecter les images TCGdex dans les cartes _mobileDB
+              const imgMap = new Map(d2.cards.map(c=>[c.localId, c.image]));
+              tgCards = tgCards.map(c=>({...c, image: imgMap.get(c.localId) || ''}));
+            }
+          }
         }
-      }catch(e){
-        // Fallback _mobileDB si TCGdex échoue
-        if(_mobileDB?.cards?.length){
-          const tgCards = _mobileDB.cards
-            .filter(c => c.setId === tgSetId)
-            .map(c => ({id:c.id, localId:c.number, name:c.name, image:c.img||'', _tgSetId:tgSetId}));
-          if(tgCards.length) _gridCards = [..._gridCards, ...tgCards];
-        }
-      }
+      }catch(e){}
+
+      if(tgCards.length) _gridCards = [..._gridCards, ...tgCards];
     }
 
     renderGrid();
@@ -2639,7 +2648,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.82';
+const APP_VERSION = '3.83';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

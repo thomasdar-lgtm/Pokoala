@@ -2460,11 +2460,16 @@ function renderGrid(){
     const localId = c.localId || c.number || '';
     const id=c.id||(effectiveSetId+'-'+localId);
     const oc=ownedMap.get(id);
-    const serie = effectiveSetId.match(/^([a-z]+)/i)?.[1] || effectiveSetId;
-    const imgUrl = c.image ? c.image+'/low.webp'
-      : c.img ? (c.img.replace('/low.webp','').replace('/high.webp','')+'/low.webp')
-      : `https://assets.tcgdex.net/fr/${serie}/${effectiveSetId}/${localId}/low.webp`;
-    const localImg=isLocal?`${LOCAL}/images/${id}.png`:null;
+    // Construire l'URL image comme cardImg : TCGdex FR depuis l'ID
+    const cardId = id;
+    const p = cardId.split('-');
+    const imgSetId = p.slice(0,-1).join('-');
+    const imgNum = p[p.length-1];
+    const imgSerie = imgSetId.match(/^([a-z]+)/i)?.[1] || imgSetId;
+    const imgUrl = c.image
+      ? c.image+'/low.webp'
+      : `https://assets.tcgdex.net/fr/${imgSerie}/${imgSetId}/${imgNum}/low.webp`;
+    const localImg=isLocal?`${LOCAL}/images/${cardId}.png`:null;
     const sid=escId(id);
     const cname=escId(c.name||'');
     const cimg=escId(imgUrl);
@@ -2647,7 +2652,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.86';
+const APP_VERSION = '3.87';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

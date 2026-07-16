@@ -2468,7 +2468,9 @@ function renderGrid(){
     const imgSerie = imgSetId.match(/^([a-z]+)/i)?.[1] || imgSetId;
     const imgUrl = c.image
       ? c.image+'/low.webp'
-      : `https://assets.tcgdex.net/fr/${imgSerie}/${imgSetId}/${imgNum}/low.webp`;
+      : (imgSetId.endsWith('tg') || imgSetId.endsWith('gg'))
+        ? `https://images.pokemontcg.io/${imgSetId}/${imgNum}.png`
+        : `https://assets.tcgdex.net/fr/${imgSerie}/${imgSetId}/${imgNum}/low.webp`;
     const localImg=isLocal?`${LOCAL}/images/${cardId}.png`:null;
     const sid=escId(id);
     const cname=escId(c.name||'');
@@ -2652,7 +2654,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.88';
+const APP_VERSION = '3.89';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

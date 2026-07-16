@@ -2395,7 +2395,6 @@ async function openGrid(setId,setName){
   document.getElementById('card-grid').innerHTML='<div class="loader">Chargement…</div>';
   document.getElementById('grid-overlay').classList.add('open');
   document.body.style.overflow='hidden';
-  history.pushState({modal:'grid'}, '');
   try{
     const r=await fetch(`${TCGDEX_FR}/sets/${setId}`);
     const d=await r.json();
@@ -2553,38 +2552,40 @@ function closeGrid(){
 
 
 // ── MODAL ──
-// ── Gestion bouton retour Android (swipe) ──
-function pushBackState(label){
-  history.pushState({modal: label}, '');
+// ── Gestion bouton retour Android ──
+let _backDepth = 0;
+
+function _pushAppState(){
+  history.pushState({app: ++_backDepth}, '');
 }
 
 function handleBackGesture(){
   if(document.getElementById('scan-overlay')?.style.display === 'flex'){
-    closeScanner(); return;
-  }
-  if(document.getElementById('grid-overlay')?.classList.contains('open')){
+    closeScanner();
+  } else if(document.getElementById('grid-overlay')?.classList.contains('open')){
     document.getElementById('grid-overlay').classList.remove('open');
     document.body.style.overflow='';
-    return;
+  } else {
+    const openModal = document.querySelector('.modal-bg.open');
+    if(openModal){
+      closeModal(openModal.id);
+    } else {
+      const activeTab = document.querySelector('.nav-btn.active');
+      if(activeTab && activeTab.id !== 'nav-home'){
+        switchTab('home');
+      }
+    }
   }
-  const openModal = document.querySelector('.modal-bg.open');
-  if(openModal){
-    closeModal(openModal.id);
-    return;
-  }
-  const activeTab = document.querySelector('.nav-btn.active');
-  if(activeTab && activeTab.id !== 'nav-home'){
-    switchTab('home');
-    return;
-  }
-  // Sur l'accueil sans rien d'ouvert : ne rien faire
+  // Repousser immédiatement pour garder le stack profond
+  _pushAppState();
 }
 
-window.addEventListener('popstate', () => {
-  // Toujours repousser immédiatement pour garder au moins 2 états
-  history.pushState({modal:'app'}, '');
-  handleBackGesture();
-});
+window.addEventListener('popstate', handleBackGesture);
+
+// Initialiser avec un stack de 3 états
+history.replaceState({app:0}, '');
+_pushAppState();
+_pushAppState();
 
 // Initialiser deux états pour capturer le swipe retour Android
 history.replaceState({modal:'app'}, '');
@@ -2593,7 +2594,6 @@ history.pushState({modal:'app'}, '');
 function openModal(id){ 
   document.getElementById(id).classList.add('open'); 
   document.body.style.overflow='hidden';
-  history.pushState({modal:id}, '');
 }
 function closeModal(id){
   document.getElementById(id).classList.remove('open');
@@ -2696,7 +2696,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.93';
+const APP_VERSION = '3.94';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3125,7 +3125,6 @@ async function openScanner(){
   const overlay = document.getElementById('scan-overlay');
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  history.pushState({modal:'scanner'}, '');
   document.getElementById('scan-status').textContent = 'Activation de la caméra…';
 
   try{

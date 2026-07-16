@@ -2584,9 +2584,8 @@ function handleBackGesture(){
 }
 
 window.addEventListener('popstate', (e) => {
-  // Toujours repousser un état pour garder l'app "active"
-  handleBackGesture();
   history.pushState({modal:'app'}, '');
+  handleBackGesture();
 });
 
 // Initialiser l'état de base au démarrage
@@ -2698,7 +2697,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.90';
+const APP_VERSION = '3.91';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

@@ -2395,6 +2395,7 @@ async function openGrid(setId,setName){
   document.getElementById('card-grid').innerHTML='<div class="loader">Chargement…</div>';
   document.getElementById('grid-overlay').classList.add('open');
   document.body.style.overflow='hidden';
+  history.pushState({modal:'grid'}, '');
   try{
     const r=await fetch(`${TCGDEX_FR}/sets/${setId}`);
     const d=await r.json();
@@ -2552,7 +2553,50 @@ function closeGrid(){
 
 
 // ── MODAL ──
-function openModal(id){ document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
+// ── Gestion bouton retour Android (swipe) ──
+function pushBackState(label){
+  history.pushState({modal: label}, '');
+}
+
+function handleBackGesture(){
+  // Priorité : scanner > grille > modal > onglet accueil
+  if(document.getElementById('scan-overlay')?.style.display === 'flex'){
+    closeScanner(); return;
+  }
+  if(document.getElementById('grid-overlay')?.classList.contains('open')){
+    document.getElementById('grid-overlay').classList.remove('open');
+    document.body.style.overflow='';
+    return;
+  }
+  const openModal = document.querySelector('.modal-bg.open');
+  if(openModal){
+    closeModal(openModal.id);
+    return;
+  }
+  // Si on n'est pas sur l'accueil, y revenir
+  const activeTab = document.querySelector('.nav-btn.active');
+  if(activeTab && activeTab.id !== 'nav-home'){
+    switchTab('home');
+    return;
+  }
+  // Sinon laisser Android gérer (fermer l'app)
+  history.back();
+}
+
+window.addEventListener('popstate', (e) => {
+  // Toujours repousser un état pour garder l'app "active"
+  handleBackGesture();
+  history.pushState({modal:'app'}, '');
+});
+
+// Initialiser l'état de base au démarrage
+history.replaceState({modal:'app'}, '');
+
+function openModal(id){ 
+  document.getElementById(id).classList.add('open'); 
+  document.body.style.overflow='hidden';
+  history.pushState({modal:id}, '');
+}
 function closeModal(id){
   document.getElementById(id).classList.remove('open');
   if(!document.querySelector('.modal-bg.open')&&!document.getElementById('grid-overlay').classList.contains('open')) document.body.style.overflow='';
@@ -2654,7 +2698,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.89';
+const APP_VERSION = '3.90';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3083,6 +3127,7 @@ async function openScanner(){
   const overlay = document.getElementById('scan-overlay');
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  history.pushState({modal:'scanner'}, '');
   document.getElementById('scan-status').textContent = 'Activation de la caméra…';
 
   try{

@@ -2588,8 +2588,9 @@ window.addEventListener('popstate', (e) => {
   handleBackGesture();
 });
 
-// Initialiser l'état de base au démarrage
+// Initialiser deux états pour capturer le swipe retour Android
 history.replaceState({modal:'app'}, '');
+history.pushState({modal:'app'}, '');
 
 function openModal(id){ 
   document.getElementById(id).classList.add('open'); 
@@ -2697,7 +2698,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.91';
+const APP_VERSION = '3.92';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

@@ -2474,7 +2474,7 @@ function renderGrid(){
     const cname=escId(c.name||'');
     const cimg=escId(imgUrl);
     return`<div class="grid-card${oc?'':' not-owned'}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
-      <img data-src="${localImg||imgUrl}" data-fallback="${imgUrl}" loading="lazy" onerror="if(this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.style.opacity='.2'}">
+      <img src="${localImg||imgUrl}" data-fallback="${imgUrl}" loading="lazy" onerror="if(this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.style.opacity='.2'}">
       <span class="grid-card-num">${localId}</span>
       ${oc?`<span class="grid-card-qty">${oc.qty}×</span>`:''}
       ${!oc?`<button class="grid-add-btn" onclick="event.stopPropagation();quickAddFromGrid('${sid}','${cname}','${cimg}')">+</button>`:''}
@@ -2652,7 +2652,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.87';
+const APP_VERSION = '3.88';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

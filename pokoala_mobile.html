@@ -2398,7 +2398,13 @@ async function openGrid(setId,setName){
   try{
     const r=await fetch(`${TCGDEX_FR}/sets/${setId}`);
     const d=await r.json();
-    _gridCards=d.cards||[];
+    // Exclure les cartes TG/GG de la réponse principale (elles seront chargées séparément)
+    const tgSetIdMain = PARENT_TO_TG[setId];
+    _gridCards=(d.cards||[]).filter(c => {
+      if(!tgSetIdMain) return true;
+      const num = c.localId||c.number||'';
+      return !/^(TG|GG)/i.test(num);
+    });
 
     // Charger les cartes TG/GG du set parent
     const tgSetId = PARENT_TO_TG[setId];
@@ -2639,7 +2645,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.84';
+const APP_VERSION = '3.85';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

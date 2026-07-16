@@ -2398,13 +2398,7 @@ async function openGrid(setId,setName){
   try{
     const r=await fetch(`${TCGDEX_FR}/sets/${setId}`);
     const d=await r.json();
-    // Exclure les cartes TG/GG de la réponse principale (elles seront chargées séparément)
-    const tgSetIdMain = PARENT_TO_TG[setId];
-    _gridCards=(d.cards||[]).filter(c => {
-      if(!tgSetIdMain) return true;
-      const num = c.localId||c.number||'';
-      return !/^(TG|GG)/i.test(num);
-    });
+    _gridCards=d.cards||[];
 
     // Charger les cartes TG/GG du set parent
     const tgSetId = PARENT_TO_TG[setId];
@@ -2423,14 +2417,22 @@ async function openGrid(setId,setName){
         }
       }catch(e){}
 
-      // Fallback _mobileDB si TCGdex échoue ou retourne vide
+      // Fallback _mobileDB si TCGdex ne les a pas
       if(!tgCards.length && _mobileDB?.cards?.length){
         tgCards = _mobileDB.cards
           .filter(c => c.setId === tgSetId)
           .map(c => ({id:c.id, localId:c.number, name:c.name, image:'', _tgSetId:tgSetId}));
       }
 
-      if(tgCards.length) _gridCards = [..._gridCards, ...tgCards];
+      if(tgCards.length){
+        // Dédupliquer : retirer les TG déjà dans _gridCards, ajouter celles avec images
+        const tgIds = new Set(tgCards.map(c=>c.id));
+        _gridCards = _gridCards.filter(c => {
+          const id = c.id || (tgSetId+'-'+c.localId);
+          return !tgIds.has(id);
+        });
+        _gridCards = [..._gridCards, ...tgCards];
+      }
     }
 
     renderGrid();
@@ -2479,13 +2481,13 @@ function renderGrid(){
     entries.forEach(entry => {
       if(entry.isIntersecting){
         const img = entry.target.querySelector('img[data-src]');
-        if(img && !img.src){
+        if(img && img.dataset.src && img.src !== img.dataset.src){
           img.src = img.dataset.src;
           observer.unobserve(entry.target);
         }
       }
     });
-  }, {rootMargin: '100px'});
+  }, {rootMargin: '200px'});
 
   document.querySelectorAll('.grid-card').forEach(card => observer.observe(card));
 }
@@ -2645,7 +2647,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.85';
+const APP_VERSION = '3.86';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

@@ -2577,24 +2577,22 @@ if(window.navigation && navigation.addEventListener){
   navigation.addEventListener('navigate', e => {
     if(e.navigationType === 'traverse'){
       if(e.cancelable) e.preventDefault();
+      else _trapDepth = Math.max(0, _trapDepth - 1); // entrée consommée
       _uiBack();
     }
   });
-  // Filet : si Chrome refuse le cancel (traverse non annulable), le popstate
-  // passe → on repousse immédiatement l'entrée piège pour rester dans l'app
-  window.addEventListener('popstate', () => {
-    history.pushState({app:1}, '');
-  });
-  // Une entrée derrière est nécessaire pour qu'un traverse existe (au 1er geste)
   history.replaceState({app:0}, '');
-  let _armed = false;
-  const _arm = () => {
-    if(_armed) return; _armed = true;
-    history.pushState({app:1}, '');
-    history.pushState({app:2}, '');
-  };
-  document.addEventListener('touchend', _arm, {once:true, passive:true});
-  document.addEventListener('pointerup', _arm, {once:true});
+  // Recharge permanente : chaque toucher (y compris le swipe lui-même) fournit
+  // une user activation fraîche → pushState non ignoré par l'intervention Chrome
+  let _trapDepth = 0;
+  function _reloadTrap(){
+    while(_trapDepth < 2){
+      _trapDepth++;
+      history.pushState({app:_trapDepth}, '');
+    }
+  }
+  document.addEventListener('touchend', _reloadTrap, {passive:true});
+  document.addEventListener('pointerup', _reloadTrap);
 } else {
   // Fallback : popstate + repush
   history.replaceState({app:0}, '');
@@ -2716,7 +2714,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.98';
+const APP_VERSION = '3.99';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

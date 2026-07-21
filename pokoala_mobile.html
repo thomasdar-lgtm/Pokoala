@@ -2745,7 +2745,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.01';
+const APP_VERSION = '4.02';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2810,7 +2810,8 @@ async function analyzePhoto(input){
       body: JSON.stringify({
         requests:[{
           image: {content: base64},
-          features: [{type: 'TEXT_DETECTION', maxResults: 1}]
+          features: [{type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1}],
+          imageContext: {languageHints: ['fr','en']}
         }]
       })
     });
@@ -2827,7 +2828,7 @@ async function analyzePhoto(input){
     }
 
     // Parser le texte
-    parseScanText(text, result);
+    parseScanText(text, result, data.responses[0]);
 
   }catch(e){
     result.innerHTML = `<div class="empty-state"><span class="big">⚠️</span>Erreur : ${e.message}</div>`;
@@ -2843,6 +2844,23 @@ async function analyzePhoto(input){
 // Le nom (gros caractères) est plus fiable que le numéro (petits caractères).
 
 let _scanIndex = null;
+let _lastScanKey = null;
+
+// ── Apprentissage des corrections de scan ──
+const SCAN_LEARN_KEY = 'pk_scan_learn';
+function loadScanLearn(){
+  try{ return JSON.parse(localStorage.getItem(SCAN_LEARN_KEY)) || {}; }catch(e){ return {}; }
+}
+function saveScanLearn(cardId){
+  if(!_lastScanKey) return;
+  try{
+    const m = loadScanLearn();
+    m[_lastScanKey] = cardId;
+    const keys = Object.keys(m);
+    if(keys.length > 200) delete m[keys[0]]; // borne
+    localStorage.setItem(SCAN_LEARN_KEY, JSON.stringify(m));
+  }catch(e){}
+}
 
 function normScanName(s){
   return (s||'').toLowerCase()
@@ -2911,10 +2929,55 @@ function buildScanIndex(){
   _scanIndex = { src: _mobileDB, nameMap, rootMap, enToFr, setCounts, uniqueNames: [...nameMap.keys()] };
 }
 
-function extractScanSignals(text){
+function extractScanSignals(text, anno){
   const T = text.toUpperCase();
   const sig = { cardNums: [], total: null, setIds: [], nameCandidates: [] };
   const codeMap = _mobileDB?.ptcgoMap || SET_CODE_MAP;
+  const STOP = new Set(['niveau','evolution','de','talent','base','une','fois','pendant','votre','tour','vous','pouvez','les','des','est','pour','avec','dans','sur','par','pokemon','nintendo','creatures','game','freak','illus','faiblesse','resistance','retraite','attaque','energie','energies']);
+
+  // ── Bounding boxes : le nom = gros texte dans le haut de la carte ──
+  // On extrait les blocs, on garde ceux du tiers supérieur avec une grande hauteur
+  try{
+    const pages = anno?.fullTextAnnotation?.pages;
+    if(pages?.length){
+      const blocks = [];
+      let maxY = 0;
+      for(const page of pages){
+        for(const b of (page.blocks||[])){
+          let t = '';
+          for(const par of (b.paragraphs||[])){
+            for(const w of (par.words||[])){
+              t += (w.symbols||[]).map(s => s.text).join('') + ' ';
+            }
+          }
+          const vs = b.boundingBox?.vertices || [];
+          if(!vs.length || !t.trim()) continue;
+          const ys = vs.map(v => v.y||0);
+          const yMin = Math.min(...ys), yMax = Math.max(...ys);
+          maxY = Math.max(maxY, yMax);
+          blocks.push({ text: t.trim(), yC: (yMin+yMax)/2, h: yMax-yMin });
+        }
+      }
+      if(blocks.length){
+        const imgH = (pages[0].height || maxY) || 1;
+        const hs = blocks.map(b => b.h).sort((a,b) => a-b);
+        const medH = hs[Math.floor(hs.length/2)] || 0;
+        const topBig = blocks
+          .filter(b => b.yC < imgH*0.42 && b.h >= medH)
+          .sort((a,b) => b.h - a.h);
+        for(const b of topBig){
+          const n = normScanName(b.text);
+          for(const w of n.split(' ').filter(w => w.length >= 4 && !STOP.has(w))){
+            if(!sig.nameCandidates.includes(w)) sig.nameCandidates.push(w);
+          }
+          const clean = n.split(' ').filter(w => !STOP.has(w)).join(' ');
+          if(clean.length >= 4 && clean.length <= 25 && !sig.nameCandidates.includes(clean)){
+            sig.nameCandidates.push(clean);
+          }
+        }
+      }
+    }
+  }catch(e){}
 
   // ── Numéros spéciaux TG/GG/KJ (tolérance OCR : lettre collée devant, O/I/B→0/1/8) ──
   let m;
@@ -2957,8 +3020,7 @@ function extractScanSignals(text){
     }
   }
 
-  // ── Noms candidats : mots et lignes du haut du texte ──
-  const STOP = new Set(['niveau','evolution','de','talent','base','une','fois','pendant','votre','tour','vous','pouvez','les','des','est','pour','avec','dans','sur','par','pokemon','nintendo','creatures','game','freak','illus','faiblesse','resistance','retraite','attaque','energie','energies']);
+  // ── Noms candidats (complément) : mots et lignes du haut du texte ──
   const lines = text.split('\n').slice(0, 8); // le nom est dans les premières lignes
   for(const line of lines){
     const n = normScanName(line);
@@ -2976,13 +3038,17 @@ function extractScanSignals(text){
   return sig;
 }
 
-function parseScanText(text, resultEl){
+function parseScanText(text, resultEl, anno){
   buildScanIndex();
   if(!_scanIndex){
     resultEl.innerHTML = `<div class="empty-state"><span class="big">⚠️</span>Base non chargée</div>`;
     return;
   }
-  const sig = extractScanSignals(text);
+  const sig = extractScanSignals(text, anno);
+
+  // ── Apprentissage : signature de scan → carte choisie précédemment ──
+  _lastScanKey = [...new Set(sig.cardNums)].sort().join(',') + '|' + sig.nameCandidates.slice(0,3).join(',');
+  const learnedId = loadScanLearn()[_lastScanKey] || null;
 
   // ── Collecter les candidats via les noms ──
   const candidates = new Map(); // id → {card, nameScore}
@@ -3080,6 +3146,12 @@ function parseScanText(text, resultEl){
     }
   }
 
+  // Carte apprise : toujours candidate
+  if(learnedId){
+    const lc = _mobileDB.cards.find(c => c.id === learnedId);
+    if(lc) addCand(lc, candidates.get(lc.id)?.nameScore || 0);
+  }
+
   if(candidates.size === 0){
     resultEl.innerHTML = `<div class="empty-state"><span class="big">🔍</span>Carte non reconnue<br><small style="color:rgba(255,255,255,0.3);font-size:10px">${text.substring(0,100)}</small></div>`;
     return;
@@ -3109,6 +3181,8 @@ function parseScanText(text, resultEl){
     if(sig.total && _scanIndex.setCounts.get(card.setId) === sig.total) s += 4;
     // Mot PROMO lu + carte d'un set promo
     if(sig.isPromo && PROMO_SET_IDS.has(card.setId)) s += 4;
+    // Carte déjà choisie pour cette même signature de scan
+    if(learnedId && card.id === learnedId) s += 6;
     scored.push({score: s, card});
   }
   scored.sort((a,b) => b.score - a.score);
@@ -3333,6 +3407,35 @@ async function captureAndScan(){
   document.getElementById('scan-btn').disabled = true;
 
   let base64;
+  // Recadre l'image source sur le cadre jaune (+8% de marge), via la géométrie object-fit:cover
+  const cropToFrame = (srcW, srcH, draw) => {
+    try{
+      const fr = document.getElementById('scan-frame-box').getBoundingClientRect();
+      const vr = video.getBoundingClientRect();
+      if(!fr.width || !vr.width) return null;
+      const scale = Math.max(vr.width/srcW, vr.height/srcH);
+      const visW = vr.width/scale, visH = vr.height/scale;
+      const offX = (srcW - visW)/2, offY = (srcH - visH)/2;
+      const mX = fr.width*0.08, mY = fr.height*0.08;
+      let sx = offX + ((fr.left - mX) - vr.left)/vr.width * visW;
+      let sy = offY + ((fr.top - mY) - vr.top)/vr.height * visH;
+      let sw = (fr.width + 2*mX)/vr.width * visW;
+      let sh = (fr.height + 2*mY)/vr.height * visH;
+      sx = Math.max(0, sx); sy = Math.max(0, sy);
+      sw = Math.min(sw, srcW - sx); sh = Math.min(sh, srcH - sy);
+      if(sw < 50 || sh < 50) return null;
+      const c = document.createElement('canvas');
+      const maxSize = 2000;
+      let w = Math.round(sw), h = Math.round(sh);
+      if(w > maxSize || h > maxSize){
+        if(w > h){ h = Math.round(h*maxSize/w); w = maxSize; }
+        else { w = Math.round(w*maxSize/h); h = maxSize; }
+      }
+      c.width = w; c.height = h;
+      draw(c.getContext('2d'), sx, sy, sw, sh, w, h);
+      return c.toDataURL('image/jpeg', 0.92).split(',')[1];
+    }catch(e){ return null; }
+  };
   try{
     // Tenter ImageCapture.takePhoto() — capture en pleine résolution capteur,
     // bien meilleure que le flux vidéo (souvent limité/compressé)
@@ -3343,6 +3446,9 @@ async function captureAndScan(){
       base64 = await new Promise((res, rej) => {
         const img = new Image();
         img.onload = () => {
+          const cropped = cropToFrame(img.width, img.height,
+            (ctx, sx, sy, sw, sh, w, h) => ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h));
+          if(cropped){ res(cropped); return; }
           const c = document.createElement('canvas');
           const maxSize = 2400;
           let w = img.width, h = img.height;
@@ -3364,6 +3470,10 @@ async function captureAndScan(){
 
   // Fallback : capture depuis le flux vidéo si ImageCapture indisponible/échoue
   if(!base64){
+    base64 = cropToFrame(video.videoWidth, video.videoHeight,
+      (ctx, sx, sy, sw, sh, w, h) => ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h));
+  }
+  if(!base64){
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
@@ -3379,7 +3489,8 @@ async function captureAndScan(){
       body: JSON.stringify({
         requests:[{
           image: {content: base64},
-          features: [{type: 'TEXT_DETECTION', maxResults: 1}]
+          features: [{type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1}],
+          imageContext: {languageHints: ['fr','en']}
         }]
       })
     });
@@ -3391,7 +3502,7 @@ async function captureAndScan(){
       document.getElementById('scan-btn').disabled = false;
       return;
     }
-    parseScanText(text, document.getElementById('scan-result'));
+    parseScanText(text, document.getElementById('scan-result'), data.responses[0]);
     status.textContent = '✅ Analyse terminée';
     closeScanner();
   }catch(e){
@@ -3504,6 +3615,7 @@ let _lastScannedCard = null;
 const _scanCardMap = new Map(); // id → card (depuis base mobile)
 
 function openScanCardDetail(cardId){
+  saveScanLearn(cardId); // mémoriser le choix pour cette signature de scan
   // Si la carte est déjà en collection, ouvrir l'overlay collection
   const inCol = col.find(c => c.id === cardId);
   if(inCol){ openCardModal(cardId); return; }

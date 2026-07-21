@@ -1,4 +1,4 @@
-const CACHE_VERSION = '4.01';
+const CACHE_VERSION = '4.02';
 const CACHE_SHELL = `pokoala-shell-${CACHE_VERSION}`;
 const CACHE_IMAGES = `pokoala-images-${CACHE_VERSION}`;
 

@@ -2580,12 +2580,18 @@ if(window.navigation && navigation.addEventListener){
       _uiBack();
     }
   });
+  // Filet : si Chrome refuse le cancel (traverse non annulable), le popstate
+  // passe → on repousse immédiatement l'entrée piège pour rester dans l'app
+  window.addEventListener('popstate', () => {
+    history.pushState({app:1}, '');
+  });
   // Une entrée derrière est nécessaire pour qu'un traverse existe (au 1er geste)
   history.replaceState({app:0}, '');
   let _armed = false;
   const _arm = () => {
     if(_armed) return; _armed = true;
     history.pushState({app:1}, '');
+    history.pushState({app:2}, '');
   };
   document.addEventListener('touchend', _arm, {once:true, passive:true});
   document.addEventListener('pointerup', _arm, {once:true});
@@ -2710,7 +2716,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.97';
+const APP_VERSION = '3.98';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

@@ -2552,53 +2552,57 @@ function closeGrid(){
 
 
 // ── MODAL ──
-// ── Gestion bouton retour Android ──
-let _backDepth = 0;
-
-function _pushAppState(){
-  history.pushState({app: ++_backDepth}, '');
-}
-
-function handleBackGesture(){
+// ── Gestion bouton retour / swipe Android ──
+// Retourne true si quelque chose a été fermé/navigué
+function _uiBack(){
   if(document.getElementById('scan-overlay')?.style.display === 'flex'){
-    closeScanner();
-  } else if(document.getElementById('grid-overlay')?.classList.contains('open')){
-    document.getElementById('grid-overlay').classList.remove('open');
-    document.body.style.overflow='';
-  } else {
-    const openModal = document.querySelector('.modal-bg.open');
-    if(openModal){
-      closeModal(openModal.id);
-    } else {
-      const activeTab = document.querySelector('.nav-btn.active');
-      if(activeTab && activeTab.id !== 'nav-home'){
-        switchTab('home');
-      }
-    }
+    closeScanner(); return true;
   }
-  // Un état a été consommé par le swipe
-  if(_backDepth > 0) _backDepth--;
-  // Regonfler pour qu'un swipe ne puisse jamais sortir de l'app
-  if(_backArmed) _refillBackStack();
+  if(document.getElementById('grid-overlay')?.classList.contains('open')){
+    document.getElementById('grid-overlay').classList.remove('open');
+    document.body.style.overflow=''; return true;
+  }
+  if(document.getElementById('coll-overlay')?.classList.contains('open')){
+    closeCollOverlay(); return true;
+  }
+  const openModalEl = document.querySelector('.modal-bg.open');
+  if(openModalEl){ closeModal(openModalEl.id); return true; }
+  const activeTab = document.querySelector('.nav-btn.active');
+  if(activeTab && activeTab.id !== 'nav-home'){ switchTab('home'); return true; }
+  return false;
 }
 
-window.addEventListener('popstate', handleBackGesture);
-
-// Le pushState doit venir d'un user gesture pour être reconnu par Chrome Android.
-// On amorce le stack au premier touchend seulement.
-history.replaceState({app:0}, '');
-let _backArmed = false;
-function _armBackStack(){
-  if(_backArmed) return;
-  _backArmed = true;
-  _pushAppState(); _pushAppState(); _pushAppState(); _pushAppState();
-}
-document.addEventListener('touchend', _armBackStack, {once:true, passive:true});
-document.addEventListener('pointerup', _armBackStack, {once:true});
-
-// Filet de sécurité : si le stack descend trop (swipes rapides), on le regonfle
-function _refillBackStack(){
-  while(_backDepth < 4) _pushAppState();
+if(window.navigation && navigation.addEventListener){
+  // Navigation API : on annule le "traverse" (swipe/bouton retour) → jamais de sortie
+  navigation.addEventListener('navigate', e => {
+    if(e.navigationType === 'traverse'){
+      if(e.cancelable) e.preventDefault();
+      _uiBack();
+    }
+  });
+  // Une entrée derrière est nécessaire pour qu'un traverse existe (au 1er geste)
+  history.replaceState({app:0}, '');
+  let _armed = false;
+  const _arm = () => {
+    if(_armed) return; _armed = true;
+    history.pushState({app:1}, '');
+  };
+  document.addEventListener('touchend', _arm, {once:true, passive:true});
+  document.addEventListener('pointerup', _arm, {once:true});
+} else {
+  // Fallback : popstate + repush
+  history.replaceState({app:0}, '');
+  let _armed = false;
+  const _arm = () => {
+    if(_armed) return; _armed = true;
+    history.pushState({app:1}, '');
+  };
+  document.addEventListener('touchend', _arm, {once:true, passive:true});
+  document.addEventListener('pointerup', _arm, {once:true});
+  window.addEventListener('popstate', () => {
+    _uiBack();
+    history.pushState({app:1}, '');
+  });
 }
 
 function openModal(id){ 
@@ -2706,7 +2710,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.96';
+const APP_VERSION = '3.97';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

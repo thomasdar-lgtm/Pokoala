@@ -2576,20 +2576,30 @@ function handleBackGesture(){
       }
     }
   }
-  // Repousser immédiatement pour garder le stack profond
-  _pushAppState();
+  // Un état a été consommé par le swipe
+  if(_backDepth > 0) _backDepth--;
+  // Regonfler pour qu'un swipe ne puisse jamais sortir de l'app
+  if(_backArmed) _refillBackStack();
 }
 
 window.addEventListener('popstate', handleBackGesture);
 
-// Initialiser avec un stack de 3 états
+// Le pushState doit venir d'un user gesture pour être reconnu par Chrome Android.
+// On amorce le stack au premier touchend seulement.
 history.replaceState({app:0}, '');
-_pushAppState();
-_pushAppState();
+let _backArmed = false;
+function _armBackStack(){
+  if(_backArmed) return;
+  _backArmed = true;
+  _pushAppState(); _pushAppState(); _pushAppState(); _pushAppState();
+}
+document.addEventListener('touchend', _armBackStack, {once:true, passive:true});
+document.addEventListener('pointerup', _armBackStack, {once:true});
 
-// Initialiser deux états pour capturer le swipe retour Android
-history.replaceState({modal:'app'}, '');
-history.pushState({modal:'app'}, '');
+// Filet de sécurité : si le stack descend trop (swipes rapides), on le regonfle
+function _refillBackStack(){
+  while(_backDepth < 4) _pushAppState();
+}
 
 function openModal(id){ 
   document.getElementById(id).classList.add('open'); 
@@ -2696,7 +2706,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '3.94';
+const APP_VERSION = '3.96';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

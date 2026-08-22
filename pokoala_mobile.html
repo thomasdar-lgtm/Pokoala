@@ -272,7 +272,7 @@ body::before{
   background:rgba(255,255,255,0.04);
 }
 .grid-card img{width:100%;height:100%;object-fit:cover;display:block}
-.grid-card.not-owned{filter:grayscale(100%) brightness(0.95);opacity:0.85}
+.grid-card.not-owned{filter:saturate(45%) brightness(0.85)}
 .grid-card-num{
   position:absolute;bottom:3px;left:0;right:0;text-align:center;
   font-size:9px;font-weight:700;color:rgba(255,255,255,0.7);
@@ -2745,7 +2745,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.03';
+const APP_VERSION = '4.04';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

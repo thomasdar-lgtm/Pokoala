@@ -2795,7 +2795,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.08';
+const APP_VERSION = '4.10';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -2975,6 +2975,17 @@ function buildScanIndex(){
     // Nom racine sans suffixe : "chef-de-fer-ex" → "chef-de-fer"
     const root = n.replace(/[\s\-](ex|v|vmax|vstar|gx|break)$/,'').trim();
     if(root && root !== n && root.length >= 4) addTo(rootMap, root, c);
+    // Qualificatifs (radieux, brillant, de galar, d'alola…) : indexer aussi le
+    // nom nu, sinon un OCR qui ne lit que "Jirachi" rate "Jirachi Radieux"
+    const QUAL = /[\s\-](radieux|radiant|brillant|shining|prisme|prism star|de galar|de hisui|de paldea|dalola|de alola|galarian|hisuian|paldean|alolan|obscur|dark|lumineux|light)\b/g;
+    for(const base of [n, ne]){
+      if(!base) continue;
+      const bare = base.replace(QUAL, '').replace(/[\s\-](ex|v|vmax|vstar|gx|break)$/,'').trim();
+      if(bare && bare !== base && bare.length >= 4) addTo(rootMap, bare, c);
+      // Premier mot significatif : couvre les cas non listés ci-dessus
+      const first = base.split(/[\s\-]/)[0];
+      if(first && first !== base && first.length >= 5) addTo(rootMap, first, c);
+    }
   }
   _scanIndex = { src: _mobileDB, nameMap, rootMap, enToFr, setCounts, uniqueNames: [...nameMap.keys()] };
 }
@@ -3708,10 +3719,10 @@ function openScanCardDetail(cardId){
 // Ajout rapide depuis le scan, sans passer par l'overlay de détail
 function quickAddFromScan(cardId){
   saveScanLearn(cardId); // le choix vaut correction pour cette signature
-  addCardFromScan(cardId);
+  addCardFromScan(cardId, true);
 }
 
-function addCardFromScan(cardId){
+function addCardFromScan(cardId, quick){
   const card = _mobileDB?.cards?.find(c => c.id === cardId);
   if(!card) return;
   vibrate([40,30,40]);
@@ -3726,6 +3737,12 @@ function addCardFromScan(cardId){
       large: getCardImg(card, 'high')
     }
   });
+  // Ajout rapide : 1 exemplaire NM, pas d'overlay — sinon on ouvre la fiche
+  if(quick){
+    toast(`✓ ${getCardNameFR(card)} ajoutée (1× NM)`);
+    if(typeof renderScanHistory === 'function') renderScanHistory();
+    return;
+  }
   openCardModal(card.id);
 }
 

@@ -1177,9 +1177,12 @@ function imgSources(setId, number, tcgdexBase){
   const sid = setId || '', num = number || '';
   const serie = sid.match(/^([a-z]+)/i)?.[1] || sid;
   const out = [];
-  if(tcgdexBase) out.push(tcgdexBase + '/low.webp');
-  out.push(`https://images.pokemontcg.io/${sid}/${num}.png`);
+  if(tcgdexBase){ out.push(tcgdexBase + '/low.webp'); out.push(tcgdexBase + '/high.webp'); }
+  // TCGdex FR d'abord (images françaises, couvre les TG/GG) — low puis high car
+  // certains sets n'exposent que la version high
   out.push(`https://assets.tcgdex.net/fr/${serie}/${sid}/${num}/low.webp`);
+  out.push(`https://assets.tcgdex.net/fr/${serie}/${sid}/${num}/high.webp`);
+  out.push(`https://images.pokemontcg.io/${sid}/${num}.png`);
   out.push(`https://assets.tcgdex.net/en/${serie}/${sid}/${num}/low.webp`);
   out.push(`https://images.pokemontcg.io/${sid}/${num}_hires.png`);
   return [...new Set(out.filter(Boolean))];
@@ -1890,12 +1893,19 @@ function renderCollOverlay(){
     return;
   }
   list.innerHTML=items.map(c=>{
-    const img=cardImg(c);
+    const _p=(c.id||'').split('-');
+    const _sid=_p.length>=2?_p.slice(0,-1).join('-'):(c.setId||'');
+    const _num=_p.length>=2?_p[_p.length-1]:(c.num||c.number||'');
+    const _base=(c.imgLarge||c.img||'').includes('assets.tcgdex.net')
+      ? (c.imgLarge||c.img).replace(/\/(low|high)\.webp$/,'') : null;
+    const _is=imgSources(_sid,_num,_base);
+    const _isa=JSON.stringify(_is).replace(/"/g,'&quot;');
+    const img=_is[0];
     const mul=condMul(c.cond);
     const price=c.priceManual!=null?c.priceManual:(c.price?+(c.price*mul).toFixed(2):null);
     const sid=escId(c.id);
     return `<div class="coll-item" onclick="openCardModal('${sid}')">
-      ${img?`<img class="coll-thumb" src="${img}" loading="lazy" onerror="this.style.display='none'">`:`<div class="coll-thumb-ph"></div>`}
+      ${img?`<img class="coll-thumb" src="${img}" data-srcs="${_isa}" data-si="0" loading="lazy" onerror="imgNext(this)">`:`<div class="coll-thumb-ph"></div>`}
       <div class="coll-info">
         <div class="coll-name">${c.name}</div>
         <div class="coll-sub">${c.set||''}${c.num?' · N°'+c.num:''}</div>
@@ -2776,7 +2786,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.06';
+const APP_VERSION = '4.07';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

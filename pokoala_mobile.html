@@ -1169,6 +1169,36 @@ const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.file email profile';
 const DRIVE_FILE_NAME='pokoala_collection.json';
 const POKEMONTCG='https://api.pokemontcg.io/v2';
 const TCGDEX_FR='https://api.tcgdex.net/v2/fr';
+
+// ── Chaîne de fallback pour les images de cartes ──
+// Certaines cartes (TG/GG/SV shiny, radieux, promos anciennes) ont img:'' dans
+// la base : on essaie successivement plusieurs sources au lieu d'une seule.
+function imgSources(setId, number, tcgdexBase){
+  const sid = setId || '', num = number || '';
+  const serie = sid.match(/^([a-z]+)/i)?.[1] || sid;
+  const out = [];
+  if(tcgdexBase) out.push(tcgdexBase + '/low.webp');
+  out.push(`https://images.pokemontcg.io/${sid}/${num}.png`);
+  out.push(`https://assets.tcgdex.net/fr/${serie}/${sid}/${num}/low.webp`);
+  out.push(`https://assets.tcgdex.net/en/${serie}/${sid}/${num}/low.webp`);
+  out.push(`https://images.pokemontcg.io/${sid}/${num}_hires.png`);
+  return [...new Set(out.filter(Boolean))];
+}
+// Avance dans la liste des sources à chaque erreur de chargement
+function imgNext(el){
+  try{
+    const list = JSON.parse(el.dataset.srcs || '[]');
+    let i = parseInt(el.dataset.si || '0') + 1;
+    if(i < list.length){ el.dataset.si = i; el.src = list[i]; return; }
+  }catch(e){}
+  el.style.opacity = '.2';
+}
+function imgTag(cls, setId, number, tcgdexBase, extra){
+  const list = imgSources(setId, number, tcgdexBase);
+  const j = JSON.stringify(list).replace(/"/g,'&quot;');
+  return `<img ${cls?`class="${cls}" `:''}src="${list[0]}" data-srcs="${j}" data-si="0" loading="lazy" onerror="imgNext(this)"${extra?' '+extra:''}>`;
+}
+
 const LOCAL='http://localhost:8765';
 
 let col=[], _driveToken=null, _driveFileId=null;
@@ -2142,7 +2172,8 @@ async function doSearch(){
         number: c.number,
         rarity: c.rarity,
         set: {id: c.setId, name: c.setName},
-        images: {small: c.img ? c.img+'/low.webp' : `https://images.pokemontcg.io/${c.setId}/${c.number}.png`}
+        images: {small: imgSources(c.setId, c.number, c.img || null)[0]},
+        _srcs: imgSources(c.setId, c.number, c.img || null)
       })));
       return;
     }
@@ -2167,9 +2198,11 @@ function renderSearchResults(cards){
   const res=document.getElementById('search-results');
   res.innerHTML=cards.map((c,i)=>{
     const owned=col.find(x=>x.id===c.id);
-    const img=c.images?.small||`https://assets.tcgdex.net/fr/${c.set?.id||''}/${c.number||''}/low.webp`;
+    const _s = c._srcs || imgSources(c.set?.id, c.number, null);
+    const img = c.images?.small || _s[0];
+    const _sa = JSON.stringify(_s).replace(/"/g,'&quot;');
     return`<div class="search-result" data-idx="${i}">
-      ${img?`<img class="search-result-img" src="${img}" loading="lazy">`:'<div class="search-result-img"></div>'}
+      ${img?`<img class="search-result-img" src="${img}" data-srcs="${_sa}" data-si="0" loading="lazy" onerror="imgNext(this)">`:'<div class="search-result-img"></div>'}
       <div class="search-result-info">
         <div class="search-result-name">${c.name}</div>
         <div class="search-result-sub">${c.set?.name||''} · N°${c.number||'—'} · ${c.rarity||'—'}</div>
@@ -2497,17 +2530,15 @@ function renderGrid(){
     const imgSetId = p.slice(0,-1).join('-');
     const imgNum = p[p.length-1];
     const imgSerie = imgSetId.match(/^([a-z]+)/i)?.[1] || imgSetId;
-    const imgUrl = c.image
-      ? c.image+'/low.webp'
-      : (imgSetId.endsWith('tg') || imgSetId.endsWith('gg'))
-        ? `https://images.pokemontcg.io/${imgSetId}/${imgNum}.png`
-        : `https://assets.tcgdex.net/fr/${imgSerie}/${imgSetId}/${imgNum}/low.webp`;
+    const _srcs = imgSources(imgSetId, imgNum, c.image || null);
+    const imgUrl = _srcs[0];
+    const _srcsAttr = JSON.stringify(_srcs).replace(/"/g,'&quot;');
     const localImg=isLocal?`${LOCAL}/images/${cardId}.png`:null;
     const sid=escId(id);
     const cname=escId(c.name||'');
     const cimg=escId(imgUrl);
     return`<div class="grid-card${oc?'':' not-owned'}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
-      <img src="${localImg||imgUrl}" data-fallback="${imgUrl}" loading="lazy" onerror="if(this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.style.opacity='.2'}">
+      <img src="${localImg||imgUrl}" data-srcs="${_srcsAttr}" data-si="0" loading="lazy" onerror="imgNext(this)">
       <span class="grid-card-num">${localId}</span>
       ${oc?`<span class="grid-card-qty">${oc.qty}×</span>`:''}
       ${!oc?`<button class="grid-add-btn" onclick="event.stopPropagation();quickAddFromGrid('${sid}','${cname}','${cimg}')">+</button>`:''}
@@ -2745,7 +2776,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.05';
+const APP_VERSION = '4.06';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3217,12 +3248,14 @@ function showScanChoices(cards, resultEl){
         Plusieurs cartes trouvées — laquelle ?
       </div>
       ${cards.map(c => {
-        const img = getCardImg(c,'low');
+        const _cs = imgSources(c.setId, c.number, c.img ? c.img.replace(/\/(low|high)\.webp$/,'') : null);
+        const _csa = JSON.stringify(_cs).replace(/"/g,'&quot;');
+        const img = _cs[0];
         const nameFR = c.name && c.nameEn && c.name !== c.nameEn ? c.name :
           (_mobileDB?.cards?.find(x => x.nameEn === c.nameEn && x.name !== x.nameEn)?.name || c.name);
         const displayName = nameFR || c.name;
         return `<div onclick="openScanCardDetail('${escId(c.id)}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid rgba(255,255,255,0.05);cursor:pointer;-webkit-user-select:none;user-select:none">
-          <img src="${img}" style="width:36px;height:50px;object-fit:contain;border-radius:4px;flex-shrink:0" onerror="this.style.opacity='.2'">
+          <img src="${img}" data-srcs="${_csa}" data-si="0" style="width:36px;height:50px;object-fit:contain;border-radius:4px;flex-shrink:0" onerror="imgNext(this)">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:700;color:#fff">${displayName}</div>
             <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px">${c.setName||c.setId} · N°${c.number}</div>
@@ -3522,8 +3555,10 @@ function getCardImg(card, size='low'){
   // Construire l'URL TCGdex avec la série : fr/{serie}/{setId}/{number}/{size}.webp
   const setId = card.setId || '';
   const number = card.number || '';
+  // Pas d'img en base (TG/GG/SV shiny, promos, radieux) : pokemontcg.io d'abord
   const serie = setId.match(/^([a-z]+)/i)?.[1] || setId;
-  return `https://assets.tcgdex.net/fr/${serie}/${setId}/${number}/${size}.webp`;
+  if(size === 'high') return `https://images.pokemontcg.io/${setId}/${number}_hires.png`;
+  return `https://images.pokemontcg.io/${setId}/${number}.png`;
 }
 
 function getCardNameFR(card){
@@ -3586,7 +3621,9 @@ function timeSince(ts){
 function showScanResult(card, setCode, cardNum){
   closeScanner();
   vibrate(60);
-  const imgLow  = getCardImg(card, 'low');
+  const _rs = imgSources(card.setId, card.number, card.img ? card.img.replace(/\/(low|high)\.webp$/,'') : null);
+  const _rsa = JSON.stringify(_rs).replace(/"/g,'&quot;');
+  const imgLow  = _rs[0];
   const imgHigh = getCardImg(card, 'high');
   const owned = col.find(c => c.id === card.id);
   const displayName = getCardNameFR(card);
@@ -3596,8 +3633,8 @@ function showScanResult(card, setCode, cardNum){
   scanResult.innerHTML = `
     <div class="card-block" style="text-align:left;overflow:hidden;cursor:pointer" onclick="openScanCardDetail('${escId(card.id)}')">
       <div style="display:flex;gap:12px;padding:12px">
-        <img src="${imgHigh}" style="width:80px;border-radius:6px;object-fit:contain"
-          onerror="this.src='${imgLow}';this.onerror=null;">
+        <img src="${imgHigh}" data-srcs="${_rsa}" data-si="-1" style="width:80px;border-radius:6px;object-fit:contain"
+          onerror="imgNext(this)">
         <div style="flex:1">
           <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">${displayName}</div>
           <div style="font-size:12px;color:rgba(255,255,255,0.5)">${card.setName||''} · N°${cardNum}</div>

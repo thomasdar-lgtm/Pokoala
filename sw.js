@@ -1,4 +1,4 @@
-const CACHE_VERSION = '4.07';
+const CACHE_VERSION = '4.08';
 const CACHE_SHELL = `pokoala-shell-${CACHE_VERSION}`;
 // Cache images NON versionné : les images ne changent jamais, inutile de
 // les re-télécharger à chaque nouvelle version (cause de rate-limit TCGdex)

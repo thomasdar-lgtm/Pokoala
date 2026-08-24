@@ -2341,7 +2341,7 @@ function getSymbol(setId, setName){
 }
 
 
-const TG_GG_IDS = new Set(['swsh9tg','swsh10tg','swsh11tg','swsh12tg','swsh12pt5gg','swsh12.5gg']);
+const TG_GG_IDS = new Set(['swsh9tg','swsh10tg','swsh11tg','swsh12tg','swsh12pt5gg','swsh12.5gg','swsh45sv','swsh4.5sv']);
 
 // ── Complétion des séries ──
 // La liste `series` de la base est incomplète (63 sets absents : Voie du Maître,
@@ -2569,6 +2569,9 @@ const PARENT_TO_TG = {
   'swsh12':   'swsh12tg',
   'swsh12.5': 'swsh12pt5gg',
   'swsh12pt5':'swsh12pt5gg',
+  // Destinées Radieuses : la Chambre Chromatique fait partie de l'extension
+  'swsh45':   'swsh45sv',
+  'swsh4.5':  'swsh45sv',
 };
 
 async function openGrid(setId,setName){
@@ -2919,7 +2922,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.14';
+const APP_VERSION = '4.15';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

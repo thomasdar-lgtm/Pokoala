@@ -283,6 +283,16 @@ body::before{
   background:rgba(255,215,0,0.9);color:#000;
   font-size:9px;font-weight:800;border-radius:4px;padding:1px 4px;
 }
+.scan-cm-btn{
+  align-self:center;flex-shrink:0;margin-right:6px;
+  width:34px;height:34px;border-radius:50%;
+  background:rgba(255,255,255,0.08);color:var(--yellow2);
+  border:1px solid rgba(255,215,0,0.35);
+  font-size:15px;font-weight:900;line-height:1;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.scan-cm-btn:active{filter:brightness(.85)}
+
 .scan-quick-add{
   align-self:center;flex-shrink:0;
   width:34px;height:34px;border-radius:50%;
@@ -1970,6 +1980,35 @@ const CONDS = ['M','NM','EX','GD','LP','PL','PO'];
 
 // Noms FR officiels des sets (source : pokemon.com/fr) pour les sets dont la base a le nom EN
 const SET_NAME_FR = {
+  'swsh35':     'La Voie du Maître',
+  'swsh45':     'Destinées Radieuses',
+  'swsh45sv':   'Destinées Radieuses : Chambre Chromatique',
+  'swsh12pt5':  'Zénith Suprême',
+  'cel25c':     'Célébrations : Collection Classique',
+  'sm35':       'Légendes Brillantes',
+  'sm75':       'Majesté des Dragons',
+  'pgo':        'Pokémon GO',
+  'sv1':        'Écarlate et Violet',
+  'sv2':        'Évolutions à Paldea',
+  'sv3':        'Flammes Obsidiennes',
+  'sv3pt5':     'Écarlate et Violet — 151',
+  'sv4':        'Faille Paradoxe',
+  'sv4pt5':     'Destinées de Paldea',
+  'sv5':        'Forces Temporelles',
+  'sv6':        'Mascarade Crépusculaire',
+  'sv6pt5':     'Fable Nébuleuse',
+  'sv7':        'Couronne Stellaire',
+  'sv8':        'Étincelles Déferlantes',
+  'sv8pt5':     'Évolutions Prismatiques',
+  'sv9':        'Aventures Ensemble',
+  'sv10':       'Rivalités Destinées',
+  'zsv10pt5':   'Foudre Noire',
+  'rsv10pt5':   'Flamme Blanche',
+  'me1':        'Méga-Évolution',
+  'me2':        'Flammes Fantasmagoriques',
+  'me2pt5':     'Héros Transcendants',
+  'me3':        'Équilibre Parfait',
+  'me4':        'Chaos Ascendant',
   'swsh9tg':    'Stars Étincelantes : Galerie des Dresseurs',
   'swsh10tg':   'Astres Radieux : Galerie des Dresseurs',
   'swsh11tg':   'Origine Perdue : Galerie des Dresseurs',
@@ -2123,8 +2162,10 @@ function updQty(id,d){
 function updCond(id,v){ const c=col.find(x=>x.id===id); if(!c) return; if(c.copies?.length) c.copies[0].cond=v; _syncFromCopies(c); save(); renderCollOverlay(); }
 function updSale(id,d){ /* remplacé par toggleCopyForSale */ }
 function removeCard(id){ col=col.filter(x=>x.id!==id); closeModal('card-modal'); save(); renderCollOverlay(); renderHome(); toast('Carte retirée'); }
+// Cardmarket : language=2 (français), minCondition=2 (Near Mint ou mieux)
 function openCM(name,num){
-  window.open('https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString='+encodeURIComponent(name+' '+num),'_blank');
+  const q = encodeURIComponent((name+' '+(num||'')).trim());
+  window.open('https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString='+q+'&language=2&minCondition=2','_blank');
 }
 
 // ── ADD CARD ──
@@ -2301,6 +2342,62 @@ function getSymbol(setId, setName){
 
 
 const TG_GG_IDS = new Set(['swsh9tg','swsh10tg','swsh11tg','swsh12tg','swsh12pt5gg','swsh12.5gg']);
+
+// ── Complétion des séries ──
+// La liste `series` de la base est incomplète (63 sets absents : Voie du Maître,
+// Destinées Radieuses, Zénith Suprême, Pokémon GO…) et utilise une convention
+// d'ID différente ('swsh12.5' vs 'swsh12pt5'). On la reconstruit depuis `sets`.
+const SET_PREFIX_RE = /^([a-z]+)/i;
+function setPrefix(id){
+  const m = SET_PREFIX_RE.exec(String(id||''));
+  return m ? m[1].toLowerCase() : '';
+}
+function normSetId(id){
+  return String(id||'').replace(/\.5$/,'pt5').replace(/\.(\d)/g,'pt$1');
+}
+// Nombre de cartes d'un set, compté depuis la base (les sets ajoutés n'ont pas cardCount)
+let _setCounts = null;
+function _setCardCount(id){
+  if(!_setCounts){
+    _setCounts = new Map();
+    for(const c of (_mobileDB?.cards||[])) _setCounts.set(c.setId, (_setCounts.get(c.setId)||0)+1);
+  }
+  const n = _setCounts.get(id);
+  return n ? {official:n, total:n} : undefined;
+}
+
+function augmentSeries(data){
+  if(!Array.isArray(data) || !_mobileDB?.sets?.length) return data;
+  const out = data.map(s => ({...s, sets: (s.sets||[]).map(st => ({...st, id: normSetId(st.id)}))}));
+  const seen = new Set();
+  for(const s of out) for(const st of s.sets) seen.add(st.id);
+
+  // Rattacher chaque set orphelin à la série EXISTANTE qui contient déjà un set
+  // de même préfixe (évite de créer des doublons "Noir & Blanc"/"Noir et Blanc")
+  const prefToSerie = new Map();
+  for(const s of out){
+    for(const st of s.sets){
+      const p = setPrefix(st.id);
+      if(p && !prefToSerie.has(p)) prefToSerie.set(p, s);
+    }
+  }
+  const ALIAS = {zsv:'sv', rsv:'sv', hs:'hgss', col:'hgss', ru:'hgss', pl:'dp', tk:'ex', pop:'ex', si:'base', g:'xy'};
+  let misc = null;
+  for(const st of _mobileDB.sets){
+    const id = normSetId(st.id);
+    if(seen.has(id) || TG_GG_IDS.has(id)) continue;
+    const p = setPrefix(id);
+    let serie = prefToSerie.get(p) || prefToSerie.get(ALIAS[p]);
+    if(!serie){
+      if(!misc){ misc = {name:'Collections spéciales', sets:[]}; out.push(misc); }
+      serie = misc;
+    }
+    const n = st.cardCount || _setCardCount(id);
+    serie.sets.push({id, name: setNameFR(id, st.name), cardCount: n});
+    seen.add(id);
+  }
+  return out.filter(s => s.sets?.length > 0);
+}
 function filterTGSets(data){
   return data.map(s=>({...s,sets:(s.sets||[]).filter(st=>!TG_GG_IDS.has(st.id))})).filter(s=>s.sets?.length>0);
 }
@@ -2323,7 +2420,7 @@ function saveSeriesCache(data){
 async function loadSeries(){
   // 1. Base mobile locale
   if(_mobileDB?.series?.length){
-    _seriesData = filterTGSets(_mobileDB.series);
+    _seriesData = augmentSeries(filterTGSets(_mobileDB.series));
     saveSeriesCache(_seriesData);
     renderSeries();
     return;
@@ -2332,7 +2429,7 @@ async function loadSeries(){
   // 2. Cache localStorage — affichage immédiat
   const cached = loadSeriesFromCache();
   if(cached && cached.length){
-    _seriesData = filterTGSets(cached);
+    _seriesData = augmentSeries(filterTGSets(cached));
     saveSeriesCache(_seriesData);
     renderSeries();
     _refreshSeriesInBackground();
@@ -2361,7 +2458,7 @@ async function _refreshSeriesInBackground(){
     const list = await r.json();
     const fresh = list.filter(s => s.sets?.length > 0).reverse();
     if(fresh.length){
-      _seriesData = filterTGSets(fresh);
+      _seriesData = augmentSeries(filterTGSets(fresh));
       saveSeriesCache(_seriesData);
       // Pas de re-render si l'utilisateur est encore sur browse
       const banner = document.getElementById('offline-banner');
@@ -2376,7 +2473,7 @@ async function _fetchSeriesOnline(){
     const r = await fetch(`${LOCAL}/api/series`, {signal: AbortSignal.timeout(300)});
     const d = await r.json();
     if(!d.loading && d.series?.length){
-      _seriesData = filterTGSets(d.series);
+      _seriesData = augmentSeries(filterTGSets(d.series));
       saveSeriesCache(_seriesData);
       renderSeries();
       return;
@@ -2795,7 +2892,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.10';
+const APP_VERSION = '4.13';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3672,6 +3769,7 @@ function showScanResult(card, setCode, cardNum){
           ${card.rarity ? `<div style="margin-top:6px">${rareBadge(card.rarity)}</div>` : ''}
           ${owned ? `<div style="margin-top:6px;font-size:12px;color:var(--yellow2);font-weight:700">✓ Déjà dans ta collection (${owned.qty}×)</div>` : ''}
         </div>
+        <button class="scan-cm-btn" onclick="event.stopPropagation();openCM('${escId(card.nameEn||card.name)}','${escId(card.number||'')}')" title="Prix Cardmarket (FR, NM)">€</button>
         <button class="scan-quick-add" onclick="event.stopPropagation();quickAddFromScan('${escId(card.id)}')" title="Ajouter à ma collection">+</button>
         <div style="color:rgba(255,255,255,0.2);font-size:20px;align-self:center">›</div>
       </div>

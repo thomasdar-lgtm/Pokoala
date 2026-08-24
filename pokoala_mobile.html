@@ -2352,8 +2352,26 @@ function setPrefix(id){
   const m = SET_PREFIX_RE.exec(String(id||''));
   return m ? m[1].toLowerCase() : '';
 }
+// Équivalences d'ID entre les deux conventions, quand la normalisation ne suffit pas
+const SET_ID_ALIAS = {
+  'zsv10pt5':'sv10pt5b', 'rsv10pt5':'sv10pt5w',
+  'swsh35':'swsh3pt5', 'swsh45':'swsh4pt5', 'swsh12pt5':'swsh12pt5',
+  'sm35':'sm3pt5', 'sm75':'sm7pt5', 'sm115':'sm11pt5',
+  'swsh45sv':'swsh4pt5sv',
+};
+// 'sv03.5' → 'sv3pt5', 'sv01' → 'sv1' : unifie les conventions TCGdex/pokemontcg
 function normSetId(id){
-  return String(id||'').replace(/\.5$/,'pt5').replace(/\.(\d)/g,'pt$1');
+  const raw = String(id||'').toLowerCase();
+  if(SET_ID_ALIAS[raw]) return SET_ID_ALIAS[raw];
+  return raw
+    .replace(/\.(\d)/g, 'pt$1')
+    .replace(/^([a-z]+)0+(\d)/, '$1$2');
+}
+// Valeur numérique d'un set pour l'ordonner (swsh3pt5 → 3.5)
+function setOrderVal(id){
+  const m = /^[a-z]+(\d+)(?:pt(\d))?/.exec(normSetId(id));
+  if(!m) return null;
+  return parseFloat(m[1] + (m[2] ? '.' + m[2] : ''));
 }
 // Nombre de cartes d'un set, compté depuis la base (les sets ajoutés n'ont pas cardCount)
 let _setCounts = null;
@@ -2379,26 +2397,42 @@ function augmentSeries(data){
   const prefToSerie = new Map();
   for(const s of out){
     for(const st of s.sets){
-      const p = setPrefix(st.id);
+      const p = setPrefix(normSetId(st.id));
       if(p && !prefToSerie.has(p)) prefToSerie.set(p, s);
     }
   }
   const ALIAS = {zsv:'sv', rsv:'sv', hs:'hgss', col:'hgss', ru:'hgss', pl:'dp', tk:'ex', pop:'ex', si:'base', g:'xy'};
   let misc = null;
+  const tgNorm = new Set([...TG_GG_IDS].map(normSetId));
   for(const st of _mobileDB.sets){
-    const id = normSetId(st.id);
-    if(seen.has(id) || TG_GG_IDS.has(id)) continue;
+    const id = st.id;               // id d'origine : conserve nom FR et fetch
+    const nid = normSetId(id);      // forme normalisée : dédup, tri, sous-sets
+    if(seen.has(nid) || tgNorm.has(nid)) continue;
     // Ces sets viennent de la base (convention pokemontcg) : openGrid utilisera
     // le fallback _mobileDB si TCGdex ne connaît pas cet id
-    const p = setPrefix(id);
+    const p = setPrefix(nid);
     let serie = prefToSerie.get(p) || prefToSerie.get(ALIAS[p]);
     if(!serie){
       if(!misc){ misc = {name:'Collections spéciales', sets:[]}; out.push(misc); }
       serie = misc;
     }
     const n = st.cardCount || _setCardCount(id);
-    serie.sets.push({id, name: setNameFR(id, st.name), cardCount: n});
-    seen.add(id);
+    const entry = {id, name: setNameFR(id, st.name), cardCount: n};
+    // Insérer à sa place chronologique parmi les sets de même préfixe
+    // (la liste est ordonnée du plus récent au plus ancien)
+    const pfx = setPrefix(nid), val = setOrderVal(nid);
+    let idx = -1;
+    if(val != null){
+      idx = serie.sets.findIndex(x => {
+        const xn = normSetId(x.id);
+        if(setPrefix(xn) !== pfx) return false;
+        const v = setOrderVal(xn);
+        return v != null && v < val;
+      });
+    }
+    if(idx >= 0) serie.sets.splice(idx, 0, entry);
+    else serie.sets.push(entry);
+    seen.add(nid);
   }
   return out.filter(s => s.sets?.length > 0);
 }
@@ -2922,7 +2956,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.15';
+const APP_VERSION = '4.18';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

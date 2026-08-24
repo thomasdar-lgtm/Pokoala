@@ -2368,9 +2368,11 @@ function _setCardCount(id){
 
 function augmentSeries(data){
   if(!Array.isArray(data) || !_mobileDB?.sets?.length) return data;
-  const out = data.map(s => ({...s, sets: (s.sets||[]).map(st => ({...st, id: normSetId(st.id)}))}));
+  // On conserve les ids d'origine (TCGdex sait les interroger) et on ne compare
+  // que leur forme normalisée pour repérer les doublons
+  const out = data.map(s => ({...s, sets: [...(s.sets||[])]}));
   const seen = new Set();
-  for(const s of out) for(const st of s.sets) seen.add(st.id);
+  for(const s of out) for(const st of s.sets) seen.add(normSetId(st.id));
 
   // Rattacher chaque set orphelin à la série EXISTANTE qui contient déjà un set
   // de même préfixe (évite de créer des doublons "Noir & Blanc"/"Noir et Blanc")
@@ -2386,6 +2388,8 @@ function augmentSeries(data){
   for(const st of _mobileDB.sets){
     const id = normSetId(st.id);
     if(seen.has(id) || TG_GG_IDS.has(id)) continue;
+    // Ces sets viennent de la base (convention pokemontcg) : openGrid utilisera
+    // le fallback _mobileDB si TCGdex ne connaît pas cet id
     const p = setPrefix(id);
     let serie = prefToSerie.get(p) || prefToSerie.get(ALIAS[p]);
     if(!serie){
@@ -2576,9 +2580,32 @@ async function openGrid(setId,setName){
   document.getElementById('grid-overlay').classList.add('open');
   document.body.style.overflow='hidden';
   try{
-    const r=await fetch(`${TCGDEX_FR}/sets/${setId}`);
-    const d=await r.json();
+    let d = {};
+    try{
+      const r=await fetch(`${TCGDEX_FR}/sets/${setId}`);
+      if(r.ok) d=await r.json();
+    }catch(e){}
     _gridCards=d.cards||[];
+
+    // TCGdex ne connaît pas cet id (ex. swsh35 vs swsh3.5) : on tente la variante
+    // à point, puis la base locale
+    if(!_gridCards.length){
+      const alt = String(setId).replace(/pt(\d)/g,'.$1');
+      if(alt !== setId){
+        try{
+          const rAlt=await fetch(`${TCGDEX_FR}/sets/${alt}`);
+          if(rAlt.ok){
+            const dAlt=await rAlt.json();
+            if(dAlt.cards?.length) _gridCards=dAlt.cards;
+          }
+        }catch(e){}
+      }
+    }
+    if(!_gridCards.length && _mobileDB?.cards?.length){
+      _gridCards = _mobileDB.cards
+        .filter(c => c.setId === setId)
+        .map(c => ({id:c.id, localId:c.number, name:c.name, image:c.img||''}));
+    }
 
     // Charger les cartes TG/GG du set parent
     const tgSetId = PARENT_TO_TG[setId];
@@ -2892,7 +2919,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.13';
+const APP_VERSION = '4.14';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

@@ -2235,7 +2235,7 @@ async function doSearch(){
     if(results.length){
       renderSearchResults(results.map(c=>({
         id: c.id,
-        name: c.name,
+        name: getCardNameFR(c),
         nameEn: c.nameEn,
         number: c.number,
         rarity: c.rarity,
@@ -2725,7 +2725,7 @@ function renderGrid(){
     const _srcsAttr = JSON.stringify(_srcs).replace(/"/g,'&quot;');
     const localImg=isLocal?`${LOCAL}/images/${cardId}.png`:null;
     const sid=escId(id);
-    const cname=escId(c.name||'');
+    const cname=escId(getCardNameFR(c) || c.name || '');
     const cimg=escId(imgUrl);
     return`<div class="grid-card${oc?'':' not-owned'}" data-id="${sid}" data-name="${cname}" data-img="${cimg}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
       <img src="${localImg||imgUrl}" data-srcs="${_srcsAttr}" data-si="0" loading="lazy" onerror="imgNext(this)">
@@ -3012,7 +3012,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.23';
+const APP_VERSION = '4.24';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3151,6 +3151,8 @@ function levDist(a, b, maxD=2){
   }
   return prev[b.length];
 }
+
+function invalidateNameMaps(){ _frNameMap = null; _scanIndex = null; _setCounts = null; }
 
 function buildScanIndex(){
   if(_scanIndex && _scanIndex.src === _mobileDB) return;
@@ -3809,13 +3811,21 @@ function getCardImg(card, size='low'){
   return `https://images.pokemontcg.io/${setId}/${number}.png`;
 }
 
+// Table EN→FR construite une seule fois depuis la base (les sets TG/GG et
+// certains promos n'ont que le nom anglais : 'Flareon' → 'Pyroli')
+let _frNameMap = null;
+function _buildFrNameMap(){
+  _frNameMap = new Map();
+  for(const c of (_mobileDB?.cards || [])){
+    if(!c.nameEn || !c.name || c.name === c.nameEn) continue;
+    const k = c.nameEn.toLowerCase();
+    if(!_frNameMap.has(k)) _frNameMap.set(k, c.name);
+  }
+}
 function getCardNameFR(card){
-  // Pour les cartes dont name = nameEn (anglais uniquement), chercher le nom FR dans la base
-  if(!card.nameEn || card.name !== card.nameEn) return card.name;
-  const frCard = _mobileDB?.cards?.find(c =>
-    c.nameEn === card.nameEn && c.name !== c.nameEn
-  );
-  return frCard?.name || card.name;
+  if(!card || !card.nameEn || card.name !== card.nameEn) return card?.name || '';
+  if(!_frNameMap) _buildFrNameMap();
+  return _frNameMap.get(card.nameEn.toLowerCase()) || card.name;
 }
 
 // ── Vibration & historique de scan ──

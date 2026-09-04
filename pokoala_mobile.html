@@ -1646,6 +1646,7 @@ async function loadMobileDB(){
         localStorage.setItem(MOBILE_DB_KEY, JSON.stringify(_mobileDB));
         localStorage.setItem(MOBILE_DB_DATE_KEY, new Date().toISOString());
         console.log(`Base mobile : ${_mobileDB.cards.length} cartes (serveur local)`);
+        onMobileDBLoaded();
         return true;
       }
     }
@@ -1664,6 +1665,7 @@ async function loadMobileDB(){
           localStorage.setItem(MOBILE_DB_KEY, JSON.stringify(_mobileDB));
           localStorage.setItem(MOBILE_DB_DATE_KEY, new Date().toISOString());
           console.log(`Base mobile : ${_mobileDB.cards.length} cartes (Drive)`);
+          onMobileDBLoaded();
           return true;
         }
       }
@@ -1737,6 +1739,7 @@ async function syncMobileDB(){
     _mobileDB = JSON.parse(data);
     localStorage.setItem(MOBILE_DB_KEY, data);
     localStorage.setItem(MOBILE_DB_DATE_KEY, new Date().toISOString());
+    onMobileDBLoaded();
     toast(`✅ Base mobile synchronisée (${info.cards} cartes)`);
   }catch(e){
     toast('Erreur sync : '+e.message);
@@ -2527,8 +2530,11 @@ function saveSeriesCache(data){
 async function loadSeries(){
   // 1. Base mobile locale
   if(_mobileDB?.series?.length){
+    // On met en cache la donnée BRUTE : augmentSeries dépend de _mobileDB, qui
+    // peut ne pas être chargé au moment du rendu. Cacher le résultat complété
+    // figerait une liste incomplète (extension récente absente à vie).
+    saveSeriesCache(_mobileDB.series);
     _seriesData = augmentSeries(filterTGSets(_mobileDB.series));
-    saveSeriesCache(_seriesData);
     renderSeries();
     return;
   }
@@ -2537,7 +2543,6 @@ async function loadSeries(){
   const cached = loadSeriesFromCache();
   if(cached && cached.length){
     _seriesData = augmentSeries(filterTGSets(cached));
-    saveSeriesCache(_seriesData);
     renderSeries();
     _refreshSeriesInBackground();
     return;
@@ -2565,8 +2570,8 @@ async function _refreshSeriesInBackground(){
     const list = await r.json();
     const fresh = list.filter(s => s.sets?.length > 0).reverse();
     if(fresh.length){
+      saveSeriesCache(fresh);
       _seriesData = augmentSeries(filterTGSets(fresh));
-      saveSeriesCache(_seriesData);
       // Pas de re-render si l'utilisateur est encore sur browse
       const banner = document.getElementById('offline-banner');
       if(banner) banner.remove();
@@ -3079,7 +3084,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.34';
+const APP_VERSION = '4.35';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3220,6 +3225,18 @@ function levDist(a, b, maxD=2){
 }
 
 function invalidateNameMaps(){ _frNameMap = null; _scanIndex = null; _setCounts = null; }
+
+// La base mobile vient d'être (re)chargée : les listes dérivées sont périmées
+function onMobileDBLoaded(){
+  invalidateNameMaps();
+  try{ localStorage.removeItem(SERIES_CACHE_KEY); }catch(e){}
+  _seriesData = null;
+  if(_mobileDB?.series?.length){
+    _seriesData = augmentSeries(filterTGSets(_mobileDB.series));
+    saveSeriesCache(_mobileDB.series);
+    if(typeof renderSeries === 'function' && document.getElementById('series-list')) renderSeries();
+  }
+}
 
 function buildScanIndex(){
   if(_scanIndex && _scanIndex.src === _mobileDB) return;

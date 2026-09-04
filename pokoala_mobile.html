@@ -2207,9 +2207,13 @@ async function doSearch(){
   if(raw.length < 2){ res.innerHTML=`<div class="empty-state"><span class="big">🔍</span>Tape un nom de carte pour commencer</div>`; return; }
 
   // Découper en tokens : séparer nom et numéro
+  // Un numéro peut être préfixé (TG05, GG07, SWSH004, SV001, RC12, H09)
   const tokens = raw.split(/\s+/).filter(t => t.length > 0);
-  const numTokens = tokens.filter(t => /^\d+$/.test(t));
-  const nameTokens = tokens.filter(t => !/^\d+$/.test(t));
+  const isNumTok = t => /^[a-z]{0,4}\d{1,3}[a-z]?$/.test(t) && /\d/.test(t);
+  const numTokens = tokens.filter(isNumTok);
+  const nameTokens = tokens.filter(t => !isNumTok(t));
+  // 'gg07' == 'GG7' : on compare sans les zéros de tête
+  const normNum = v => String(v||'').toLowerCase().replace(/^([a-z]*)0+(\d)/, '$1$2');
 
   // 1. Recherche dans la base mobile locale
   if(_mobileDB?.cards?.length){
@@ -2219,8 +2223,12 @@ async function doSearch(){
       const num = (c.number||'').toLowerCase();
       // Les tokens texte doivent matcher le nom de la carte
       const nameOk = nameTokens.every(t => name.includes(t) || nameEn.includes(t));
-      // Les tokens numériques doivent matcher le numéro
-      const numOk = numTokens.every(t => num === t || num === t.padStart(3,'0') || num === t.replace(/^0+/,''));
+      // Les tokens numériques doivent matcher le numéro (ou, à défaut, le nom :
+      // certains noms contiennent des chiffres)
+      const numOk = numTokens.every(t =>
+        normNum(num) === normNum(t) ||
+        num === t.padStart(3,'0') ||
+        name.includes(t) || nameEn.includes(t));
       return nameOk && numOk;
     }).slice(0, 40);
 
@@ -2719,7 +2727,7 @@ function renderGrid(){
     const sid=escId(id);
     const cname=escId(c.name||'');
     const cimg=escId(imgUrl);
-    return`<div class="grid-card${oc?'':' not-owned'}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
+    return`<div class="grid-card${oc?'':' not-owned'}" data-id="${sid}" data-name="${cname}" data-img="${cimg}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
       <img src="${localImg||imgUrl}" data-srcs="${_srcsAttr}" data-si="0" loading="lazy" onerror="imgNext(this)">
       <span class="grid-card-num">${localId}</span>
       ${oc?`<span class="grid-card-qty">${oc.qty}×</span>`:''}
@@ -2745,30 +2753,75 @@ function renderGrid(){
 
 function gridTapUnowned(id, name, img){
   const c=_gridCards.find(x=>(x.id===id)||((_gridSetId+'-'+x.localId)===id));
-  const largImg=img.replace('/low.webp','/high.webp');
+  // Chaîne de fallback depuis l'id réel de la carte : les GG/TG et les cartes
+  // sans image en base n'ont pas d'URL TCGdex en .webp
+  const _p = String(id).split('-');
+  const _srcs = imgSources(_p.slice(0,-1).join('-'), _p[_p.length-1], c?.image || null);
+  const _srcsAttr = JSON.stringify(_srcs).replace(/"/g,'&quot;');
+  const largImg = _srcs[0];
   window._addCard={
     id, name: name||(c?.name||id),
     number: c?.localId||c?.number||id.split('-').pop(),
     rarity: c?.rarity||'',
     set:{id:_gridSetId, name:document.getElementById('grid-title').textContent},
-    images:{small:img, large:largImg}
+    images:{small:_srcs[0], large:_srcs[1]||_srcs[0]}
   };
   document.getElementById('card-modal-content').innerHTML=`
     <div class="modal-header">
       <span class="modal-title" style="font-size:15px">${name}</span>
       <button class="modal-close" onclick="closeModal('card-modal')">✕</button>
     </div>
-    <div class="modal-img-wrap"><img src="${largImg}" onerror="this.src='${img}'"></div>
+    <div class="modal-img-wrap"><img src="${largImg}" data-srcs="${_srcsAttr}" data-si="0" onerror="imgNext(this)"></div>
     <div class="modal-section">
       <div style="font-size:13px;color:rgba(255,255,255,0.55)">${document.getElementById('grid-title').textContent}${c?.localId?' · N°'+c.localId:''}${c?.rarity?' · '+c.rarity:''}</div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-primary btn-full" onclick="addCard(window._addCard);closeModal('card-modal');renderGrid()">
+      <button class="btn btn-primary btn-full" onclick="addCard(window._addCard);closeModal('card-modal');updateGridCard(window._addCard.id)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Ajouter à ma collection
       </button>
     </div>`;
   openModal('card-modal');
+}
+
+// Met à jour une seule tuile après ajout, sans réécrire la grille : évite que
+// toutes les images soient recréées (et donc rechargées) à chaque ajout
+function updateGridCard(id){
+  const el = document.querySelector(`.grid-card[data-id="${CSS.escape(id)}"]`);
+  if(!el){ renderGrid(); return; }
+  const oc = col.find(c => c.id === id);
+  el.classList.toggle('not-owned', !oc);
+  el.querySelector('.grid-card-qty')?.remove();
+  el.querySelector('.grid-add-btn')?.remove();
+  if(oc){
+    const q = document.createElement('span');
+    q.className = 'grid-card-qty';
+    q.textContent = oc.qty + '×';
+    el.appendChild(q);
+    el.setAttribute('onclick', `openCardModal('${id}')`);
+  } else {
+    const b = document.createElement('button');
+    b.className = 'grid-add-btn';
+    b.textContent = '+';
+    b.setAttribute('onclick', `event.stopPropagation();quickAddFromGrid('${id}','${el.dataset.name||''}','${el.dataset.img||''}')`);
+    el.appendChild(b);
+    el.setAttribute('onclick', `gridTapUnowned('${id}','${el.dataset.name||''}','${el.dataset.img||''}')`);
+  }
+  updateGridStats();
+}
+
+// Recalcule le compteur et la barre de progression sans toucher aux tuiles
+function updateGridStats(){
+  if(!_gridCards?.length) return;
+  const ids = new Set(col.map(c => c.id));
+  const owned = _gridCards.filter(c => ids.has(c.id || ((c._tgSetId||c.setId||_gridSetId)+'-'+(c.localId||c.number||''))));
+  const pct = Math.round(owned.length / _gridCards.length * 100);
+  const p = document.getElementById('grid-pct');
+  if(p) p.textContent = `${owned.length}/${_gridCards.length}`;
+  const cnt = document.getElementById('grid-count');
+  if(cnt) cnt.textContent = `${owned.length} / ${_gridCards.length} cartes · ${pct}%`;
+  const fill = document.getElementById('grid-prog-fill');
+  if(fill) fill.style.width = pct + '%';
 }
 
 function quickAddFromGrid(id, name, img){
@@ -2778,13 +2831,14 @@ function quickAddFromGrid(id, name, img){
     number: c?.localId||c?.number||id.split('-').pop(),
     rarity: c?.rarity||'',
     set:{id:_gridSetId, name:document.getElementById('grid-title').textContent},
-    images:{
-      small: c?.image ? c.image+'/low.webp' : img,
-      large: c?.image ? c.image+'/high.webp' : img.replace('/low.webp','/high.webp')
-    }
+    images:(function(){
+      const p=String(id).split('-');
+      const src=imgSources(p.slice(0,-1).join('-'), p[p.length-1], c?.image||null);
+      return {small:src[0], large:src[1]||src[0]};
+    })()
   };
   addCard(cardObj);
-  renderGrid();
+  updateGridCard(id);
 }
 
 function closeGrid(){
@@ -2958,7 +3012,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.19';
+const APP_VERSION = '4.23';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

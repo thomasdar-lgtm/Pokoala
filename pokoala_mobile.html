@@ -1210,21 +1210,24 @@ function tcgdexSetVariants(sid){
   }
   return out;
 }
-function imgSources(setId, number, tcgdexBase){
+// quality: 'low' (vignettes) ou 'high' (overlays plein écran)
+function imgSources(setId, number, tcgdexBase, quality){
   const sid = setId || '', num = number || '';
+  const hi = quality === 'high';
+  const q1 = hi ? 'high' : 'low', q2 = hi ? 'low' : 'high';
   const out = [];
-  if(tcgdexBase){ out.push(tcgdexBase + '/low.webp'); out.push(tcgdexBase + '/high.webp'); }
+  if(tcgdexBase){ out.push(tcgdexBase + '/' + q1 + '.webp'); out.push(tcgdexBase + '/' + q2 + '.webp'); }
   // TCGdex FR d'abord (images françaises, couvre les TG/GG), en essayant chaque
-  // variante d'id — low puis high, certains sets n'exposant que high
+  // variante d'id ; la qualité demandée passe en premier
   for(const v of tcgdexSetVariants(sid)){
     const serie = v.match(/^([a-z]+)/i)?.[1] || v;
-    out.push(`https://assets.tcgdex.net/fr/${serie}/${v}/${num}/low.webp`);
-    out.push(`https://assets.tcgdex.net/fr/${serie}/${v}/${num}/high.webp`);
+    out.push(`https://assets.tcgdex.net/fr/${serie}/${v}/${num}/${q1}.webp`);
+    out.push(`https://assets.tcgdex.net/fr/${serie}/${v}/${num}/${q2}.webp`);
   }
-  out.push(`https://images.pokemontcg.io/${sid}/${num}.png`);
+  out.push(`https://images.pokemontcg.io/${sid}/${num}${hi?'_hires':''}.png`);
   const s0 = tcgdexSetVariants(sid)[0];
-  out.push(`https://assets.tcgdex.net/en/${s0.match(/^([a-z]+)/i)?.[1]||s0}/${s0}/${num}/low.webp`);
-  out.push(`https://images.pokemontcg.io/${sid}/${num}_hires.png`);
+  out.push(`https://assets.tcgdex.net/en/${s0.match(/^([a-z]+)/i)?.[1]||s0}/${s0}/${num}/${q1}.webp`);
+  out.push(`https://images.pokemontcg.io/${sid}/${num}${hi?'':'_hires'}.png`);
   return [...new Set(out.filter(Boolean))];
 }
 // Avance dans la liste des sources à chaque erreur de chargement
@@ -2048,7 +2051,7 @@ function openCardModal(id){
 function _renderCardModal(c){
   const _p = String(c.id||'').split('-');
   const _srcs = _p.length >= 2
-    ? imgSources(_p.slice(0,-1).join('-'), _p[_p.length-1], null)
+    ? imgSources(_p.slice(0,-1).join('-'), _p[_p.length-1], null, 'high')
     : [];
   const _modalSrcs = JSON.stringify(_srcs).replace(/"/g,'&quot;');
   const img = _srcs[0] || cardImg(c);
@@ -2782,7 +2785,7 @@ function gridTapUnowned(id, name, img){
   // Chaîne de fallback depuis l'id réel de la carte : les GG/TG et les cartes
   // sans image en base n'ont pas d'URL TCGdex en .webp
   const _p = String(id).split('-');
-  const _srcs = imgSources(_p.slice(0,-1).join('-'), _p[_p.length-1], c?.image || null);
+  const _srcs = imgSources(_p.slice(0,-1).join('-'), _p[_p.length-1], c?.image || null, 'high');
   const _srcsAttr = JSON.stringify(_srcs).replace(/"/g,'&quot;');
   const largImg = _srcs[0];
   window._addCard={
@@ -3038,7 +3041,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.26';
+const APP_VERSION = '4.27';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3905,7 +3908,7 @@ function timeSince(ts){
 function showScanResult(card, setCode, cardNum){
   closeScanner();
   vibrate(60);
-  const _rs = imgSources(card.setId, card.number, card.img ? card.img.replace(/\/(low|high)\.webp$/,'') : null);
+  const _rs = imgSources(card.setId, card.number, card.img ? card.img.replace(/\/(low|high)\.webp$/,'') : null, 'high');
   const _rsa = JSON.stringify(_rs).replace(/"/g,'&quot;');
   const imgLow  = _rs[0];
   const imgHigh = getCardImg(card, 'high');

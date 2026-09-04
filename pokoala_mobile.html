@@ -286,12 +286,36 @@ body::before{
 .scan-cm-btn{
   align-self:center;flex-shrink:0;margin-right:6px;
   width:34px;height:34px;border-radius:50%;
-  background:rgba(255,255,255,0.08);color:var(--yellow2);
-  border:1px solid rgba(255,215,0,0.35);
-  font-size:15px;font-weight:900;line-height:1;
+  background:#fff;
+  border:1px solid rgba(255,255,255,0.25);
   cursor:pointer;display:flex;align-items:center;justify-content:center;
+  padding:0;
 }
+.scan-cm-btn img{width:22px;height:22px;object-fit:contain;display:block}
 .scan-cm-btn:active{filter:brightness(.85)}
+
+/* Bouton Cardmarket sur les tuiles de la grille (bas à droite) */
+.grid-cm-btn{
+  position:absolute;bottom:4px;right:4px;
+  width:20px;height:20px;border-radius:5px;
+  background:rgba(255,255,255,0.92);
+  border:none;padding:2px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 1px 4px rgba(0,0,0,0.45);
+}
+.grid-cm-btn img{width:100%;height:100%;object-fit:contain;display:block}
+.grid-cm-btn:active{filter:brightness(.85)}
+
+/* Bouton Cardmarket dans les overlays de carte */
+.cm-link-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:#fff;color:#0a1a4a;
+  border:none;border-radius:9px;
+  padding:9px 14px;font-size:13px;font-weight:800;
+  font-family:'Raleway',sans-serif;cursor:pointer;
+}
+.cm-link-btn img{width:18px;height:18px;object-fit:contain;display:block}
+.cm-link-btn:active{filter:brightness(.9)}
 
 .scan-quick-add{
   align-self:center;flex-shrink:0;
@@ -2098,9 +2122,8 @@ function _renderCardModal(c){
         <label>Prix estimé</label>
         <div class="val" style="color:var(--yellow2)">${price?price.toFixed(2)+' €':'—'}</div>
       </div>
-      <button class="btn btn-secondary" style="flex-shrink:0;padding:8px 12px;font-size:12px" onclick="openCM('${escId(c.nameEn||c.name)}','${escId(c.num||'')}')">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        Cardmarket
+      <button class="cm-link-btn" style="flex-shrink:0;padding:8px 12px;font-size:12px" onclick="openCM('${escId(c.nameEn||c.name)}','${escId(c.num||'')}')">
+        <img src="${CM_LOGO}" alt="">Cardmarket
       </button>
     </div>
 
@@ -2191,6 +2214,9 @@ function updQty(id,d){
 function updCond(id,v){ const c=col.find(x=>x.id===id); if(!c) return; if(c.copies?.length) c.copies[0].cond=v; _syncFromCopies(c); save(); renderCollOverlay(); }
 function updSale(id,d){ /* remplacé par toggleCopyForSale */ }
 function removeCard(id){ col=col.filter(x=>x.id!==id); closeModal('card-modal'); save(); renderCollOverlay(); renderHome(); toast('Carte retirée'); }
+// Logo Cardmarket (pictogramme officiel) utilisé sur tous les liens vers le site
+const CM_LOGO = 'data:image/png;base64,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';
+
 // Cardmarket : language=2 (français), minCondition=2 (Near Mint ou mieux)
 function openCM(name,num){
   const q = encodeURIComponent((name+' '+(num||'')).trim());
@@ -2352,9 +2378,8 @@ function openCardModalFromSearch(idx){
             Ajouter
            </button>`
       }
-      <button class="btn btn-secondary" style="flex:1" onclick="openCM('${escId(nameEn)}','${escId(num)}')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        Cardmarket
+      <button class="cm-link-btn" style="flex:1;justify-content:center" onclick="openCM('${escId(nameEn)}','${escId(num)}')">
+        <img src="${CM_LOGO}" alt="">Cardmarket
       </button>
     </div>`;
   openModal('card-modal');
@@ -2761,6 +2786,7 @@ function renderGrid(){
       <span class="grid-card-num">${localId}</span>
       ${oc?`<span class="grid-card-qty">${oc.qty}×</span>`:''}
       ${!oc?`<button class="grid-add-btn" onclick="event.stopPropagation();quickAddFromGrid('${sid}','${cname}','${cimg}')">+</button>`:''}
+      <button class="grid-cm-btn" title="Prix Cardmarket (FR, NM)" onclick="event.stopPropagation();openCM('${escId(c.nameEn||c.name||'')}','${escId(localId)}')"><img src="${CM_LOGO}" alt="Cardmarket"></button>
     </div>`;
   }).join('');
 
@@ -2808,6 +2834,11 @@ function gridTapUnowned(id, name, img){
       <button class="btn btn-primary btn-full" onclick="addCard(window._addCard);closeModal('card-modal');updateGridCard(window._addCard.id)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Ajouter à ma collection
+      </button>
+    </div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="cm-link-btn" style="flex:1;justify-content:center" onclick="openCM('${escId(c?.name||name||'')}','${escId(c?.localId||c?.number||'')}')">
+        <img src="${CM_LOGO}" alt="">Voir le prix sur Cardmarket
       </button>
     </div>`;
   openModal('card-modal');
@@ -3041,7 +3072,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.27';
+const APP_VERSION = '4.28';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3928,7 +3959,7 @@ function showScanResult(card, setCode, cardNum){
           ${card.rarity ? `<div style="margin-top:6px">${rareBadge(card.rarity)}</div>` : ''}
           ${owned ? `<div style="margin-top:6px;font-size:12px;color:var(--yellow2);font-weight:700">✓ Déjà dans ta collection (${owned.qty}×)</div>` : ''}
         </div>
-        <button class="scan-cm-btn" onclick="event.stopPropagation();openCM('${escId(card.nameEn||card.name)}','${escId(card.number||'')}')" title="Prix Cardmarket (FR, NM)">€</button>
+        <button class="scan-cm-btn" onclick="event.stopPropagation();openCM('${escId(card.nameEn||card.name)}','${escId(card.number||'')}')" title="Prix Cardmarket (FR, NM)"><img src="${CM_LOGO}" alt="Cardmarket"></button>
         <button class="scan-quick-add" onclick="event.stopPropagation();quickAddFromScan('${escId(card.id)}')" title="Ajouter à ma collection">+</button>
         <div style="color:rgba(255,255,255,0.2);font-size:20px;align-self:center">›</div>
       </div>
@@ -3966,8 +3997,8 @@ function openScanCardDetail(cardId){
       <button class="btn btn-primary" style="flex:1" onclick="addCardFromScan('${escId(card.id)}');closeModal('card-modal')">
         ➕ Ajouter à ma collection
       </button>
-      <button class="btn btn-secondary" style="flex:1" onclick="openCM('${escId(displayName)}','${escId(card.number||'')}')">
-        Cardmarket
+      <button class="cm-link-btn" style="flex:1;justify-content:center" onclick="openCM('${escId(displayName)}','${escId(card.number||'')}')">
+        <img src="${CM_LOGO}" alt="">Cardmarket
       </button>
     </div>`;
   openModal('card-modal');

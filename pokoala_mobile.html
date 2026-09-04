@@ -1192,17 +1192,38 @@ const TCGDEX_FR='https://api.tcgdex.net/v2/fr';
 // ── Chaîne de fallback pour les images de cartes ──
 // Certaines cartes (TG/GG/SV shiny, radieux, promos anciennes) ont img:'' dans
 // la base : on essaie successivement plusieurs sources au lieu d'une seule.
+// Variantes d'identifiant de set côté TCGdex : 'swsh35' → 'swsh3.5', 'sv3pt5' →
+// 'sv03.5'. Sans ça TCGdex renvoie une image de DOS DE CARTE (statut 200, donc
+// onerror ne se déclenche pas) et la carte reste illisible.
+function tcgdexSetVariants(sid){
+  const out = [];
+  const norm = (typeof normSetId === 'function') ? normSetId(sid) : String(sid||'').toLowerCase();
+  // TCGdex ne sépare pas les Galeries des Dresseurs : les cartes TG/GG et la
+  // Chambre Chromatique vivent dans le set PARENT, avec leur numéro (GG07, TG01).
+  // C'est la seule URL qui existe en français.
+  const parent = norm.replace(/(tg|gg|sv)$/,'');
+  const dotted = parent.replace(/pt(\d)/g, '.$1');
+  const padded = dotted.replace(/^([a-z]+)(\d)(?=[.\D]|$)/, '$10$2');
+  const selfDotted = norm.replace(/pt(\d)/g, '.$1');
+  for(const v of [dotted, padded, selfDotted, norm, String(sid||'')]){
+    if(v && !out.includes(v)) out.push(v);
+  }
+  return out;
+}
 function imgSources(setId, number, tcgdexBase){
   const sid = setId || '', num = number || '';
-  const serie = sid.match(/^([a-z]+)/i)?.[1] || sid;
   const out = [];
   if(tcgdexBase){ out.push(tcgdexBase + '/low.webp'); out.push(tcgdexBase + '/high.webp'); }
-  // TCGdex FR d'abord (images françaises, couvre les TG/GG) — low puis high car
-  // certains sets n'exposent que la version high
-  out.push(`https://assets.tcgdex.net/fr/${serie}/${sid}/${num}/low.webp`);
-  out.push(`https://assets.tcgdex.net/fr/${serie}/${sid}/${num}/high.webp`);
+  // TCGdex FR d'abord (images françaises, couvre les TG/GG), en essayant chaque
+  // variante d'id — low puis high, certains sets n'exposant que high
+  for(const v of tcgdexSetVariants(sid)){
+    const serie = v.match(/^([a-z]+)/i)?.[1] || v;
+    out.push(`https://assets.tcgdex.net/fr/${serie}/${v}/${num}/low.webp`);
+    out.push(`https://assets.tcgdex.net/fr/${serie}/${v}/${num}/high.webp`);
+  }
   out.push(`https://images.pokemontcg.io/${sid}/${num}.png`);
-  out.push(`https://assets.tcgdex.net/en/${serie}/${sid}/${num}/low.webp`);
+  const s0 = tcgdexSetVariants(sid)[0];
+  out.push(`https://assets.tcgdex.net/en/${s0.match(/^([a-z]+)/i)?.[1]||s0}/${s0}/${num}/low.webp`);
   out.push(`https://images.pokemontcg.io/${sid}/${num}_hires.png`);
   return [...new Set(out.filter(Boolean))];
 }
@@ -2025,7 +2046,12 @@ function openCardModal(id){
 }
 
 function _renderCardModal(c){
-  const img = cardImg(c);
+  const _p = String(c.id||'').split('-');
+  const _srcs = _p.length >= 2
+    ? imgSources(_p.slice(0,-1).join('-'), _p[_p.length-1], null)
+    : [];
+  const _modalSrcs = JSON.stringify(_srcs).replace(/"/g,'&quot;');
+  const img = _srcs[0] || cardImg(c);
   const sid = escId(c.id);
   const copies = c.copies || [{cond:c.cond||'NM', for_sale:false}];
   const totalSale = copies.filter(x=>x.for_sale).length;
@@ -2038,7 +2064,7 @@ function _renderCardModal(c){
       <span class="modal-title" style="font-size:15px;max-width:calc(100% - 50px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
       <button class="modal-close" onclick="closeModal('card-modal')">✕</button>
     </div>
-    ${img?`<div class="modal-img-wrap"><img src="${img}" onerror="if(!this.dataset.fb){this.dataset.fb='1';this.src='https://images.pokemontcg.io/${escId(c.setId||'')}/${escId(c.num||'')}_hires.png'}else{this.style.display='none'}"></div>`:''}
+    ${img?`<div class="modal-img-wrap"><img src="${img}" data-srcs="${_modalSrcs}" data-si="0" onerror="imgNext(this)"></div>`:''}
     <div class="modal-section">
       <label>Extension</label>
       <div class="val">${setNameFR(c.setId, c.set||'—')}${c.num?' · N°'+c.num:''}</div>
@@ -3012,7 +3038,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.24';
+const APP_VERSION = '4.26';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

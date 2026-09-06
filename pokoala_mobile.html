@@ -481,6 +481,13 @@ select.cond-select{
 .btn-danger{background:rgba(200,0,0,0.18);border:1px solid rgba(200,0,0,0.28);color:#f87171}
 .btn-drive{background:rgba(0,58,140,0.25);border:1px solid rgba(0,100,255,0.28);color:#7aadff}
 .btn-full{width:100%}
+/* Panneau de résultat affiché par-dessus le viseur (mode rafale) */
+#scan-live .card-block{
+  background:rgba(12,8,22,0.94);
+  border:1px solid rgba(255,255,255,0.12);
+  box-shadow:0 8px 28px rgba(0,0,0,0.6);
+  max-height:42vh;overflow-y:auto;
+}
 /* Boutons de scan : même gabarit, rouge sourd accordé à la palette de l'app */
 .btn-scan{
   width:100%;box-sizing:border-box;
@@ -492,6 +499,10 @@ select.cond-select{
 }
 .btn-scan-alt{
   background:linear-gradient(135deg,#2a1030,#3d1a2a);
+  color:rgba(255,255,255,0.88);
+}
+.btn-scan-burst{
+  background:linear-gradient(135deg,#1b1030,#2a1a44);
   color:rgba(255,255,255,0.88);
 }
 .btn-row{display:flex;gap:8px;padding:10px 16px 4px}
@@ -884,10 +895,16 @@ select.cond-select{
           </div>
         </label>
 
-        <!-- Scan rapide (viseur intégré) -->
-        <button class="btn btn-scan btn-scan-alt" onclick="openScanner()">
+        <!-- Scan rapide (viseur intégré, une carte à la fois) -->
+        <button class="btn btn-scan btn-scan-alt" style="margin-bottom:10px" onclick="openScanner(false)">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4V5.6A1.6 1.6 0 0 1 4.6 4h2.8M16.6 4h2.8A1.6 1.6 0 0 1 21 5.6v2.8M21 15.6v2.8a1.6 1.6 0 0 1-1.6 1.6h-2.8M7.4 20H4.6A1.6 1.6 0 0 1 3 18.4v-2.8"/><rect x="8.4" y="8.4" width="7.2" height="7.2" rx="1.2"/></svg>
           Scan rapide
+        </button>
+
+        <!-- Scan en série : le viseur reste ouvert entre les cartes -->
+        <button class="btn btn-scan btn-scan-burst" onclick="openScanner(true)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="12" height="14" rx="1.8"/><path d="M7 4.6h10.2A1.8 1.8 0 0 1 19 6.4v11"/><path d="M10.4 4.6V3.4"/></svg>
+          Scan en série
         </button>
 
         <div id="scan-result" style="margin-top:24px"></div>
@@ -1133,6 +1150,8 @@ select.cond-select{
       <span id="zoom-label" style="font-size:11px;font-weight:700;color:var(--yellow2);width:28px">2×</span>
     </div>
   </div>
+  <!-- Mode rafale : résultat affiché par-dessus le viseur, qui reste ouvert -->
+  <div id="scan-live" style="display:none;position:absolute;left:12px;right:12px;bottom:calc(112px + var(--safe-bottom));z-index:5"></div>
   <div style="background:#000;padding:8px 20px calc(20px + var(--safe-bottom));display:flex;align-items:center;justify-content:space-between;gap:16px">
     <button onclick="closeScanner()" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center">✕</button>
     <button id="scan-btn" onclick="captureAndScan()" style="width:72px;height:72px;border-radius:50%;background:var(--yellow2);border:4px solid #fff;cursor:pointer;display:flex;align-items:center;justify-content:center">
@@ -3341,7 +3360,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.64';
+const APP_VERSION = '4.66';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3923,7 +3942,9 @@ function positionScanFrame(){
   document.getElementById('scan-mask-right').style.cssText += `;top:${fy}px;height:${fh}px;width:${fx}px;left:auto;right:0`;
 }
 
-async function openScanner(){
+async function openScanner(burst){
+  _burstMode = !!burst;   // rafale : le viseur reste ouvert entre les cartes
+  _scanLiveMode = false; _burstCount = 0;
   const overlay = document.getElementById('scan-overlay');
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
@@ -3980,11 +4001,24 @@ async function openScanner(){
   }
 }
 
+let _burstMode = false, _burstCount = 0; // viseur ouvert en rafale, cartes ajoutées
+let _scanLiveMode = false; // un résultat est actuellement affiché dans le viseur
 function closeScanner(){
   if(_scanStream){ _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
   document.getElementById('scan-overlay').style.display = 'none';
   document.body.style.overflow = '';
   _torchOn = false;
+  _scanLiveMode = false; _burstMode = false;
+  const live = document.getElementById('scan-live');
+  if(live){ live.style.display = 'none'; live.innerHTML = ''; }
+}
+
+// Efface le résultat affiché dans le viseur pour enchaîner sur la carte suivante
+function clearScanLive(){
+  const live = document.getElementById('scan-live');
+  if(live){ live.style.display = 'none'; live.innerHTML = ''; }
+  const st = document.getElementById('scan-status');
+  if(st) st.textContent = '';
 }
 
 async function toggleTorch(){
@@ -4127,9 +4161,19 @@ async function captureAndScan(){
       document.getElementById('scan-btn').disabled = false;
       return;
     }
-    parseScanText(text, document.getElementById('scan-result'), data.responses[0]);
-    status.textContent = '✅ Analyse terminée';
-    closeScanner();
+    if(_burstMode){
+      // Rafale : le résultat s'affiche dans le viseur, qui reste ouvert
+      _scanLiveMode = true;
+      const live = document.getElementById('scan-live');
+      live.style.display = 'block';
+      parseScanText(text, live, data.responses[0]);
+      status.textContent = '';
+    } else {
+      // Scan rapide : on referme le viseur et on affiche le résultat dans l'onglet
+      parseScanText(text, document.getElementById('scan-result'), data.responses[0]);
+      status.textContent = '✅ Analyse terminée';
+      closeScanner();
+    }
   }catch(e){
     status.textContent = '❌ Erreur : ' + e.message;
   }
@@ -4229,7 +4273,7 @@ function timeSince(ts){
 }
 
 function showScanResult(card, setCode, cardNum, fromHistory){
-  closeScanner();
+  if(!_scanLiveMode) closeScanner();
   vibrate(60);
   const _rs = imgSources(card.setId, card.number, card.img ? card.img.replace(/\/(low|high)\.webp$/,'') : null, 'high');
   const _rsa = JSON.stringify(_rs).replace(/"/g,'&quot;');
@@ -4251,6 +4295,7 @@ function showScanResult(card, setCode, cardNum, fromHistory){
           ${card.rarity ? `<div style="margin-top:6px">${rareBadge(card.rarity)}</div>` : ''}
           ${owned ? `<div style="margin-top:6px;font-size:12px;color:var(--yellow2);font-weight:700;white-space:nowrap">✓ En collection (${owned.qty}×)</div>` : ''}
         </div>
+        ${_scanLiveMode ? `<button onclick="event.stopPropagation();clearScanLive()" title="Ignorer" style="align-self:flex-start;flex-shrink:0;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);font-size:14px;line-height:1;cursor:pointer">✕</button>` : ''}
         <button class="scan-cm-btn" onclick="event.stopPropagation();openCM('${escId(card.nameEn||card.name)}','${escId(card.number||'')}')" title="Prix Cardmarket (FR, NM)"><img src="${CM_LOGO}" alt="Cardmarket"></button>
         <button class="scan-quick-add" onclick="event.stopPropagation();quickAddFromScan('${escId(card.id)}')" title="Ajouter à ma collection">+</button>
 
@@ -4265,6 +4310,7 @@ const _scanCardMap = new Map(); // id → card (depuis base mobile)
 
 function openScanCardDetail(cardId){
   saveScanLearn(cardId); // mémoriser le choix pour cette signature de scan
+  if(_scanLiveMode) closeScanner(); // la fiche s'ouvre hors du viseur
   // Si la carte est déjà en collection, ouvrir l'overlay collection
   const inCol = col.find(c => c.id === cardId);
   if(inCol){ openCardModal(cardId); return; }
@@ -4300,6 +4346,13 @@ function openScanCardDetail(cardId){
 function quickAddFromScan(cardId){
   saveScanLearn(cardId); // le choix vaut correction pour cette signature
   addCardFromScan(cardId, true);
+  // Rafale : on libère le viseur pour la carte suivante
+  if(_scanLiveMode){
+    _burstCount++;
+    clearScanLive();
+    const st = document.getElementById('scan-status');
+    if(st) st.textContent = `${_burstCount} carte${_burstCount>1?'s':''} ajoutée${_burstCount>1?'s':''} — carte suivante`;
+  }
 }
 
 function addCardFromScan(cardId, quick){

@@ -1061,10 +1061,11 @@ select.cond-select{
         <option value="PO">PO — Poor</option>
       </select>
       <select class="mob-select" id="coll-sort" onchange="renderCollOverlay()" style="flex:1;min-width:100px;font-size:11px;padding:6px 8px">
+        <option value="date">Ajout : récent → ancien</option>
+        <option value="date_asc">Ajout : ancien → récent</option>
         <option value="name">Nom A→Z</option>
         <option value="value">Valeur ↓</option>
         <option value="set">Extension</option>
-        <option value="date">Date ajout</option>
       </select>
     </div>
     <div style="display:flex;gap:6px;margin-top:6px">
@@ -1947,7 +1948,7 @@ function renderCollOverlay(){
   const filterSet=document.getElementById('coll-filter-set')?.value||'';
   const filterRarity=_selectedRarity||'';
   const filterCond=document.getElementById('coll-filter-cond')?.value||'';
-  const sort=document.getElementById('coll-sort')?.value||'name';
+  const sort=document.getElementById('coll-sort')?.value||'date';
 
   let items=[...col];
 
@@ -1971,7 +1972,21 @@ function renderCollOverlay(){
   if(sort==='name') items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','fr'));
   if(sort==='value') items.sort((a,b)=>(b.price||0)*condMul(b.cond)-(a.price||0)*condMul(a.cond));
   if(sort==='set') items.sort((a,b)=>(a.set||'').localeCompare(b.set||'','fr'));
-  if(sort==='date') items.reverse(); // les derniers ajoutés en premier
+  if(sort==='date' || sort==='date_asc'){
+    // Les cartes ajoutées avant la v4.43 n'ont pas d'addedAt : on retombe sur
+    // leur position dans `col`, qui reflète l'ordre d'insertion.
+    const pos=new Map(col.map((c,i)=>[c.id,i]));
+    const key=c=>c.addedAt || pos.get(c.id) || 0;
+    items.sort((a,b)=>{
+      const ka=key(a), kb=key(b);
+      if(ka===kb) return (pos.get(a.id)||0)-(pos.get(b.id)||0);
+      // addedAt (ms) et index ne sont pas comparables : on trie d'abord les
+      // cartes datées, les anciennes gardant leur ordre relatif
+      const da=!!a.addedAt, db=!!b.addedAt;
+      if(da!==db) return sort==='date' ? (da?-1:1) : (da?1:-1);
+      return sort==='date' ? kb-ka : ka-kb;
+    });
+  }
 
   document.getElementById('coll-ov-count').textContent=items.length+' carte'+(items.length>1?'s':'');
 
@@ -2088,7 +2103,25 @@ const SET_NAME_FR = {
   'swsh12tg':   'Tempête Argentée : Galerie des Dresseurs',
   'swsh12pt5gg':'Zénith Suprême : Galerie de Galar',
 };
-function setNameFR(setId, fallback){ return SET_NAME_FR[setId] || fallback || setId; }
+// Table id→nom FR construite depuis la base : `series` porte les noms TCGdex
+// (français), alors que `cards.setName` vient de pokemontcg.io (anglais).
+let _setNameFRMap = null;
+function _buildSetNameFRMap(){
+  _setNameFRMap = new Map();
+  for(const serie of (_mobileDB?.series || [])){
+    for(const st of (serie.sets || [])){
+      if(!st.id || !st.name) continue;
+      const k = (typeof normSetId === 'function') ? normSetId(st.id) : String(st.id).toLowerCase();
+      if(!_setNameFRMap.has(k)) _setNameFRMap.set(k, st.name);
+    }
+  }
+}
+function setNameFR(setId, fallback){
+  if(SET_NAME_FR[setId]) return SET_NAME_FR[setId];
+  if(!_setNameFRMap) _buildSetNameFRMap();
+  const k = (typeof normSetId === 'function') ? normSetId(setId) : String(setId||'').toLowerCase();
+  return _setNameFRMap.get(k) || SET_NAME_FR[k] || fallback || setId;
+}
 
 function openCardModal(id){
   const c=col.find(x=>x.id===id);
@@ -2269,6 +2302,7 @@ function addCard(cardData){
       rarity:cardData.rarity||'',
       img, imgLarge:imgL,
       price:null, priceManual:null,
+      addedAt: Date.now(),
       copies:[{cond:'NM', for_sale:false}]
     };
     _syncFromCopies(newCard);
@@ -2375,7 +2409,7 @@ function openCardModalFromSearch(idx){
   const img = c.images?.small || `https://assets.tcgdex.net/fr/${c.set?.id||''}/${c.number||''}/low.webp`;
   const nameEn = c.nameEn || c.name;
   const num = c.number || c.localId || '';
-  const setName = c.set?.name || c.set || '';
+  const setName = setNameFR(c.set?.id || '', c.set?.name || c.set || '');
 
   document.getElementById('card-modal-content').innerHTML=`
     <div class="modal-header">
@@ -3118,7 +3152,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.40';
+const APP_VERSION = '4.43';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3258,7 +3292,7 @@ function levDist(a, b, maxD=2){
   return prev[b.length];
 }
 
-function invalidateNameMaps(){ _frNameMap = null; _scanIndex = null; _setCounts = null; }
+function invalidateNameMaps(){ _frNameMap = null; _scanIndex = null; _setCounts = null; _setNameFRMap = null; }
 
 // La base mobile vient d'être (re)chargée : les listes dérivées sont périmées
 function onMobileDBLoaded(){

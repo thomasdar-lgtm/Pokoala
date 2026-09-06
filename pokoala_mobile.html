@@ -826,6 +826,7 @@ select.cond-select{
 
     <!-- TAB ACCUEIL -->
     <div class="tab-page active" id="tab-home">
+      <div id="sync-warn" onclick="openModal('drive-modal')" style="display:none;background:rgba(255,170,0,0.14);border:1px solid rgba(255,170,0,0.4);color:#ffcc66;font-size:11px;font-weight:700;padding:8px 12px;border-radius:9px;margin-bottom:10px;cursor:pointer"></div>
       <div class="home-grid" id="home-grid"></div>
       <div style="margin-top:4px;position:sticky;top:0;z-index:5;background:transparent">
         <div class="search-wrap">
@@ -1214,6 +1215,8 @@ select.cond-select{
 const DRIVE_CLIENT_ID='794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.file email profile';
 const DRIVE_FILE_NAME='pokoala_collection.json';
+const LAST_SYNC_KEY='pk_last_sync';
+const SNAPSHOT_LAST_KEY='pk_last_snapshot';
 const POKEMONTCG='https://api.pokemontcg.io/v2';
 const TCGDEX_FR='https://api.tcgdex.net/v2/fr';
 
@@ -1325,7 +1328,7 @@ function _syncFromCopies(c){
 }
 let _saveTimer;
 function scheduleSave(){
-  if(!_driveToken) return;
+  if(!_driveToken){ updateSyncBadge(); return; }
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>driveSave(true),3000);
 }
@@ -1803,6 +1806,7 @@ function condMul(c){ return{M:1.3,NM:1.0,LP:.85,MP:.65,HP:.4,D:.2}[c]||1; }
 function escId(id){ return(id||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
 function renderHome(){
+  updateSyncBadge();
   const uniq=col.length;
   const doubles=col.reduce((s,c)=>s+Math.max(0,(c.qty||1)-1),0);
   const forsale=col.filter(c=>c.for_sale).length;
@@ -3129,11 +3133,74 @@ async function driveSave(silent=false){
     }
     const res=await r.json(); _driveFileId=res.id;
     dot.className='drive-dot ok';
+    localStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
+    updateSyncBadge();
+    driveSnapshot(data); // sauvegarde horodatée, sans bloquer
     if(!silent){ toast('✅ Collection sauvegardée sur Drive !'); closeModal('drive-modal'); }
   }catch(e){
     document.getElementById('drive-dot').className='drive-dot';
     if(!silent) toast('Erreur sauvegarde Drive');
   }
+}
+
+// Conserve les 8 dernières sauvegardes horodatées sur le Drive, en plus du
+// fichier principal : permet de revenir en arrière après un écrasement.
+const SNAPSHOT_PREFIX = 'pokoala_backup_';
+const SNAPSHOT_KEEP = 8;
+async function driveSnapshot(data){
+  if(!_driveToken) return;
+  try{
+    const last = parseInt(localStorage.getItem(SNAPSHOT_LAST_KEY) || '0');
+    // Une sauvegarde horodatée par tranche de 6 h : évite d'en créer une à
+    // chaque ajout de carte
+    if(Date.now() - last < 6*3600*1000) return;
+    const d = new Date();
+    const nom = SNAPSHOT_PREFIX +
+      d.toISOString().slice(0,16).replace('T','_').replace(':','h') + '.json';
+    const meta = JSON.stringify({name:nom, mimeType:'application/json'});
+    const form = new FormData();
+    form.append('metadata', new Blob([meta],{type:'application/json'}));
+    form.append('file', new Blob([data],{type:'application/json'}));
+    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+      {method:'POST', headers:{'Authorization':'Bearer '+_driveToken}, body:form});
+    localStorage.setItem(SNAPSHOT_LAST_KEY, String(Date.now()));
+    pruneSnapshots();
+  }catch(e){}
+}
+
+// Supprime les sauvegardes horodatées les plus anciennes au-delà de SNAPSHOT_KEEP
+async function pruneSnapshots(){
+  try{
+    const r = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name+contains+'${SNAPSHOT_PREFIX}'+and+trashed=false&fields=files(id,name)&orderBy=name`,
+      {headers:{'Authorization':'Bearer '+_driveToken}});
+    const d = await r.json();
+    const files = (d.files||[]).filter(f => f.name.startsWith(SNAPSHOT_PREFIX)).sort((a,b)=>a.name.localeCompare(b.name));
+    for(const f of files.slice(0, Math.max(0, files.length - SNAPSHOT_KEEP))){
+      await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}`,
+        {method:'DELETE', headers:{'Authorization':'Bearer '+_driveToken}});
+    }
+  }catch(e){}
+}
+
+// Indicateur : prévient quand la sauvegarde automatique est inactive
+function updateSyncBadge(){
+  const el = document.getElementById('sync-warn');
+  if(!el) return;
+  if(!_driveToken){
+    el.style.display = 'block';
+    el.textContent = '⚠️ Sauvegarde automatique inactive — connecte-toi à Drive';
+    return;
+  }
+  const last = parseInt(localStorage.getItem(LAST_SYNC_KEY) || '0');
+  if(!last || Date.now() - last > 24*3600*1000){
+    el.style.display = 'block';
+    el.textContent = last
+      ? '⚠️ Dernière sauvegarde Drive : ' + new Date(last).toLocaleDateString('fr-FR')
+      : '⚠️ Aucune sauvegarde Drive effectuée';
+    return;
+  }
+  el.style.display = 'none';
 }
 
 async function driveLoad(silent=false){
@@ -3145,14 +3212,29 @@ async function driveLoad(silent=false){
     _driveFileId=fileId;
     const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,{headers:{'Authorization':'Bearer '+_driveToken}});
     const d=await r.json();
-    if(d.collection&&d.collection.length>0){ col=d.collection; save(); renderHome(); renderCollOverlay(); toast(`✅ ${col.length} cartes chargées depuis Drive !`); }
+    if(d.collection&&d.collection.length>0){
+      // Garde-fou : ne jamais écraser silencieusement une collection plus fournie
+      if(col.length > d.collection.length){
+        const perdues = col.length - d.collection.length;
+        const quand = d.savedAt ? new Date(d.savedAt).toLocaleString('fr-FR') : 'date inconnue';
+        const ok = confirm(
+          `⚠️ La sauvegarde du Drive contient MOINS de cartes que ton téléphone.\n\n` +
+          `Ici : ${col.length} cartes\nSur le Drive : ${d.collection.length} cartes (${quand})\n\n` +
+          `Charger remplacerait ta collection et ferait disparaître ${perdues} carte(s).\n\n` +
+          `Continuer quand même ?`
+        );
+        if(!ok){ if(!silent) toast('Chargement annulé'); return; }
+      }
+      col=d.collection; save(); renderHome(); renderCollOverlay();
+      toast(`✅ ${col.length} cartes chargées depuis Drive !`);
+    }
     else if(!silent) toast('Aucune collection sur Drive');
     if(!silent) closeModal('drive-modal');
   }catch(e){ if(!silent) toast('Erreur récupération Drive'); }
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.44';
+const APP_VERSION = '4.45';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

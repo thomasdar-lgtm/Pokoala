@@ -859,10 +859,6 @@ select.cond-select{
     <!-- TAB SCAN -->
     <div class="tab-page" id="tab-scan">
       <div id="scan-home" style="text-align:center;padding:24px 16px">
-        <div style="font-size:48px;margin-bottom:12px">📷</div>
-        <div style="font-size:16px;font-weight:700;color:rgba(255,255,255,0.8);margin-bottom:8px">Scanner une carte</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:24px;line-height:1.5">Pointe la caméra vers le bas de la carte pour lire le numéro et l'extension</div>
-        
         <!-- Indicateur base de données -->
         <div id="scan-db-status" style="margin-bottom:20px;padding:10px 14px;border-radius:var(--radius-xs);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:12px"></div>
 
@@ -3327,7 +3323,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.57';
+const APP_VERSION = '4.59';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3845,7 +3841,8 @@ function showScanChoices(cards, resultEl){
 
 function showScanResult_byId(cardId){
   const card = _mobileDB?.cards?.find(c => c.id === cardId);
-  if(card) showScanResult(card, card.setId, card.number);
+  // Appelé depuis l'historique : on réaffiche sans réenregistrer
+  if(card) showScanResult(card, card.setId, card.number, true);
 }
 
 const TOTAL_TO_SET = {
@@ -4172,7 +4169,9 @@ function pushScanHistory(card){
   list.unshift({
     id: card.id,
     name: getCardNameFR(card),
-    img: getCardImg(card,'low'),
+    setId: card.setId,
+    num: card.number,
+    img: card.img || '',
     time: Date.now()
   });
   saveScanHistory(list);
@@ -4187,13 +4186,21 @@ function renderScanHistory(){
     <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;text-align:left">
       Dernières cartes scannées
     </div>
-    ${list.map(h => `
+    ${list.map(h => {
+      // Reconstruit la chaîne de sources : les entrées d'avant la v4.59 ne
+      // portent qu'une URL unique, souvent celle qui échoue
+      const p = String(h.id||'').split('-');
+      const sid = h.setId || (p.length>=2 ? p.slice(0,-1).join('-') : '');
+      const num = h.num || (p.length>=2 ? p[p.length-1] : '');
+      const srcs = imgSources(sid, num, h.img ? h.img.replace(/\/(low|high)\.webp$/,'') : null);
+      const sa = JSON.stringify(srcs).replace(/"/g,'&quot;');
+      return `
       <div class="scan-history-item" onclick="showScanResult_byId('${escId(h.id)}')">
-        <img src="${h.img}" onerror="this.style.opacity='.2'">
+        <img src="${srcs[0]||''}" data-srcs="${sa}" data-si="0" onerror="imgNext(this)">
         <div class="name">${h.name}</div>
         <div class="time">${timeSince(h.time)}</div>
-      </div>
-    `).join('')}`;
+      </div>`;
+    }).join('')}`;
 }
 function timeSince(ts){
   const s = Math.floor((Date.now()-ts)/1000);
@@ -4203,7 +4210,7 @@ function timeSince(ts){
   return Math.floor(s/86400)+' j';
 }
 
-function showScanResult(card, setCode, cardNum){
+function showScanResult(card, setCode, cardNum, fromHistory){
   closeScanner();
   vibrate(60);
   const _rs = imgSources(card.setId, card.number, card.img ? card.img.replace(/\/(low|high)\.webp$/,'') : null, 'high');
@@ -4232,7 +4239,7 @@ function showScanResult(card, setCode, cardNum){
       </div>
     </div>`;
   scanResult.scrollIntoView({behavior:'smooth', block:'center'});
-  pushScanHistory(card);
+  if(!fromHistory) pushScanHistory(card);
 }
 
 let _lastScannedCard = null;

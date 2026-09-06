@@ -1910,7 +1910,7 @@ function openCollOverlay(filter){
     const el=document.getElementById(id); if(el) el.value='';
   });
   const sortEl=document.getElementById('coll-sort');
-  if(sortEl) sortEl.value = filter==='value' ? 'value' : 'name';
+  if(sortEl) sortEl.value = filter==='value' ? 'value' : 'date';
   ['all','doubles','forsale'].forEach(x =>
     document.getElementById('pill-'+x)?.classList.toggle('active', x==='all')
   );
@@ -3152,7 +3152,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.43';
+const APP_VERSION = '4.44';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

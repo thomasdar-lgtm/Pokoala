@@ -3193,11 +3193,16 @@ function updateSyncBadge(){
     return;
   }
   const last = parseInt(localStorage.getItem(LAST_SYNC_KEY) || '0');
-  if(!last || Date.now() - last > 24*3600*1000){
+  // Connecté mais sans historique (cas d'une mise à jour depuis une version
+  // antérieure) : on sauvegarde au lieu d'alerter à tort
+  if(!last){
+    el.style.display = 'none';
+    if(col.length) setTimeout(() => driveSave(true), 1500);
+    return;
+  }
+  if(Date.now() - last > 24*3600*1000){
     el.style.display = 'block';
-    el.textContent = last
-      ? '⚠️ Dernière sauvegarde Drive : ' + new Date(last).toLocaleDateString('fr-FR')
-      : '⚠️ Aucune sauvegarde Drive effectuée';
+    el.textContent = '⚠️ Dernière sauvegarde Drive : ' + new Date(last).toLocaleDateString('fr-FR');
     return;
   }
   el.style.display = 'none';
@@ -3234,7 +3239,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.45';
+const APP_VERSION = '4.46';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

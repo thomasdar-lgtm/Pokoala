@@ -90,7 +90,7 @@ body::before{
 .drive-dot.busy{background:var(--yellow2);animation:blink 1s infinite}
 .drive-dot.warn{background:#ffa726;box-shadow:0 0 6px rgba(255,167,38,0.5)}
 .drive-sep{width:1px;height:12px;background:rgba(255,255,255,0.15);flex-shrink:0;margin:0 2px}
-.drive-save-ico{width:14px;height:14px;flex-shrink:0;color:rgba(255,255,255,0.6)}
+.drive-save-ico{width:17px;height:17px;flex-shrink:0;color:rgba(255,255,255,0.6)}
 /* Le libellé n'occupe pas d'espace quand il est vide (état connecté) */
 .drive-pill-label:empty{display:none}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
@@ -808,7 +808,7 @@ select.cond-select{
   <!-- HEADER -->
   <div id="header">
     <div class="header-logo">
-      <img src="Logo.png" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(255,215,0,0.35))" alt="PoKoala">
+      <img src="Logo.png" style="width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(255,215,0,0.35))" alt="PoKoala">
       <div class="logo-text">
         <span class="logo-po">Po</span><span class="logo-koala-text">Koala</span>
       </div>
@@ -3327,7 +3327,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.53';
+const APP_VERSION = '4.54';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

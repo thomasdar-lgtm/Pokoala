@@ -293,14 +293,14 @@ body::before{
   font-size:9px;font-weight:800;border-radius:4px;padding:1px 4px;
 }
 .scan-cm-btn{
-  align-self:center;flex-shrink:0;margin-right:6px;
-  width:34px;height:34px;border-radius:50%;
+  align-self:center;flex-shrink:0;margin-right:4px;
+  width:30px;height:30px;border-radius:50%;
   background:#fff;
   border:1px solid rgba(255,255,255,0.25);
   cursor:pointer;display:flex;align-items:center;justify-content:center;
   padding:0;
 }
-.scan-cm-btn img{width:22px;height:22px;object-fit:contain;display:block}
+.scan-cm-btn img{width:19px;height:19px;object-fit:contain;display:block}
 .scan-cm-btn:active{filter:brightness(.85)}
 
 /* Bouton Cardmarket sur les tuiles de la grille (bas à droite) */
@@ -328,7 +328,7 @@ body::before{
 
 .scan-quick-add{
   align-self:center;flex-shrink:0;
-  width:34px;height:34px;border-radius:50%;
+  width:30px;height:30px;border-radius:50%;
   background:rgba(255,215,0,0.95);color:#000;
   border:none;font-size:20px;font-weight:900;line-height:1;
   cursor:pointer;display:flex;align-items:center;justify-content:center;
@@ -481,6 +481,19 @@ select.cond-select{
 .btn-danger{background:rgba(200,0,0,0.18);border:1px solid rgba(200,0,0,0.28);color:#f87171}
 .btn-drive{background:rgba(0,58,140,0.25);border:1px solid rgba(0,100,255,0.28);color:#7aadff}
 .btn-full{width:100%}
+/* Boutons de scan : même gabarit, rouge sourd accordé à la palette de l'app */
+.btn-scan{
+  width:100%;box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  font-size:16px;font-weight:800;padding:15px 24px;
+  background:linear-gradient(135deg,var(--red-dark),var(--red));
+  border:1px solid rgba(255,255,255,0.09);
+  color:rgba(255,255,255,0.95);
+}
+.btn-scan-alt{
+  background:linear-gradient(135deg,#2a1030,#3d1a2a);
+  color:rgba(255,255,255,0.88);
+}
 .btn-row{display:flex;gap:8px;padding:10px 16px 4px}
 
 /* ── SEARCH RESULTS ── */
@@ -862,26 +875,20 @@ select.cond-select{
         <!-- Indicateur base de données -->
         <div id="scan-db-status" style="margin-bottom:20px;padding:10px 14px;border-radius:var(--radius-xs);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:12px"></div>
 
-        <!-- Option 1 : Photo native (recommandée) -->
-        <div style="margin-bottom:16px">
-          <label style="display:inline-block;cursor:pointer">
-            <input type="file" accept="image/*" capture="environment" id="photo-input" style="display:none" onchange="analyzePhoto(this)">
-            <div class="btn btn-primary" style="font-size:16px;padding:16px 32px;pointer-events:none">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-              Prendre une photo
-            </div>
-          </label>
-          <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px">Recommandé — utilise l'appareil photo natif</div>
-        </div>
+        <!-- Photo native -->
+        <label style="display:block;cursor:pointer;margin-bottom:10px">
+          <input type="file" accept="image/*" capture="environment" id="photo-input" style="display:none" onchange="analyzePhoto(this)">
+          <div class="btn btn-scan" style="pointer-events:none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Prendre une photo
+          </div>
+        </label>
 
-        <!-- Option 2 : Viewfinder (backup) -->
-        <div>
-          <button class="btn btn-secondary" style="font-size:13px;padding:10px 20px" onclick="openScanner()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="2"/><circle cx="12" cy="12" r="4"/></svg>
-            Viewfinder (bêta)
-          </button>
-          <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px">Scan en temps réel</div>
-        </div>
+        <!-- Scan rapide (viseur intégré) -->
+        <button class="btn btn-scan btn-scan-alt" onclick="openScanner()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4V5.6A1.6 1.6 0 0 1 4.6 4h2.8M16.6 4h2.8A1.6 1.6 0 0 1 21 5.6v2.8M21 15.6v2.8a1.6 1.6 0 0 1-1.6 1.6h-2.8M7.4 20H4.6A1.6 1.6 0 0 1 3 18.4v-2.8"/><rect x="8.4" y="8.4" width="7.2" height="7.2" rx="1.2"/></svg>
+          Scan rapide
+        </button>
 
         <div id="scan-result" style="margin-top:24px"></div>
 
@@ -1381,9 +1388,13 @@ function updateScanDBStatus(){
   const date = localStorage.getItem(MOBILE_DB_DATE_KEY);
   const dateStr = date ? new Date(date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : null;
 
+  // Rien à signaler quand la base est là : la date est consultable dans la
+  // fenêtre Drive. On n'alerte que sur l'absence, seul cas qui bloque le scan.
   if(cards > 0){
-    el.innerHTML = `<span style="color:#4ade80">✓</span> <span style="color:rgba(255,255,255,0.6)">Base chargée —</span> <strong style="color:rgba(255,255,255,0.9)">${cards.toLocaleString()} cartes</strong>${dateStr?`<span style="color:rgba(255,255,255,0.4)"> · Mise à jour le ${dateStr}</span>`:''}`;
+    el.style.display = 'none';
+    el.innerHTML = '';
   } else {
+    el.style.display = '';
     el.innerHTML = `<span style="color:#f4a261">⚠️</span> <span style="color:rgba(255,255,255,0.6)">Base non chargée — le scan ne pourra pas identifier les cartes</span><br>
     <button onclick="loadDBFromDrive()" class="btn btn-secondary" style="margin-top:8px;font-size:11px;padding:6px 12px">
       Charger depuis Drive
@@ -2369,7 +2380,7 @@ async function doSearch(){
         nameEn: c.nameEn,
         number: c.number,
         rarity: c.rarity,
-        set: {id: c.setId, name: c.setName},
+        set: {id: c.setId, name: setNameFR(c.setId, c.setName)},
         images: {small: imgSources(c.setId, c.number, c.img || null)[0]},
         _srcs: imgSources(c.setId, c.number, c.img || null)
       })));
@@ -3094,6 +3105,8 @@ async function driveInspect(){
     if(ecart === 0) etat = '<span style="color:#4ade80;font-weight:700">✓ À jour</span>';
     else if(ecart > 0) etat = `<span style="color:#ffa726;font-weight:700">⚠️ ${ecart} carte(s) non sauvegardée(s)</span>`;
     else etat = `<span style="color:#ffa726;font-weight:700">⚠️ Le Drive contient ${-ecart} carte(s) de plus</span>`;
+    const dbDate = localStorage.getItem(MOBILE_DB_DATE_KEY);
+    const dbCards = _mobileDB?.cards?.length || 0;
     el.innerHTML =
       `<div style="display:flex;justify-content:space-between;margin-bottom:3px">
          <span style="color:rgba(255,255,255,0.45)">Sur le Drive</span>
@@ -3107,7 +3120,12 @@ async function driveInspect(){
          <span style="color:rgba(255,255,255,0.45)">Sauvegardé le</span>
          <span style="font-weight:700">${quand}</span>
        </div>
-       ${etat}`;
+       ${etat}
+       <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.09);display:flex;justify-content:space-between">
+         <span style="color:rgba(255,255,255,0.45)">Base de cartes</span>
+         <span style="font-weight:700">${dbCards ? dbCards.toLocaleString()+' cartes' : 'non chargée'}${
+           dbDate ? ' · ' + new Date(dbDate).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : ''}</span>
+       </div>`;
   }catch(e){
     el.innerHTML = '<span style="color:rgba(255,255,255,0.35)">Lecture impossible</span>';
   }
@@ -3323,7 +3341,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.59';
+const APP_VERSION = '4.64';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3831,7 +3849,7 @@ function showScanChoices(cards, resultEl){
           <button class="scan-quick-add" onclick="event.stopPropagation();quickAddFromScan('${escId(c.id)}')" title="Ajouter à ma collection">+</button>
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:700;color:#fff">${displayName}</div>
-            <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px">${c.setName||c.setId} · N°${c.number}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px">${setNameFR(c.setId, c.setName||c.setId)} · N°${c.number}</div>
           </div>
           <span style="color:rgba(255,255,255,0.2);font-size:16px">›</span>
         </div>`;
@@ -4224,18 +4242,18 @@ function showScanResult(card, setCode, cardNum, fromHistory){
   _lastScannedCard = card;
   scanResult.innerHTML = `
     <div class="card-block" style="text-align:left;overflow:hidden;cursor:pointer" onclick="openScanCardDetail('${escId(card.id)}')">
-      <div style="display:flex;gap:12px;padding:12px">
-        <img src="${imgHigh}" data-srcs="${_rsa}" data-si="-1" style="width:80px;border-radius:6px;object-fit:contain"
+      <div style="display:flex;gap:10px;padding:12px">
+        <img src="${imgHigh}" data-srcs="${_rsa}" data-si="-1" style="width:64px;flex-shrink:0;border-radius:6px;object-fit:contain"
           onerror="imgNext(this)">
-        <div style="flex:1">
-          <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">${displayName}</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.5)">${card.setName||''} · N°${cardNum}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.2">${displayName}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5)">${setNameFR(card.setId, card.setName||'')} · N°${cardNum}</div>
           ${card.rarity ? `<div style="margin-top:6px">${rareBadge(card.rarity)}</div>` : ''}
-          ${owned ? `<div style="margin-top:6px;font-size:12px;color:var(--yellow2);font-weight:700">✓ Déjà dans ta collection (${owned.qty}×)</div>` : ''}
+          ${owned ? `<div style="margin-top:6px;font-size:12px;color:var(--yellow2);font-weight:700;white-space:nowrap">✓ En collection (${owned.qty}×)</div>` : ''}
         </div>
         <button class="scan-cm-btn" onclick="event.stopPropagation();openCM('${escId(card.nameEn||card.name)}','${escId(card.number||'')}')" title="Prix Cardmarket (FR, NM)"><img src="${CM_LOGO}" alt="Cardmarket"></button>
         <button class="scan-quick-add" onclick="event.stopPropagation();quickAddFromScan('${escId(card.id)}')" title="Ajouter à ma collection">+</button>
-        <div style="color:rgba(255,255,255,0.2);font-size:20px;align-self:center">›</div>
+
       </div>
     </div>`;
   scanResult.scrollIntoView({behavior:'smooth', block:'center'});

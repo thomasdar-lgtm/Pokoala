@@ -3360,7 +3360,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.66';
+const APP_VERSION = '4.67';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3833,13 +3833,13 @@ function parseScanText(text, resultEl, anno){
   // ── Décision ──
   // Score dominant et net → résultat direct
   if(top.score >= 14 && (!second || top.score - second.score >= 4)){
-    showScanResult(top.card, top.card.setId, top.card.number);
+    showScanResult(top.card, top.card.setId, top.card.number, false, resultEl);
     return;
   }
   // Score correct mais ambigu → choix triés par score
   const bestChoices = scored.filter(x => x.score >= Math.max(8, top.score - 4)).slice(0, 8).map(x => x.card);
   if(bestChoices.length === 1){
-    showScanResult(bestChoices[0], bestChoices[0].setId, bestChoices[0].number);
+    showScanResult(bestChoices[0], bestChoices[0].setId, bestChoices[0].number, false, resultEl);
     return;
   }
   if(bestChoices.length > 1){
@@ -4272,7 +4272,7 @@ function timeSince(ts){
   return Math.floor(s/86400)+' j';
 }
 
-function showScanResult(card, setCode, cardNum, fromHistory){
+function showScanResult(card, setCode, cardNum, fromHistory, targetEl){
   if(!_scanLiveMode) closeScanner();
   vibrate(60);
   const _rs = imgSources(card.setId, card.number, card.img ? card.img.replace(/\/(low|high)\.webp$/,'') : null, 'high');
@@ -4281,7 +4281,8 @@ function showScanResult(card, setCode, cardNum, fromHistory){
   const imgHigh = getCardImg(card, 'high');
   const owned = col.find(c => c.id === card.id);
   const displayName = getCardNameFR(card);
-  const scanResult = document.getElementById('scan-result');
+  // En rafale, le résultat s'affiche dans le viseur ; sinon dans l'onglet
+  const scanResult = targetEl || document.getElementById('scan-result');
   // Stocker la carte scannée pour le clic
   _lastScannedCard = card;
   scanResult.innerHTML = `

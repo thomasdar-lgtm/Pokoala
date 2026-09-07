@@ -249,12 +249,22 @@ body::before{
   border-radius:var(--radius-sm);margin-bottom:7px;overflow:hidden;
 }
 .serie-header{
-  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  display:flex;align-items:center;gap:9px;padding:11px 14px;
   cursor:pointer;user-select:none;
+  background:linear-gradient(90deg,rgba(255,215,0,0.12),rgba(255,215,0,0.02));
+  border-left:3px solid var(--yellow2);
 }
-.serie-header:active{background:rgba(255,255,255,0.04)}
-.serie-name{flex:1;font-weight:700;font-size:14px;color:rgba(255,255,255,0.85)}
-.serie-arrow{color:rgba(255,255,255,0.25);font-size:11px;transition:transform .2s;flex-shrink:0}
+.serie-header:active{background:rgba(255,215,0,0.18)}
+.serie-name{
+  flex:1;font-family:'Raleway',sans-serif;font-weight:900;font-size:13px;
+  color:var(--yellow2);text-transform:uppercase;letter-spacing:.05em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.serie-count{
+  font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);
+  background:rgba(255,255,255,0.07);border-radius:9px;padding:2px 7px;flex-shrink:0;
+}
+.serie-arrow{color:rgba(255,215,0,0.5);font-size:11px;transition:transform .2s;flex-shrink:0}
 .serie-arrow.open{transform:rotate(180deg)}
 .serie-sets{display:none;border-top:1px solid rgba(255,255,255,0.05)}
 .serie-sets.open{display:block}
@@ -2749,9 +2759,10 @@ function renderSeries(){
     return`<div class="serie-block">
       <div class="serie-header" onclick="toggleSerie(${i})">
         <span class="serie-name">${s.name}</span>
-        <span class="serie-arrow" id="sa-${i}">▾</span>
+        <span class="serie-count">${sets.length}</span>
+        <span class="serie-arrow open" id="sa-${i}">▾</span>
       </div>
-      <div class="serie-sets" id="ss-${i}">
+      <div class="serie-sets open" id="ss-${i}">
         ${sets.map(st=>{
           const ptcgId = TCGDEX_TO_PTCG[st.id] || st.id;
           const _sym = [...symbolSources(ptcgId, st.name), ...symbolSources(st.id, st.name)];
@@ -3360,7 +3371,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.67';
+const APP_VERSION = '4.68';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

@@ -1299,22 +1299,26 @@ function imgSources(setId, number, tcgdexBase, quality){
   const variants = tcgdexSetVariants(sid);
   // TCGdex numérote sur 3 chiffres ('075'), la base sur 1 à 3 ('75')
   const nums = [...new Set([num, /^\d+$/.test(num) ? String(num).padStart(3,'0') : null].filter(Boolean))];
-  for(const v of variants){
-    const serie = v.match(/^([a-z]+)/i)?.[1] || v;
-    for(const n of nums){
-      out.push(`https://assets.tcgdex.net/fr/${serie}/${v}/${n}/${q1}.webp`);
-      out.push(`https://assets.tcgdex.net/fr/${serie}/${v}/${n}/${q2}.webp`);
+  // Qualité demandée d'abord pour TOUTES les variantes, l'autre qualité ensuite :
+  // une variante d'identifiant erronée est écartée en une requête au lieu de deux
+  for(const q of [q1, q2]){
+    for(const v of variants){
+      const serie = v.match(/^([a-z]+)/i)?.[1] || v;
+      for(const n of nums){
+        out.push(`https://assets.tcgdex.net/fr/${serie}/${v}/${n}/${q}.webp`);
+      }
     }
   }
   // Anglais TCGdex AVANT pokemontcg.io : quand un scan FR manque (asset 404
   // alors que l'API le référence), l'anglais existe presque toujours. Il faut
   // le tenter avant pokemontcg.io, qui renvoie un DOS DE CARTE avec un statut
   // 200 — donc sans erreur, ce qui stopperait définitivement la chaîne.
-  for(const v of variants){
-    const serie = v.match(/^([a-z]+)/i)?.[1] || v;
-    for(const n of nums){
-      out.push(`https://assets.tcgdex.net/en/${serie}/${v}/${n}/${q1}.webp`);
-      out.push(`https://assets.tcgdex.net/en/${serie}/${v}/${n}/${q2}.webp`);
+  for(const q of [q1, q2]){
+    for(const v of variants){
+      const serie = v.match(/^([a-z]+)/i)?.[1] || v;
+      for(const n of nums){
+        out.push(`https://assets.tcgdex.net/en/${serie}/${v}/${n}/${q}.webp`);
+      }
     }
   }
   out.push(`https://images.pokemontcg.io/${sid}/${num}${hi?'_hires':''}.png`);
@@ -2193,8 +2197,12 @@ function openCardModal(id){
 
 function _renderCardModal(c){
   const _p = String(c.id||'').split('-');
+  // La carte porte déjà l'URL TCGdex valide : la passer en tête évite de tester
+  // en vain toutes les variantes d'identifiant avant de tomber sur la bonne
+  const _base = (c.imgLarge||c.img||'').includes('assets.tcgdex.net')
+    ? (c.imgLarge||c.img).replace(/\/(low|high)\.webp$/,'') : null;
   const _srcs = _p.length >= 2
-    ? imgSources(_p.slice(0,-1).join('-'), _p[_p.length-1], null, 'high')
+    ? imgSources(_p.slice(0,-1).join('-'), _p[_p.length-1], _base, 'high')
     : [];
   const _modalSrcs = JSON.stringify(_srcs).replace(/"/g,'&quot;');
   const img = _srcs[0] || cardImg(c);
@@ -3376,7 +3384,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.69';
+const APP_VERSION = '4.70';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

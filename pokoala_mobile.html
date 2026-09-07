@@ -2048,7 +2048,12 @@ function renderCollOverlay(){
 
   const list=document.getElementById('coll-list');
   if(!items.length){
-    list.innerHTML=`<div class="empty-state"><span class="big">🃏</span>${col.length===0?'Ta collection est vide':'Aucune carte trouvée'}</div>`;
+    // Message adapté au filtre en cours, sans illustration
+    const vide = col.length===0 ? 'Ta collection est vide'
+      : _collOverlayFilter==='doubles' ? 'Aucune carte en double'
+      : _collOverlayFilter==='forsale' ? 'Aucune carte en vente'
+      : 'Aucune carte trouvée';
+    list.innerHTML=`<div class="empty-state">${vide}</div>`;
     return;
   }
   list.innerHTML=items.map(c=>{
@@ -3371,7 +3376,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.68';
+const APP_VERSION = '4.69';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

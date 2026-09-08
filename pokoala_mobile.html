@@ -2591,6 +2591,26 @@ function _setCardCount(id){
   return n ? {official:n, total:n} : undefined;
 }
 
+// Ordre chronologique inverse des blocs (du plus récent au plus ancien),
+// repéré par le préfixe d'identifiant de leurs extensions
+const SERIE_ORDER = ['me','zsv','rsv','sv','swsh','sm','xy','g','bw','col','hgss','hs','ru','pl','dp','pop','ex','tk','ecard','neo','gym','base','si'];
+function serieRank(serie){
+  // Le fourre-tout reste en fin de liste quel que soit son contenu
+  if(serie.name === 'Collections spéciales') return 998;
+  let best = 999;
+  for(const st of (serie.sets || [])){
+    const p = setPrefix(normSetId(st.id));
+    const i = SERIE_ORDER.indexOf(p);
+    if(i >= 0 && i < best) best = i;
+  }
+  return best;
+}
+function sortSeries(list){
+  return list.map((s,i) => ({s, i, r: serieRank(s)}))
+    .sort((a,b) => a.r !== b.r ? a.r - b.r : a.i - b.i)
+    .map(x => x.s);
+}
+
 function augmentSeries(data){
   if(!Array.isArray(data) || !_mobileDB?.sets?.length) return data;
   // On conserve les ids d'origine (TCGdex sait les interroger) et on ne compare
@@ -2641,7 +2661,11 @@ function augmentSeries(data){
     else serie.sets.push(entry);
     seen.add(nid);
   }
-  return out.filter(s => s.sets?.length > 0);
+  // Les extensions hors blocs (McDonald's, Gym, kits…) n'ont pas d'ordre
+  // chronologique cohérent entre elles : on les range par identifiant
+  const misc2 = out.find(s => s.name === 'Collections spéciales');
+  if(misc2) misc2.sets.sort((a,b) => String(a.id).localeCompare(String(b.id)));
+  return sortSeries(out.filter(s => s.sets?.length > 0));
 }
 function filterTGSets(data){
   return data.map(s=>({...s,sets:(s.sets||[]).filter(st=>!TG_GG_IDS.has(st.id))})).filter(s=>s.sets?.length>0);
@@ -3384,7 +3408,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.70';
+const APP_VERSION = '4.72';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

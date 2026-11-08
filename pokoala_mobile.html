@@ -1960,6 +1960,7 @@ function setCollPill(p){
 }
 
 function openCollOverlay(filter){
+  refreshPrices();   // récupère les tendances manquantes (cartes récemment ajoutées)
   _collOverlayFilter=filter;
   _collPill='all';
   const titles={all:'Ma Collection',doubles:'Doubles',value:'Valeur',forsale:'En vente'};
@@ -2030,7 +2031,7 @@ function renderCollOverlay(){
 
   // Tri
   if(sort==='name') items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','fr'));
-  if(sort==='value') items.sort((a,b)=>(b.price||0)*condMul(b.cond)-(a.price||0)*condMul(a.cond));
+  if(sort==='value') items.sort((a,b)=>cardValue(b)-cardValue(a));
   if(sort==='set') items.sort((a,b)=>(a.set||'').localeCompare(b.set||'','fr'));
   if(sort==='date' || sort==='date_asc'){
     // Les cartes ajoutées avant la v4.43 n'ont pas d'addedAt : on retombe sur
@@ -2048,7 +2049,8 @@ function renderCollOverlay(){
     });
   }
 
-  document.getElementById('coll-ov-count').textContent=items.length+' carte'+(items.length>1?'s':'');
+  const _tot=items.reduce((t,c)=>t+cardValue(c),0);
+  document.getElementById('coll-ov-count').textContent=items.length+' carte'+(items.length>1?'s':'')+(_tot>0?' · '+fmtEur(_tot):'');
 
   const list=document.getElementById('coll-list');
   if(!items.length){
@@ -2069,8 +2071,8 @@ function renderCollOverlay(){
     const _is=imgSources(_sid,_num,_base);
     const _isa=JSON.stringify(_is).replace(/"/g,'&quot;');
     const img=_is[0];
-    const mul=condMul(c.cond);
-    const price=c.priceManual!=null?c.priceManual:(c.price?+(c.price*mul).toFixed(2):null);
+    const price=cardUnitPrice(c, c.cond);
+    const manual=c.priceManual!=null;
     const sid=escId(c.id);
     return `<div class="coll-item" onclick="openCardModal('${sid}')">
       ${img?`<img class="coll-thumb" src="${img}" data-srcs="${_isa}" data-si="0" loading="lazy" onerror="imgNext(this)">`:`<div class="coll-thumb-ph"></div>`}
@@ -2081,7 +2083,7 @@ function renderCollOverlay(){
       </div>
       <div class="coll-right">
         <span class="coll-qty">${c.qty}×</span>
-        ${price?`<div class="coll-price">${price.toFixed(2)} €</div>`:''}
+        ${price!=null?`<div class="coll-price"${manual?'':' style="opacity:.6"'}>${manual?'':'≈ '}${fmtEur(price)}</div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -2188,11 +2190,120 @@ function setNameFR(setId, fallback){
   return _setNameFRMap.get(k) || SET_NAME_FR[k] || fallback || setId;
 }
 
+// ── PRIX : tendance Cardmarket (via TCGdex) + prix saisi ──
+// Tendance = toutes langues et tous états confondus : indicative. Le prix saisi
+// par l'utilisateur (relevé FR/NM sur Cardmarket) la remplace pour la carte.
+// Le cache des tendances vit à part (pas dans la collection) pour ne pas
+// déclencher une sauvegarde Drive à chaque rafraîchissement quotidien.
+const PRICE_KEY='pk_prices', SETFMT_KEY='pk_tcgdex_fmt';
+const PRICE_TTL=20*3600*1000, PRICE_NF_TTL=7*86400*1000;
+let _prices={}, _setFmt={};
+try{ _prices=JSON.parse(localStorage.getItem(PRICE_KEY))||{}; }catch(e){}
+try{ _setFmt=JSON.parse(localStorage.getItem(SETFMT_KEY))||{}; }catch(e){}
+function savePrices(){
+  try{ localStorage.setItem(PRICE_KEY, JSON.stringify(_prices)); }catch(e){}
+  try{ localStorage.setItem(SETFMT_KEY, JSON.stringify(_setFmt)); }catch(e){}
+}
+function priceStale(id){
+  const e=_prices[id];
+  if(!e) return true;
+  return Date.now()-e.at > (e.nf ? PRICE_NF_TTL : PRICE_TTL);
+}
+// Identifiants de carte côté API TCGdex : le format varie selon les sets
+// ('me05-075', 'base1-4', 'swsh12.5gg-GG07'). Le format qui marche pour un set
+// est mémorisé, les cartes suivantes du même set n'ont qu'une requête à faire.
+function priceIdCandidates(cardId){
+  const p=String(cardId).split('-');
+  if(p.length<2) return [];
+  const setPart=p.slice(0,-1).join('-'), num=p[p.length-1];
+  const norm=normSetId(setPart);
+  const dotted=norm.replace(/pt(\d)/g,'.$1');
+  const padded=dotted.replace(/^([a-z]+)(\d)(?=[.\D]|$)/,'$10$2');
+  const sets=[...new Set([padded, dotted, setPart])];
+  const isNum=/^\d+$/.test(num);
+  const nums=isNum ? [String(num).padStart(3,'0'), String(parseInt(num,10))] : [num];
+  const out=[];
+  for(const st of sets) for(let i=0;i<nums.length;i++) out.push({setPart, s:st, n:nums[i], pad: isNum && i===0});
+  const f=_setFmt[setPart];
+  if(f){
+    out.sort((a,b)=>{
+      const ka=(a.s===f.s && a.pad===!!f.p)?0:1, kb=(b.s===f.s && b.pad===!!f.p)?0:1;
+      return ka-kb;
+    });
+  }
+  return out.filter((x,i,a)=>a.findIndex(y=>y.s===x.s&&y.n===x.n)===i);
+}
+async function fetchCardPrice(cardId){
+  for(const c of priceIdCandidates(cardId)){
+    let r;
+    try{ r=await fetch(`${TCGDEX_FR}/cards/${encodeURIComponent(c.s+'-'+c.n)}`); }
+    catch(e){ return null; } // hors ligne : on réessaiera plus tard
+    if(r.status===404) continue;
+    if(!r.ok) return null;
+    let d; try{ d=await r.json(); }catch(e){ return null; }
+    _setFmt[c.setPart]={s:c.s, p:c.pad?1:0};
+    const cm=d?.pricing?.cardmarket||{};
+    const pick=[cm.trend, cm.avg30, cm['trend-holo']].find(v=>typeof v==='number' && v>0);
+    _prices[cardId]={v: pick ?? null, a: cm.avg30 ?? null, u: cm.updated || null, at: Date.now()};
+    return _prices[cardId];
+  }
+  _prices[cardId]={v:null, at:Date.now(), nf:1}; // introuvable : nouvel essai dans 7 jours
+  return _prices[cardId];
+}
+let _priceRunning=false;
+async function refreshPrices(){
+  if(_priceRunning || !navigator.onLine) return;
+  const ids=[...new Set(col.map(c=>c.id))].filter(priceStale);
+  if(!ids.length) return;
+  _priceRunning=true;
+  let i=0;
+  const worker=async()=>{ while(i<ids.length){ const id=ids[i++]; await fetchCardPrice(id); } };
+  try{ await Promise.all([worker(),worker(),worker(),worker()]); }
+  finally{ _priceRunning=false; }
+  savePrices();
+  if(document.getElementById('coll-overlay')?.classList.contains('open')) renderCollOverlay();
+}
+// Prix unitaire d'un exemplaire : saisi tel quel, sinon tendance × état
+function cardUnitPrice(c, cond){
+  if(c.priceManual!=null) return +c.priceManual;
+  const e=_prices[c.id];
+  if(e && e.v>0) return +(e.v*condMul(cond||'NM')).toFixed(2);
+  return null;
+}
+// Valeur totale d'une carte : somme de ses exemplaires
+function cardValue(c){
+  const copies=c.copies && c.copies.length ? c.copies : [{cond:c.cond||'NM'}];
+  return copies.reduce((t,x)=>t+(cardUnitPrice(c,x.cond)||0),0);
+}
+function fmtEur(v){ return v.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function setManualPrice(id){
+  const c=col.find(x=>x.id===id); if(!c) return;
+  const raw=(document.getElementById('price-manual-input')?.value||'').trim().replace(',','.');
+  const v=parseFloat(raw);
+  if(!raw || isNaN(v) || v<0){ toast('Prix invalide'); return; }
+  c.priceManual=+v.toFixed(2);
+  save(); renderCollOverlay(); _renderCardModal(c);
+  toast('✅ Prix enregistré');
+}
+function clearManualPrice(id){
+  const c=col.find(x=>x.id===id); if(!c) return;
+  c.priceManual=null;
+  save(); renderCollOverlay(); _renderCardModal(c);
+}
+
 function openCardModal(id){
   const c=col.find(x=>x.id===id);
   if(!c) return;
   _renderCardModal(c);
   openModal('card-modal');
+  if(priceStale(c.id)){
+    fetchCardPrice(c.id).then(()=>{
+      savePrices();
+      const open=document.getElementById('card-modal')?.classList.contains('open');
+      const typing=document.activeElement?.id==='price-manual-input';
+      if(open && !typing && _modalCardRef?.id===c.id) _renderCardModal(c);
+    });
+  }
 }
 
 function _renderCardModal(c){
@@ -2209,8 +2320,10 @@ function _renderCardModal(c){
   const sid = escId(c.id);
   const copies = c.copies || [{cond:c.cond||'NM', for_sale:false}];
   const totalSale = copies.filter(x=>x.for_sale).length;
-  const mul = condMul(copies[0]?.cond||'NM');
-  const price = c.priceManual!=null ? c.priceManual : (c.price ? +(c.price*mul).toFixed(2) : null);
+  const _pe = _prices[c.id];
+  const _trend = _pe && _pe.v>0 ? _pe.v : null;
+  const _manual = c.priceManual!=null ? +c.priceManual : null;
+  const _pDate = _pe?.u ? new Date(_pe.u).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : '';
   const inCol = col.some(x=>x.id===c.id);
 
   document.getElementById('card-modal-content').innerHTML=`
@@ -2243,15 +2356,31 @@ function _renderCardModal(c){
       </div>
     </div>
 
-    <!-- Prix + Cardmarket -->
-    <div class="modal-section" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <div>
-        <label>Prix estimé</label>
-        <div class="val" style="color:var(--yellow2)">${price?price.toFixed(2)+' €':'—'}</div>
+    <!-- Prix : saisi (prioritaire) ou tendance Cardmarket + lien -->
+    <div class="modal-section">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="min-width:0">
+          <label>${_manual!=null ? 'Prix saisi' : 'Tendance Cardmarket'}</label>
+          <div class="val" style="color:var(--yellow2)">${
+            _manual!=null ? fmtEur(_manual) : _trend!=null ? '≈ '+fmtEur(_trend) : (_pe ? 'Non disponible' : 'Chargement…')}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.38);margin-top:2px">${
+            _manual!=null
+              ? (_trend!=null ? 'Tendance CM : '+fmtEur(_trend) : 'Pas de tendance disponible')
+              : (_trend!=null ? 'Toutes langues et états'+(_pDate?' · '+_pDate:'') : '')}</div>
+        </div>
+        <button class="cm-link-btn" style="flex-shrink:0;padding:8px 12px;font-size:12px" onclick="openCM('${escId(c.nameEn||c.name)}','${escId(c.num||'')}')">
+          <img src="${CM_LOGO}" alt="">Cardmarket
+        </button>
       </div>
-      <button class="cm-link-btn" style="flex-shrink:0;padding:8px 12px;font-size:12px" onclick="openCM('${escId(c.nameEn||c.name)}','${escId(c.num||'')}')">
-        <img src="${CM_LOGO}" alt="">Cardmarket
-      </button>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <input id="price-manual-input" type="text" inputmode="decimal" placeholder="Ton prix FR NM (€)"
+          value="${_manual!=null ? String(_manual).replace('.',',') : ''}"
+          style="flex:1;min-width:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:#fff;font-size:13px;padding:8px 10px;font-family:inherit">
+        <button onclick="setManualPrice('${sid}')"
+          style="flex-shrink:0;padding:8px 14px;border-radius:8px;border:none;background:var(--yellow2);color:#1a0a0a;font-weight:800;font-size:12px;cursor:pointer">OK</button>
+        ${_manual!=null ? `<button onclick="clearManualPrice('${sid}')" title="Revenir à la tendance"
+          style="flex-shrink:0;width:34px;border-radius:8px;border:1px solid rgba(255,255,255,0.14);background:transparent;color:rgba(255,255,255,0.55);font-size:13px;cursor:pointer">✕</button>` : ''}
+      </div>
     </div>
 
     <!-- Liste des exemplaires — hauteur fixe, scroll interne -->
@@ -3408,7 +3537,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.75';
+const APP_VERSION = '4.76';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -4465,6 +4594,7 @@ async function init(){
   // Charger la base mobile en arrière-plan
   await loadMobileDB();
   updateScanDBStatus();
+  refreshPrices();   // tendances périmées (> 20 h) uniquement, en arrière-plan
 }
 init();
 

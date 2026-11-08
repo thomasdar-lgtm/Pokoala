@@ -1,4 +1,4 @@
-const CACHE_VERSION = '4.75';
+const CACHE_VERSION = '4.76';
 const CACHE_SHELL = `pokoala-shell-${CACHE_VERSION}`;
 // Cache images NON versionné : les images ne changent jamais, inutile de
 // les re-télécharger à chaque nouvelle version (cause de rate-limit TCGdex)
@@ -50,6 +50,12 @@ self.addEventListener('fetch', e => {
         })
       )
     );
+    return;
+  }
+
+  // Fiches de cartes TCGdex : toujours réseau (elles portent les prix du
+  // jour ; un cache servirait la tendance de la veille)
+  if(url.hostname.includes('api.tcgdex.net') && url.pathname.includes('/cards/')){
     return;
   }
 

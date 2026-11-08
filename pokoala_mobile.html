@@ -90,9 +90,19 @@ body::before{
 .drive-dot.busy{background:var(--yellow2);animation:blink 1s infinite}
 .drive-dot.warn{background:#ffa726;box-shadow:0 0 6px rgba(255,167,38,0.5)}
 /* Engrenage Paramètres dans l'en-tête */
-.hdr-gear{width:30px;height:30px;flex-shrink:0;border:none;background:none;padding:4px;cursor:pointer;color:rgba(255,255,255,0.55);display:flex;align-items:center;justify-content:center}
-.hdr-gear svg{width:21px;height:21px}
-.hdr-gear:active{color:var(--yellow2)}
+.hdr-gear{
+  position:relative;width:32px;height:32px;flex-shrink:0;padding:0;cursor:pointer;
+  border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+  color:rgba(255,255,255,0.72);display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s,transform .35s;
+}
+.hdr-gear svg{width:17px;height:17px;display:block}
+.hdr-gear:active{background:rgba(255,255,255,0.14);color:var(--yellow2);transform:rotate(60deg)}
+/* Pastille dorée : une nouvelle version attend d'être installée */
+.hdr-gear.has-maj::after{
+  content:'';position:absolute;top:-1px;right:-1px;width:9px;height:9px;border-radius:50%;
+  background:var(--yellow2);border:2px solid #150a20;box-shadow:0 0 6px rgba(255,215,0,0.6);
+}
 /* Bloc Mise à jour des Paramètres */
 .maj-box{margin:4px 16px 0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 13px;display:flex;align-items:center;gap:12px}
 .maj-t{flex:1;min-width:0}
@@ -865,9 +875,6 @@ select.cond-select{
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <button class="hdr-gear" onclick="openSettings()" aria-label="Paramètres">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </button>
       <div class="drive-pill" onclick="openDriveModal()">
       <!-- Logo Google Drive (version 2026) -->
       <img class="drive-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAQq0lEQVR42uWca5BkZXnHf8/zntPd0zs7wy4gILCyRozLQuFKVlAkuyhWCBVRy+1JjJKgJFSUqviB8oJKZlqQi+CC+WKSSkpTmA+ZRqs0l4LCcne1Kq6wwGLcNVEJyoKXdVmYnUtPnz7v++TDOT3Tc925dI/GnKq3+p2z55w+59//5//c3rPCr3ozhFpFOf2owM5851745cuMSi0gGP/vtsFBZc+OiMFB7eixXdhkbdliQm1AGaj51q71j1x3qkTxZhNejvf9ADg3IsZPrdx8ZvTSB16YOn+44qgMB0TsNw+g4YprAbPhkes2pVH0LoE/wOxiVE6VggPNbycYlngI9gIiT5njXyNJv/ziFQ88O/tavwkACcMVZaDmNzx0/blpj3xMjPdKT9xHGjIg0mAIAcv1RhAMJVKRgoNIsXrzhAlfikbSu1+89oFnc5ACdFejuguQ5dcXrP/r1/+ZxXqXlKJTbTwBH1JEMiBkgfswcuDMcBrJugLWSF8QHz42cuUX/779+v/3ADIEDIZE+ndc/3l6CzfaeALNkCLiFgRl4esZZp44A4qx5O9G9n3xAzAIQ1XrFkjSNXBqFeXQBdb3uz/+Z+kv7bIX6yngEFndd5oZ4GVDT2Qjkw+e+OZ5f8jWw9KtkKA7rnPvDsdAza+/4sefz8FpIhKtGhwAEUEkshfrTekv7Vr/pmf+hoGaZ+8O141H6TxAwxXHlfvS9Q9d937tK95oL9WbiMSd577E9lK9qf2lP1//0HXv58p9KcMV9+ttYnkw13P5kTOjOHxfhF6aQTrCnIXMLVIzGEtj3VJ/5NyfA1Cthl9PBm09LFSrIaZ5p5YLfTRD6Bo4LXNLQ9ByoS+eaN5JtRrYelh+PRmUB28bv/HBSy1qfts3k4DhWItN8MROLbU3jL75C9/pZCDZaQ2SQojuc1FxbVNMA4lUJPX3dVo2OnMxG3bIgN/8jU+8J/S6L02cOOYT6s4IawmSl/UFZ6PJe0+89R//Cas4ZPUsWj1AZgJDcsHe08upjBxuusY5k8mINWxCU5K1pFEgjoSmf77o1m355c7TJ2D1AeSqTaxCTZFqiCz9aLGv/1xJzDspaCQxwlpWKERJUi99xXMmk7GPIdUAFf3VMsgGFYbs9d954LyQTh5qhPFiIx2TBhOS2AQNm2BNWWQYTgyRhqRcOHLVF56BQcnA+hUwqFLbKohYPKmfKZTX96gXcxKLk5jWkLUsOQmCDyY9UU8I/jMiWKW2Ore/4pMrw8OuNjDg3/Ktf9lJiT0T9Rd8EuquwQQZe8ZpWJ2GjeNprnUh0EspcmN1rvRv/Ye9q3H7uhpgK8PDrkC8OyLGEWWsIcpHjJOIaK1ZlN9cQHiZ1HfbMK6yCjKsCKAde/a42sCA92edfUO5//Rtod70EQXniIiYNq8MuBhdo3ixtTnMjU5o+tenP7mN87ihNvCg37NnZTcRrcSt7xwinP2t727wzn+qWU9CJAUJluYMinGWf7bAIsab73bxrwUOJ4i5PPqZ7Ar/HVB3m33X1/gyI2Z5ia6bDKqAVqsSYi3eWu479QxphhBJrFPgtExM8pGb21qxyAAxuLN4QEmC0edexqS7VaqElTzvsk4YNNMahA98+6dbioW+m9LRieCIXQuUqKVDbebliIkkJpKo6+BEGC9ZkXfHPwpXFH4mqcQaRkOgqDfZ44UtQDBb3jMv6+DDNQQRc1a6t1RaX3BBLZJYXJvuOGaZV9u+brJIgCbKRpm0oeKTYggiCEGMkhQwu1cEo7Y8sV7yzzps5gZE/Ie/3bxGe/Wa0bFj3mnBOUsX0J0IZ9EsrxYTzHdJewIj1sPtxcdsc3RCU2KcGCAujOF1vV7TfKxwjWxP/t0MJ4LvHIPM5BDY4Pes4DS6V72aEskMM8rdupPc1BZgUjdYpBgTxLxGX7QPFQ9JwKGZGoFIViP3mEZyr32PQl5qk44BNLgXVxUJEyf8TT39bPH1NMRS1LmCPBeUSOaC2HmAYNIcnyo9Yb2aSEBn1OlERUOdoP26xTd6bhIhsHdpv9RJURwctAzEd3Ja0uS/ROn3TcSTSINxGtaKnPPBzL8TG593f6dKIZlbL/Bmfd4e7n1IgrjsV5ecPZI9piGmBSyYjGiPvoYHxo8B5N5t5QzaOoRUqxLqk9xW6mWDbwYTQXQhxrS5+oW8mqNzLAoIsQX7dOlxRLJO4zQwOQeyXeITMV0vGxiz26RKYOjkBNHF861MmD/6qG2Li9wwOYoXUc1O1Kl0ohXvRLMEeSGv1qlSSERgxApcX/iBbY+PyrQwTwMzAyRFGcVTkhvsYHmbCN6GFze1Jd2lpex2MS6ErLppBmZkwFiMWkuAs+GkzatZZI4oKFFwFgVnLpvjAmYrG1gQs9AwZ2fIhN1aPChZB5tpYZ5nLiISAlAQF0R3r8rNt9z64BO2y5XZOTmKjyJce6BuOExjzCLMIoJFmDnMHEGVYEoo9IghU6AGg0D+aaxIiyzXnhFf5DZ9PLzcjeVufUbHY5pBbXMRcWHMvPbrzuZTvbvk4rEHF3P7spBbHxxCTvwexaTO9wolNqcJ83YpAp6EOolN0rT8kzqJ1a0pkzSj40cSOVFvUKfBmCWhPlUKSVhZKUQNmUS50L1U+lbfv22KQ0BEM8fVJswLzQ0J2iMSGvZj7TtlK+c+1wBsvjxtXgbtGMJVq5JuK9jNcS+vTMZIRRZimwN689GOMSEq4dJJHjv4CdlVGTZXG5CORIk2jJMB/GP7eZCye0UYFy+Cm605C2qRoGGSVDe6zf74iZujTdxue4iA9OQMGjRlCPud2znHxxwGynhkJUUdg+CKqE9468Fb5OuVirlabXUgtcCxR91VlHnET0hQQWe79am/53H5ZFQxjcSCMKESbeH8489nFjjT5ueIdGVrlm+lwp2uSK95bKUVLyFfEmXsvuRvD8RUWl0QVjRa0e+BA8TeuA+T7FllIWFmXpefa5GEFNNe7Q1Nf1duXrKoF2uZwWtvsze6Iu/xdTLqriKO8w18XOai9NglN9YGxFdqaK6zKxkqA/hLUr3RncKFoY4XEXcyYV7I5ETFMWpey/rH9sMNb5jP7c9kUC3/hZXdaOZ1Vp1lC+ITgipD2++wU2uHMFrR+bIaKChDmB3gNGIZYkLCFLOXAMbUXGbOgwlECKndN19+pjPYUxP/2k9zXVTmUj+5avZMfUdICVEPpzWNIaoSKltXYLJDiFQJoemG6JXTQkoQEV0aMG36w8y5CI4xPBvcpfxg43UygLc2by0tt84Q8nrobZY4LMrLzWeU7lihTwjiMBW2Hfgwh6igLFGwbRjHACH5Dy6MetwTGkRCQCVbTLVkYZ5vnie1gaIIXn5KsAs4//hYy+1r1t9CqUpoxtwS9XB28Hg6u7BBLIBGRM0Gu0GsUlm+4Eeqn9WiRMFnIrtcYV7IzBBREjz9ejbGLbkny3JeBk2pYtvu4Ldw/CdGgTB9mY7Wiw0f9eD8JG9/8uPytaXERq0o1x5119LLV8OYeNFcmJfIkqm5tJmY5JHL9P6sK+tIaMpFvOqXTwOilcMIiFngHleglJtWVxpZIkh+/Xtf9Tkr1g5hYLIIOAKY/YBiwO4lFVuVMDM9F+bokuAxylrC7J6W29daLXfrJd6R1jsmzAsKtk8IUZnz143yl1Ql7Bhc5Pv24kQI/rh+SPv1/DDZGWFeEEDFMWqe9e4d9sPT3yiC1zxbuDknbdcbVwLqGwSN+MQlt9tZ+4bw87l9G0TZibcDnOUK8nHGCdM1knnAmAPMIvHPIswCjIKAk5sB9OI77Tzg6jAJwho0rwQJKeaK9Hv4NCI2r9sfypp8IXF3sE76fYqtSphPYnJtc8eYAVxtz5xxnmrgbVGRcgh41ujlFhFcWscXSvzpG+6w7bUB8ZWKuRn5luDt0Wi7ruNPGMWrrjBinuWxZA4wcwRc8HjWuzLC2xThLWbYGq8vQAwKDo0dCxauQgj3EYkG6wxLZD4tmo9NQp5FylvUjIvMI2JruhyMSHHWwJfX8aarP2t/VKuJrwybM8uy9XS/vlv79fIwnudb3RLm+czMREkRkAtVhDMswFquUVEgVogVUY8VhLvfe4+tu+AQBoNmB1knKneRtFcSuirMM+eKkALCmQqU1/qt0EghEogVpUlY18umxPGRalWCyO0h1OUjeopsCo2WW+9QxLwoMLO0yACkLNvusE6nFYvXPwSK2jYEK8ZY2TG57xdsfvpdvRJ88j8EKxEyv9XhiHnB42bMs45siMwYVUe/he5F0O2ZcSwZe6aGIi4Qyr2UL9/IXYRxtFwshxHvRVuVwjUQ5tmxkEMInFCEIzl/um5oLVBmgxQrrjnhra/I+555aef7GGuYSbS2wjxzbkQCgedUjMfVYWbdBUgl1x5dECQJHvvqs/f5YBEiYW2FecrMcrLEYqg8riY8bNk7ObIW7InagIp1ep/DsT728pPx17onjr3fNEoIRHPB6KYwMwWSEBBMHtakwcMh4ahkK0asW8I8R3tmgeUk867lKLDv51WpJ6eZapPp8Gx5+rOEiHl+0AyjqErdjgIP6+GqHDcYdkWwJS4qWrUwy/x6pKKU1Bhpnin7j37SxDWzXuXaCHPrw7NeQRiWTc8dVzBxgft9gyQ3M+uWaS0GlGuBhNIbBQ4e+ws5Pn5RcK4+D0hdEGaRlvYIoyHB6/1miFaG0cdvladDk/ujMs6scyyaLczzgeTawMnmQqyGWVH2/+JuEN/28F0VZjA8pzhHw+6XVxx5OnsEM6kMoEcuo9BIeFQLXNiJjobk6URxnlFoCxYLuVgXJJsXpHWex8zZ2za/3c7Z8DUNvg8Rf9IgURYL/hYLEgOePueYCIcIsp39zyVUCIqI1S7A9t8sdZoM4BnRePVMWkyY4zZWuQXZJBTU5ODRu/G+bFPgnLSUIcsT5ixi9vSoo2kjNKOKbHquTqWtq0FVQmXY3JN/Jd8PDa7FGHcFnNncZv5S2bMc3XHMNjNwKCUXeHHyNfqj4x80ceOYRUsQ5mXqTyClrA5lnAbXyuaffD9vFIQZjcPagPgdgxY9eat8kyZXWeBIVCYyw+dLelYW8ywC0lz9aZtrJtgFFzh09BapJ5tM3GTu9jsgzBAw8WzUCOMIY3aVbHrum7aHqH2t0IwkdV9V0sqwuSc+KfttgstCwleiHpwroGTrnVIysGw5wjwbpIWAmWFyZGamYkykG+XQ0UETnWS6KrxsYbZ8tVaKSWCdKP3qmOArvCCXyebn95vh5MqZVjNv9Ny+TOV1d9o7TfmoOi4VB5ZCSAEjzE5PhExoW+I7K2uf2t8uxjPms/Zp3vSEgBl29avfZKese0y970d0OhXRk2XlIDhRigo9AgkQ+A7N8Bk59+dfaV9Wc/L1QdNNKWEIoSoB4HX32JstsAtjB8YrNaIkbq5pldw0KKVZIJXaHr4wC6zZ82hW2afp4czep7jst6/IWLRYmUNn5W6pQGINVJ8mYh/og3LW89/Ie2/KAqvLWEp5Y07300wuvotXOOVcAqeZUWhVtAsuA6iQM6nHQZzv78k/49a/t322jmnfN7cK6fHm7PdfvV36e58C3zuzB+NgTlPGOXDWwLljaDjCmb94tn2B1HJeSTjpVqmY2zFo3X9lp8ub7SGyZfyPECvI4E0YRCpbkaOHln7+zmUcsHPRw3YC+5Z3yzunF2Et94W6/wVzx3BglFmI1gAAAABJRU5ErkJggg==" alt="Google Drive">
@@ -884,6 +891,9 @@ select.cond-select{
       <div class="drive-dot" id="save-dot"></div>
       <span class="drive-pill-label" id="drive-label">Drive</span>
     </div>
+      <button class="hdr-gear" id="hdr-gear" onclick="openSettings()" aria-label="Paramètres">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" fill-rule="evenodd" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" d="M19.53 9.29 L22.33 9.64 L22.33 14.36 L19.53 14.71 L19.24 15.41 L20.98 17.64 L17.64 20.98 L15.41 19.24 L14.71 19.53 L14.36 22.33 L9.64 22.33 L9.29 19.53 L8.59 19.24 L6.36 20.98 L3.02 17.64 L4.76 15.41 L4.47 14.71 L1.67 14.36 L1.67 9.64 L4.47 9.29 L4.76 8.59 L3.02 6.36 L6.36 3.02 L8.59 4.76 L9.29 4.47 L9.64 1.67 L14.36 1.67 L14.71 4.47 L15.41 4.76 L17.64 3.02 L20.98 6.36 L19.24 8.59 Z M12 8.6a3.4 3.4 0 1 0 0 6.8a3.4 3.4 0 1 0 0-6.8Z"/></svg>
+      </button>
     </div>
   </div>
 
@@ -3578,7 +3588,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.78';
+const APP_VERSION = '4.79';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -4661,6 +4671,7 @@ async function checkUpdate(){
 
 function showMaj(v){
   majVue = v;
+  document.getElementById('hdr-gear')?.classList.add('has-maj');
   if(document.getElementById('maj-bar')) return;
   const d = document.createElement('div');
   d.className = 'maj-bar'; d.id = 'maj-bar';
@@ -4699,6 +4710,7 @@ async function majBouton(){
   if(!v){ s.textContent = 'Vérification impossible (hors ligne ?)'; b.textContent = 'Réessayer'; return; }
   if(v === APP_VERSION){ s.textContent = 'À jour · v' + APP_VERSION; b.textContent = 'Vérifier'; b.classList.remove('p'); return; }
   majVue = v;
+  document.getElementById('hdr-gear')?.classList.add('has-maj');
   s.textContent = 'Version ' + v + ' disponible (installée : v' + APP_VERSION + ')';
   b.textContent = 'Installer'; b.classList.add('p');
 }

@@ -3216,6 +3216,11 @@ function closeGrid(){
 // ── Gestion bouton retour / swipe Android ──
 // Retourne true si quelque chose a été fermé/navigué
 function _uiBack(){
+  // Ordre = empilement visuel, du plus haut au plus bas : une fiche (z 200)
+  // s'ouvre par-dessus la collection ou la grille (z 100). La fermer en
+  // premier évite qu'un geste ferme un calque caché derrière elle.
+  const openModals = document.querySelectorAll('.modal-bg.open');
+  if(openModals.length){ closeModal(openModals[openModals.length-1].id); return true; }
   if(document.getElementById('scan-overlay')?.style.display === 'flex'){
     closeScanner(); return true;
   }
@@ -3226,8 +3231,6 @@ function _uiBack(){
   if(document.getElementById('coll-overlay')?.classList.contains('open')){
     closeCollOverlay(); return true;
   }
-  const openModalEl = document.querySelector('.modal-bg.open');
-  if(openModalEl){ closeModal(openModalEl.id); return true; }
   const activeTab = document.querySelector('.nav-btn.active');
   if(activeTab && activeTab.id !== 'nav-home'){ switchTab('home'); return true; }
   return false;
@@ -3537,7 +3540,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.76';
+const APP_VERSION = '4.77';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

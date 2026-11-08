@@ -47,7 +47,10 @@ body::before{
 }
 
 /* ── APP SHELL ── */
-#app{display:flex;flex-direction:column;height:100vh;height:100dvh;position:relative;z-index:1}
+/* Accroché aux 4 bords de l'écran plutôt qu'une hauteur en 100dvh : après le
+   rechargement lancé par « Installer », Android peut mal calculer dvh et la
+   barre d'onglets sortait sous le bord de l'écran. */
+#app{display:flex;flex-direction:column;position:fixed;inset:0;z-index:1}
 
 /* ── HEADER ── */
 #header{
@@ -3588,7 +3591,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.80';
+const APP_VERSION = '4.81';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

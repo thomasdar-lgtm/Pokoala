@@ -1454,10 +1454,13 @@ function pksSources(c, big, tcgdexBase){
   }
   const k = PKM_CODES[c.setId];
   const pk = k ? `https://assets.pokemon.com/assets/cms2-fr-fr/img/cards/web/${k}/${k}_FR_${c.number}.png` : '';
-  if(big && pk) out.push(pk);
+  // Écart voulu avec PoKoalaShop : pokemon.fr ne sert que des images de
+  // 245×342 (mesuré le 08/11), la même taille que les vignettes TCGdex. En
+  // grand, le scan TCGdex 600×825 passe donc en premier.
   const g = c.img || tcgdexBase || '';
-  if(g){ out.push(g + (big ? '/high.webp' : '/low.webp'), g + (big ? '/low.webp' : '/high.webp')); }
-  if(!big && pk) out.push(pk);
+  if(g) out.push(g + (big ? '/high.webp' : '/low.webp'));
+  if(pk) out.push(pk);
+  if(g) out.push(g + (big ? '/low.webp' : '/high.webp'));
   if(!g) out.push(...imgSourcesTcgdex(c.setId, c.number, null, big ? 'high' : 'low', true));
   if(c.p){
     const sx = 'https://images.scrydex.com/pokemon/' + c.p;
@@ -2397,8 +2400,22 @@ function priceIdCandidates(cardId){
   const isNum=/^\d+$/.test(num);
   const nums=isNum ? [String(num).padStart(3,'0'), String(parseInt(num,10))] : [num];
   const out=[];
+  // D'abord l'identifiant TCGdex exact tiré de la base de PoKoalaShop :
+  // adresse d'image (…/fr/sv/sv01/001 → sv01-001), puis id TCGdex de
+  // l'extension (et de son parent : TCGdex range les Galeries dans le parent)
+  const pc=pksCard(setPart, num);
+  if(pc){
+    const m=String(pc.img||'').match(/assets\.tcgdex\.net\/[a-z]+\/[^/]+\/([^/]+)\/([^/]+)$/);
+    if(m) out.push({setPart, s:m[1], n:m[2], pad:false});
+    const st=_mobileDB.sets.find(x=>x.id===pc.setId);
+    const par=st?.parent ? _mobileDB.sets.find(x=>x.id===st.parent) : null;
+    for(const t of [st?.t, par?.t]) if(t){
+      out.push({setPart, s:t, n:pc.number, pad:false});
+      if(/^\d+$/.test(pc.number)) out.push({setPart, s:t, n:String(pc.number).padStart(3,'0'), pad:true});
+    }
+  }
   for(const st of sets) for(let i=0;i<nums.length;i++) out.push({setPart, s:st, n:nums[i], pad: isNum && i===0});
-  const f=_setFmt[setPart];
+  const f=pc ? null : _setFmt[setPart];
   if(f){
     out.sort((a,b)=>{
       const ka=(a.s===f.s && a.pad===!!f.p)?0:1, kb=(b.s===f.s && b.pad===!!f.p)?0:1;
@@ -2655,7 +2672,14 @@ function openCM(name,num){
 
 // ── ADD CARD ──
 function addCard(cardData){
-  const ex=col.find(c=>c.id===cardData.id);
+  // Même carte déjà possédée sous un autre identifiant (ancienne version :
+  // 'sv01-001' pour 'sv1-1') : on ajoute un exemplaire, pas une 2e fiche
+  let ex=col.find(c=>c.id===cardData.id);
+  if(!ex){
+    const i=String(cardData.id||''), d=i.lastIndexOf('-');
+    const pc=d>0 ? pksCard(i.slice(0,d), i.slice(d+1)) : null;
+    if(pc) ex=ownedIndex().get(pc.id);
+  }
   if(ex){
     ex.copies = ex.copies||[];
     ex.copies.push({cond:'NM', for_sale:false});
@@ -3818,7 +3842,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.86';
+const APP_VERSION = '4.87';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -4823,7 +4847,7 @@ function addCardFromScan(cardId, quick){
     name: getCardNameFR(card),
     number: card.number,
     rarity: card.rarity,
-    set: {id: card.setId, name: setNameFR(card.setId, card.setName)},
+    set: {id: card.setId, name: card.setName || setNameFR(card.setId, '')},
     images: {
       small: getCardImg(card, 'low'),
       large: getCardImg(card, 'high')

@@ -1,9 +1,11 @@
-const CACHE_VERSION = '4.82';
+const CACHE_VERSION = '4.83';
 const CACHE_SHELL = `pokoala-shell-${CACHE_VERSION}`;
 // Cache images NON versionné : les images ne changent jamais, inutile de
 // les re-télécharger à chaque nouvelle version (cause de rate-limit TCGdex)
 const CACHE_IMAGES = 'pokoala-images';
 const CACHE_API = 'pokoala-api';
+// Base de cartes (data/) : non versionné, la clé contient ?v=DATA_VER
+const CACHE_DATA = 'pokoala-data';
 
 const IMAGE_HOSTS = [
   'assets.tcgdex.net',
@@ -27,7 +29,7 @@ self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys
-        .filter(k => k !== CACHE_SHELL && k !== CACHE_IMAGES && k !== CACHE_API)
+        .filter(k => k !== CACHE_SHELL && k !== CACHE_IMAGES && k !== CACHE_API && k !== CACHE_DATA)
         .map(k => caches.delete(k))
       )
     ).then(() => self.clients.claim())
@@ -40,6 +42,26 @@ self.addEventListener('fetch', e => {
   // Vérification de version (?_=…) et rechargement après installation
   // (?maj=…) : réseau direct, sans rien stocker (une entrée par appel sinon)
   if(url.origin === self.location.origin && (url.searchParams.has('_') || url.searchParams.has('maj'))){
+    return;
+  }
+
+  // Base de cartes : cache d'abord (une nouvelle version change ?v=)
+  if(url.origin === self.location.origin && url.pathname.includes('/data/')){
+    e.respondWith(
+      caches.open(CACHE_DATA).then(cache =>
+        cache.match(e.request).then(hit => hit || fetch(e.request).then(r => {
+          if(r.ok){
+            cache.put(e.request, r.clone());
+            // ne garder que la version courante de chaque fichier
+            cache.keys().then(ks => ks.forEach(k => {
+              const u = new URL(k.url);
+              if(u.pathname === url.pathname && u.search !== url.search) cache.delete(k);
+            }));
+          }
+          return r;
+        }))
+      )
+    );
     return;
   }
 

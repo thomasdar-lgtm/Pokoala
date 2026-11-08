@@ -1106,16 +1106,6 @@ select.cond-select{
         <div style="padding:8px 16px 0">
           <button class="btn btn-danger btn-full" onclick="driveSignOut()">Se déconnecter</button>
         </div>
-        <div style="padding:8px 16px 0">
-          <button class="btn btn-secondary btn-full" onclick="reloadMobileDB()" style="font-size:12px">
-            🔄 Recharger la base de cartes depuis Drive
-          </button>
-        </div>
-        <div style="padding:8px 16px 0">
-          <button class="btn btn-secondary btn-full" onclick="syncMobileDB()" style="font-size:12px">
-            💻 Synchroniser la base depuis le PC
-          </button>
-        </div>
           <div id="db-sync-date" style="font-size:10px;color:rgba(255,255,255,0.3);text-align:center;margin-top:6px"></div>
         </div>
       </div>
@@ -1485,13 +1475,12 @@ function updateScanDBStatus(){
     el.style.display = '';
     el.innerHTML = `<span style="color:#f4a261">⚠️</span> <span style="color:rgba(255,255,255,0.6)">Base non chargée — le scan ne pourra pas identifier les cartes</span><br>
     <button onclick="loadDBFromDrive()" class="btn btn-secondary" style="margin-top:8px;font-size:11px;padding:6px 12px">
-      Charger depuis Drive
+      Réessayer
     </button>`;
   }
 }
 
 async function loadDBFromDrive(){
-  if(!_driveToken){ toast('Connecte-toi à Drive d\'abord (onglet Accueil)'); return; }
   const el = document.getElementById('scan-db-status');
   el.innerHTML = `<div class="loader" style="margin:0;font-size:12px">Chargement de la base…</div>`;
   const ok = await loadMobileDB();
@@ -1756,53 +1745,67 @@ const MOBILE_DB_KEY = 'pk_db_light';
 const MOBILE_DB_DATE_KEY = 'pk_db_light_date';
 let _mobileDB = null; // {cards, sets, series}
 
-async function loadMobileDB(){
-  // 1. Essayer depuis localStorage
-  try{
-    const cached = localStorage.getItem(MOBILE_DB_KEY);
-    if(cached){
-      _mobileDB = JSON.parse(cached);
-      console.log(`Base mobile : ${_mobileDB.cards?.length||0} cartes (cache local)`);
-      return true;
-    }
-  }catch(e){}
-
-  // 2. Essayer depuis le serveur local
-  try{
-    const r = await fetch(`${LOCAL}/api/mobile-db`, {signal: AbortSignal.timeout(500)});
-    if(r.ok){
-      _mobileDB = await r.json();
-      if(_mobileDB.cards?.length > 0){
-        localStorage.setItem(MOBILE_DB_KEY, JSON.stringify(_mobileDB));
-        localStorage.setItem(MOBILE_DB_DATE_KEY, new Date().toISOString());
-        console.log(`Base mobile : ${_mobileDB.cards.length} cartes (serveur local)`);
-        onMobileDBLoaded();
-        return true;
-      }
-    }
-  }catch(e){}
-
-  // 3. Essayer depuis Drive
-  if(_driveToken){
+// ═══ BASE DE CARTES — copie de celle de PoKoalaShop (data/) ═══
+// Générée par outils/sync_pks.py. Modifier un fichier de data/ ⇒ incrémenter
+// DATA_VER (clé de cache : ?v=DATA_VER). Plus de base sur Drive ni de PC.
+const DATA_VER = '1';
+let _mobileDBP = null;
+function loadMobileDB(){
+  if(_mobileDB?.cards?.length) return Promise.resolve(true);
+  if(_mobileDBP) return _mobileDBP;
+  _mobileDBP = (async()=>{
     try{
-      const fileId = await driveFindFileByName('pokoala_db_light.json');
-      if(fileId){
-        const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,{
-          headers:{'Authorization':'Bearer '+_driveToken}
-        });
-        _mobileDB = await r.json();
-        if(_mobileDB.cards?.length > 0){
-          localStorage.setItem(MOBILE_DB_KEY, JSON.stringify(_mobileDB));
-          localStorage.setItem(MOBILE_DB_DATE_KEY, new Date().toISOString());
-          console.log(`Base mobile : ${_mobileDB.cards.length} cartes (Drive)`);
-          onMobileDBLoaded();
-          return true;
-        }
-      }
-    }catch(e){}
-  }
+      const [rs, rc] = await Promise.all([
+        fetch('./data/sets.json?v=' + DATA_VER),
+        fetch('./data/cartes.json?v=' + DATA_VER)
+      ]);
+      if(!rs.ok || !rc.ok) throw new Error('data ' + rs.status + '/' + rc.status);
+      const sj = await rs.json(), cj = await rc.json();
+      _mobileDB = buildMobileDB(sj, cj);
+      try{
+        localStorage.removeItem('pk_db_light');   // ancienne base (~4 Mo) : libère le stockage
+        localStorage.setItem(MOBILE_DB_DATE_KEY, sj.built || new Date().toISOString());
+      }catch(e){}
+      console.log(`Base : ${_mobileDB.cards.length} cartes, ${_mobileDB.sets.length} extensions`);
+      onMobileDBLoaded();
+      return true;
+    }catch(e){
+      console.warn('Base de cartes indisponible :', e);
+      return false;
+    }finally{
+      _mobileDBP = null;
+    }
+  })();
+  return _mobileDBP;
+}
 
-  return false;
+// Adapte le format de PoKoalaShop ({i,n,e,u,s,r,g,…}) à celui qu'attend le
+// reste de l'app ({id,name,nameEn,number,setId,setName,rarity,img}).
+function buildMobileDB(sj, cj){
+  const sets = sj.sets || [];
+  const setById = new Map(sets.map(st => [st.id, st]));
+  const cards = cj.map(c => ({
+    id: c.i, name: c.n, nameEn: c.e || c.n, number: c.u, setId: c.s,
+    setName: setById.get(c.s)?.name || c.s, rarity: c.r || '', img: c.g || '',
+    p: c.p || '', v: c.v, d: c.d
+  }));
+  const counts = new Map();
+  for(const c of cards) counts.set(c.setId, (counts.get(c.setId)||0) + 1);
+  // Blocs dans l'ordre de PoKoalaShop ; les sous-extensions (Galeries,
+  // coffres, collections classiques) restent rattachées à leur parent
+  const series = [], byName = new Map();
+  for(const st of sets){
+    if(st.parent) continue;
+    let se = byName.get(st.serie);
+    if(!se){ se = {name: st.serie, sets: []}; byName.set(st.serie, se); series.push(se); }
+    const n = counts.get(st.id) || st.n || 0;
+    se.sets.push({id: st.id, name: st.name, code: st.code || '', syms: st.syms || [],
+                  date: st.date || '', cardCount: {official: n, total: n}});
+  }
+  // Codes d'extension (scanner) : table historique complétée par ceux de PKS
+  const ptcgoMap = Object.assign({}, typeof SET_CODE_MAP === 'object' ? SET_CODE_MAP : {});
+  for(const st of sets){ if(st.code && !ptcgoMap[st.code]) ptcgoMap[st.code] = st.parent || st.id; }
+  return { cards, sets, series, ptcgoMap, cardCount: cards.length, generatedAt: sj.built || '' };
 }
 
 async function driveFindFileByName(name){
@@ -1814,68 +1817,6 @@ async function driveFindFileByName(name){
   const d = await r.json();
   return d.files?.[0]?.id || null;
 }
-
-async function reloadMobileDB(){
-  if(!_driveToken){ toast('Connecte-toi à Drive d\'abord'); return; }
-  toast('⏳ Rechargement de la base…');
-  localStorage.removeItem(MOBILE_DB_KEY);
-  _mobileDB = null;
-  const ok = await loadMobileDB();
-  if(ok){
-    toast(`✅ Base rechargée : ${_mobileDB?.cards?.length||0} cartes`);
-    closeModal('drive-modal');
-  } else {
-    toast('Erreur rechargement base');
-  }
-}
-
-async function syncMobileDB(){
-  // Upload pokoala_db_light.json sur Drive depuis le serveur local
-  if(!_driveToken){ toast('Connecte-toi à Drive d\'abord'); return; }
-  try{
-    toast('⏳ Génération de la base mobile…');
-    const r = await fetch(`${LOCAL}/api/generate-mobile-db`, {signal: AbortSignal.timeout(300000)});
-    if(!r.ok) throw new Error('Serveur non disponible');
-    const info = await r.json();
-    if(info.status !== 'ok') throw new Error(info.message||'Erreur génération');
-
-    // Récupérer le fichier généré
-    const r2 = await fetch(`${LOCAL}/api/mobile-db`);
-    const data = await r2.text();
-
-    // Uploader sur Drive
-    const existingId = await driveFindFileByName('pokoala_db_light.json');
-    let r3;
-    if(existingId){
-      r3 = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=media`,{
-        method:'PATCH',
-        headers:{'Authorization':'Bearer '+_driveToken,'Content-Type':'application/json'},
-        body: data
-      });
-    } else {
-      const meta = JSON.stringify({name:'pokoala_db_light.json',mimeType:'application/json'});
-      const form = new FormData();
-      form.append('metadata', new Blob([meta],{type:'application/json'}));
-      form.append('file', new Blob([data],{type:'application/json'}));
-      r3 = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
-        method:'POST',
-        headers:{'Authorization':'Bearer '+_driveToken},
-        body: form
-      });
-    }
-    await r3.json();
-
-    // Mettre à jour le cache local
-    _mobileDB = JSON.parse(data);
-    localStorage.setItem(MOBILE_DB_KEY, data);
-    localStorage.setItem(MOBILE_DB_DATE_KEY, new Date().toISOString());
-    onMobileDBLoaded();
-    toast(`✅ Base mobile synchronisée (${info.cards} cartes)`);
-  }catch(e){
-    toast('Erreur sync : '+e.message);
-  }
-}
-
 
 // ── SYMBOLES DE RARETÉ ──
 const BASE_URL = 'https://thomasdar-lgtm.github.io/Pokoala/rarities/';
@@ -2816,6 +2757,7 @@ function augmentSeries(data){
   let misc = null;
   const tgNorm = new Set([...TG_GG_IDS].map(normSetId));
   for(const st of _mobileDB.sets){
+    if(st.parent) continue;         // sous-extension : affichée avec son parent
     const id = st.id;               // id d'origine : conserve nom FR et fetch
     const nid = normSetId(id);      // forme normalisée : dédup, tri, sous-sets
     if(seen.has(nid) || tgNorm.has(nid)) continue;
@@ -3680,7 +3622,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.82';
+const APP_VERSION = '4.83';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

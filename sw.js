@@ -1,4 +1,4 @@
-const CACHE_VERSION = '4.77';
+const CACHE_VERSION = '4.78';
 const CACHE_SHELL = `pokoala-shell-${CACHE_VERSION}`;
 // Cache images NON versionné : les images ne changent jamais, inutile de
 // les re-télécharger à chaque nouvelle version (cause de rate-limit TCGdex)
@@ -14,8 +14,13 @@ const IMAGE_HOSTS = [
   'fonts.gstatic.com'
 ];
 
-self.addEventListener('install', e => {
-  self.skipWaiting();
+// Plus de skipWaiting automatique : la nouvelle version attend que
+// l'utilisateur appuie sur « Installer », ou le prochain lancement de l'app
+// après fermeture complète.
+self.addEventListener('install', () => {});
+
+self.addEventListener('message', e => {
+  if(e.data === 'skipWaiting' || (e.data && e.data.type === 'SKIP_WAITING')) self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
@@ -31,6 +36,12 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+
+  // Vérification de version (?_=…) et rechargement après installation
+  // (?maj=…) : réseau direct, sans rien stocker (une entrée par appel sinon)
+  if(url.origin === self.location.origin && (url.searchParams.has('_') || url.searchParams.has('maj'))){
+    return;
+  }
 
   // Images : cache-first
   if(IMAGE_HOSTS.some(h => url.hostname.includes(h))){

@@ -1328,8 +1328,116 @@ function tcgdexSetVariants(sid){
   }
   return out;
 }
+// ═══ VISUELS : même chaîne que PoKoalaShop (cardSrcs) ═══
+// Scans officiels FR pokemon.fr : publiés jusqu'à SV06 seulement
+const PKM_CODES = { sv1:'SV01', sv2:'SV02', sv3:'SV03', sv4:'SV04', sv5:'SV05', sv6:'SV06' };
+// Extensions inconnues de pokemontcg.io : il renverrait un DOS DE CARTE (sans erreur)
+const NO_PTCG = { mep:1 };
+// Extensions sorties avant que TCGdex publie ses scans : source FR provisoire,
+// TCGdex n'est pas interrogé carte par carte. tcgVerifier() bascule dès qu'il publie.
+const TCG_ATTENTE = {
+  me6: { t:'me06', nom:'Règne Delta', g1:'https://assets.tcgdex.net/fr/me/me06/001',
+         src:'https://pika-collect.fr/img/card-images/me06/%03d-480.webp',
+         purge:['pika-collect.fr/img/card-images/me06/','assets.tcgdex.net/fr/me/me06/','assets.tcgdex.net/univ/me/me06/'] }
+};
+const TCGOK_KEY = 'pk_tcgok', TCGCHK_KEY = 'pk_tcgchk';
+function tcgOk(){ try{ return JSON.parse(localStorage.getItem(TCGOK_KEY) || '{}') || {}; }catch(e){ return {}; } }
+function tcgProvisoire(c){
+  const a = TCG_ATTENTE[c.setId];
+  if(!a || !c.number) return '';
+  return a.src.replace('%03d', String(c.number).padStart(3,'0'));
+}
+let _tcgEnCours = false;
+async function tcgVerifier(){
+  if(_tcgEnCours) return;
+  const ok = tcgOk(), reste = Object.keys(TCG_ATTENTE).filter(k => !ok[k]);
+  if(!reste.length) return;
+  let der = 0; try{ der = +localStorage.getItem(TCGCHK_KEY) || 0; }catch(e){}
+  if(Date.now() - der < 3600e3) return;
+  _tcgEnCours = true;
+  try{ localStorage.setItem(TCGCHK_KEY, String(Date.now())); }catch(e){}
+  for(const sid of reste){
+    const a = TCG_ATTENTE[sid];
+    try{
+      const r = await fetch(`${TCGDEX_FR}/sets/${a.t}?_=${Date.now()}`);
+      if(!r.ok) continue;
+      const c1 = ((await r.json()).cards || [])[0];
+      if(!c1 || c1.image !== a.g1) continue;
+      const ri = await fetch(c1.image + '/low.webp?_=' + Date.now(), {mode:'cors', cache:'no-store'});
+      if(!ri.ok) continue;
+      ok[sid] = new Date().toISOString();
+      try{ localStorage.setItem(TCGOK_KEY, JSON.stringify(ok)); }catch(e){ continue; }
+      // retirer du cache les copies provisoires et les échecs mis en cache
+      if(window.caches){
+        const c = await caches.open('pokoala-images');
+        for(const k of await c.keys()) if(a.purge.some(m => k.url.includes(m))) await c.delete(k);
+      }
+      toast('Scans TCGdex disponibles : ' + a.nom);
+    }catch(e){ /* pas encore publié ou hors ligne : on réessaiera */ }
+  }
+  _tcgEnCours = false;
+}
+// Carte de la base PKS correspondant à (extension, numéro), quel que soit
+// l'identifiant utilisé (PKS 'sv3pt5', TCGdex 'sv03.5' / 'sv3.5', numéro '075' ou '75')
+let _imgIdx = null;
+function imgKey(sid, num){
+  return String(sid||'').toLowerCase() + '|' + (String(num||'').toUpperCase().replace(/^0+(?=.)/, ''));
+}
+function pksCard(setId, number){
+  if(!_mobileDB?.cards?.length) return null;
+  if(!_imgIdx || _imgIdx.src !== _mobileDB){
+    const m = new Map(), alias = {};
+    for(const st of _mobileDB.sets){
+      const a = [st.id]; if(st.t) a.push(st.t, st.t.replace(/^([a-z]+)0(\d)/, '$1$2'));
+      alias[st.id] = a;
+    }
+    const put = (k, c) => { if(!m.has(k)) m.set(k, c); };
+    for(const c of _mobileDB.cards) for(const a of (alias[c.setId] || [c.setId])) put(imgKey(a, c.number), c);
+    // cartes des sous-extensions (TG/GG…) aussi trouvables sous l'id du parent
+    for(const st of _mobileDB.sets) if(st.parent){
+      for(const c of _mobileDB.cards) if(c.setId === st.id)
+        for(const a of (alias[st.parent] || [st.parent])) put(imgKey(a, c.number), c);
+    }
+    _imgIdx = { src: _mobileDB, m };
+  }
+  return _imgIdx.m.get(imgKey(setId, number)) || null;
+}
+
 // quality: 'low' (vignettes) ou 'high' (overlays plein écran)
 function imgSources(setId, number, tcgdexBase, quality){
+  const pc = pksCard(setId, number);
+  if(pc) return pksSources(pc, quality === 'high', tcgdexBase);
+  return imgSourcesTcgdex(setId, number, tcgdexBase, quality);
+}
+// Chaîne de PoKoalaShop. Seul ajout : sans URL TCGdex en base (Galeries TG/GG…),
+// les variantes TCGdex FR de PoKoala passent avant les scans anglais.
+function pksSources(c, big, tcgdexBase){
+  const out = [];
+  const ptcg = b => NO_PTCG[c.setId] ? '' : `https://images.pokemontcg.io/${c.setId}/${c.number}${b?'_hires':''}.png`;
+  const prov = tcgProvisoire(c);
+  if(prov && !tcgOk()[c.setId]){
+    out.push(prov, ptcg(big));
+    return out.filter(Boolean);
+  }
+  const k = PKM_CODES[c.setId];
+  const pk = k ? `https://assets.pokemon.com/assets/cms2-fr-fr/img/cards/web/${k}/${k}_FR_${c.number}.png` : '';
+  if(big && pk) out.push(pk);
+  const g = c.img || tcgdexBase || '';
+  if(g){ out.push(g + (big ? '/high.webp' : '/low.webp'), g + (big ? '/low.webp' : '/high.webp')); }
+  if(!big && pk) out.push(pk);
+  if(!g) out.push(...imgSourcesTcgdex(c.setId, c.number, null, big ? 'high' : 'low', true));
+  if(c.p){
+    const sx = 'https://images.scrydex.com/pokemon/' + c.p;
+    out.push(sx + (big ? '/large' : '/small'));
+    if(big) out.push(sx + '/small');
+    return [...new Set(out)];
+  }
+  if(prov) out.push(prov);
+  out.push(ptcg(big));
+  if(big) out.push(ptcg(false));
+  return [...new Set(out.filter(Boolean))];
+}
+function imgSourcesTcgdex(setId, number, tcgdexBase, quality, frOnly){
   const sid = setId || '', num = number || '';
   const hi = quality === 'high';
   const q1 = hi ? 'high' : 'low', q2 = hi ? 'low' : 'high';
@@ -1350,6 +1458,7 @@ function imgSources(setId, number, tcgdexBase, quality){
       }
     }
   }
+  if(frOnly) return [...new Set(out)];
   // Anglais TCGdex AVANT pokemontcg.io : quand un scan FR manque (asset 404
   // alors que l'API le référence), l'anglais existe presque toujours. Il faut
   // le tenter avant pokemontcg.io, qui renvoie un DOS DE CARTE avec un statut
@@ -3062,7 +3171,6 @@ function renderGrid(){
   if(fill) fill.style.width=pct+'%';
   document.getElementById('grid-stats').style.display='block';
 
-  const isLocal = window.location.hostname === 'localhost';
   document.getElementById('card-grid').innerHTML=_gridCards.map(c=>{
     const effectiveSetId = c._tgSetId || c.setId || _gridSetId;
     const localId = c.localId || c.number || '';
@@ -3077,12 +3185,11 @@ function renderGrid(){
     const _srcs = imgSources(imgSetId, imgNum, c.image || null);
     const imgUrl = _srcs[0];
     const _srcsAttr = JSON.stringify(_srcs).replace(/"/g,'&quot;');
-    const localImg=isLocal?`${LOCAL}/images/${cardId}.png`:null;
     const sid=escId(id);
     const cname=escId(getCardNameFR(c) || c.name || '');
     const cimg=escId(imgUrl);
     return`<div class="grid-card${oc?'':' not-owned'}" data-id="${sid}" data-name="${cname}" data-img="${cimg}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
-      <img src="${localImg||imgUrl}" data-srcs="${_srcsAttr}" data-si="0" loading="lazy" onerror="imgNext(this)">
+      <img src="${imgUrl}" data-srcs="${_srcsAttr}" data-si="0" loading="lazy" onerror="imgNext(this)">
       <span class="grid-card-num">${localId}</span>
       ${oc?`<span class="grid-card-qty">${oc.qty}×</span>`:''}
       ${!oc?`<button class="grid-add-btn" onclick="event.stopPropagation();quickAddFromGrid('${sid}','${cname}','${cimg}')">+</button>`:''}
@@ -3453,7 +3560,7 @@ function watchToken(retour){
   if(retour ? (reste<TOKEN_SEUIL) : (reste<3*60*1000)) reauth();
 }
 setInterval(()=>watchToken(false), 60*1000);
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') watchToken(true); });
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ watchToken(true); tcgVerifier(); } });
 
 // Toute réponse 401 de Google : jeton refusé → renouvellement immédiat
 const _fetchOrig=window.fetch.bind(window);
@@ -3622,7 +3729,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.83';
+const APP_VERSION = '4.84';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3766,6 +3873,7 @@ function invalidateNameMaps(){ _frNameMap = null; _scanIndex = null; _setCounts 
 
 // La base mobile vient d'être (re)chargée : les listes dérivées sont périmées
 function onMobileDBLoaded(){
+  setTimeout(tcgVerifier, 3000);
   invalidateNameMaps();
   try{ localStorage.removeItem(SERIES_CACHE_KEY); }catch(e){}
   _seriesData = null;

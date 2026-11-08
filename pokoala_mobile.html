@@ -308,6 +308,38 @@ body::before{
 .set-item-name{flex:1;font-size:13px;font-weight:600;color:rgba(255,255,255,0.75)}
 .set-item-count{font-size:10px;color:rgba(255,255,255,0.25);font-weight:600}
 
+/* ── PARCOURIR façon PoKoalaShop ── */
+.pk-serie{position:relative;display:flex;align-items:center;font-family:'Raleway',sans-serif;font-size:17px;font-weight:900;color:#fff;margin:24px 0 11px;padding:0 0 9px 13px;border-bottom:2px solid rgba(255,255,255,0.1)}
+.pk-serie::before{content:'';position:absolute;left:0;top:1px;bottom:11px;width:4px;border-radius:3px;background:var(--yellow2)}
+.pk-serie:first-child{margin-top:4px}
+.pk-serie .blocN{margin-left:auto;font-size:12px;font-weight:800;color:var(--yellow2)}
+.pk-serie .blocN.z{color:rgba(255,255,255,0.3);font-weight:600}
+.pk-set{display:flex;align-items:center;gap:10px;background:rgba(20,10,40,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:11px 13px;margin-bottom:7px;cursor:pointer}
+.pk-set:active{background:rgba(255,255,255,0.06)}
+.ssym{width:24px;height:24px;object-fit:contain;flex:none}
+.sfb{width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:rgba(255,255,255,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:5px;letter-spacing:.2px}
+.sinfo{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
+.sinfo b{font-size:14px;font-weight:700;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scode{font-size:9px;font-weight:900;letter-spacing:.6px;color:rgba(255,255,255,0.45);background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:2px 5px;flex:none}
+.pk-set .sc{font-size:12px;font-weight:800;color:var(--yellow2);flex:none}
+.pk-set .sc small{color:rgba(255,255,255,0.35);font-weight:600}
+.pk-set .sc.z{color:rgba(255,255,255,0.3);font-weight:600}
+.grid-ov-tit{flex:1;min-width:0}
+.grid-ov-tit .th{display:flex;align-items:center;gap:7px;min-width:0}
+.grid-ov-tit small{display:block;color:rgba(255,255,255,0.45);font-weight:600;font-size:11.5px;margin-top:3px}
+.grid-tools{flex-shrink:0;padding:8px 12px 2px;background:rgba(10,0,20,0.6);border-bottom:1px solid rgba(255,255,255,0.05)}
+.g-srch{position:relative;margin:0 0 8px}
+.g-srch input{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:11px;padding:9px 34px 9px 13px;color:#fff;font-size:14px;outline:none}
+.g-srch input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.g-srch .sx{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.12);border:0;color:#fff;width:24px;height:24px;border-radius:50%;font-size:14px;cursor:pointer}
+.g-fb{display:flex;gap:6px;margin:0 0 8px}
+.g-fb .sg{display:flex;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:2px;gap:2px;flex:1;min-width:0}
+.g-fb .sg.cols{flex:0 0 auto}
+.g-fb button{flex:1;min-width:0;background:none;border:0;color:rgba(255,255,255,0.45);font-size:11px;font-weight:700;padding:6px 4px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.g-fb .sg.cols button{min-width:28px}
+.g-fb button.on{background:rgba(255,215,0,0.16);color:var(--yellow2)}
+.g-vide{grid-column:1/-1;text-align:center;color:rgba(255,255,255,0.45);font-size:13px;padding:30px 10px}
+
 /* ── CARD GRID ── */
 .card-grid{
   display:grid;
@@ -1022,14 +1054,15 @@ select.cond-select{
     <button class="grid-ov-back" onclick="closeGrid()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
     </button>
-    <div class="grid-ov-title" id="grid-title">Extension</div>
+    <div class="grid-ov-tit">
+      <div class="th"><span id="grid-sym"></span><span class="grid-ov-title" id="grid-title">Extension</span><span id="grid-code"></span></div>
+      <small id="grid-sub"></small>
+    </div>
     <div class="grid-ov-pct" id="grid-pct"></div>
   </div>
-  <div class="grid-stats" id="grid-stats" style="display:none">
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6)" id="grid-count"></span>
-      <div class="prog-bar" style="flex:1"><div class="prog-fill" id="grid-prog-fill" style="width:0%"></div></div>
-    </div>
+  <div class="grid-tools" id="grid-tools">
+    <div class="g-srch"><input type="search" id="grid-q" placeholder="Chercher dans cette extension…" autocomplete="off" oninput="gridSearchInput()" onkeydown="if(event.key==='Enter')this.blur()"><button class="sx" id="grid-qx" style="display:none" onclick="gridClearQ()" aria-label="Effacer">×</button></div>
+    <div class="g-fb"><div class="sg" id="grid-filt"></div><div class="sg cols" id="grid-cols"></div></div>
   </div>
   <div class="grid-ov-body">
     <div class="card-grid" id="card-grid"></div>
@@ -1553,8 +1586,8 @@ function switchTab(tab){
   if(tab==='home') renderHome();
   if(tab==='browse'){
     const el = document.getElementById('series-list');
-    if(!_seriesData.length) loadSeries();
-    else if(el && !el.querySelector('.serie-block')) renderSeries();
+    if(!_seriesData?.length) loadSeries();
+    else renderSeries();   // compteurs à jour
   }
   if(tab==='scan'){ updateScanDBStatus(); renderScanHistory(); }
   if(tab==='boutiques') renderBoutiques();
@@ -2922,7 +2955,18 @@ function saveSeriesCache(data){
 
 
 async function loadSeries(){
-  // 1. Base mobile locale
+  // La liste vient uniquement de la base copiée de PoKoalaShop
+  if(!_mobileDB?.series?.length){
+    document.getElementById('series-list').innerHTML='<div class="loader">Chargement des extensions…</div>';
+    if(!(await loadMobileDB())){
+      document.getElementById('series-list').innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Extensions indisponibles.<br><button class="btn btn-secondary" style="margin-top:10px" onclick="loadSeries()">Réessayer</button></div>`;
+      return;
+    }
+  }
+  _seriesData = _mobileDB.series;
+  renderSeries();
+  return;
+  // (ancien chemin TCGdex / PC, plus utilisé)
   if(_mobileDB?.series?.length){
     // On met en cache la donnée BRUTE : augmentSeries dépend de _mobileDB, qui
     // peut ne pas être chargé au moment du rendu. Cacher le résultat complété
@@ -3015,49 +3059,80 @@ async function _fetchSeriesOnline(){
   }
 }
 
+// Symbole d'extension (sources de PoKoalaShop) ; code texte en dernier recours
+function symHtml(st){
+  const l = st?.syms || [];
+  if(!l.length) return `<span class="sfb">${escHtml((st?.code||'?').slice(0,3))}</span>`;
+  return `<img class="ssym" loading="lazy" src="${escHtml(l[0])}" alt="" data-sy="${escHtml(JSON.stringify(l))}" data-syi="0" data-code="${escHtml(st.code||'')}" onerror="symNext(this)" onload="symOk(this)">`;
+}
+// Une source peut renvoyer une image vide ou un pixel sans déclencher d'erreur
+function symOk(img){ if(img.naturalWidth < 8 || img.naturalHeight < 8) symNext(img); }
+function symNext(img){
+  let l; try{ l = JSON.parse(img.getAttribute('data-sy')); }catch(e){ l = []; }
+  const i = parseInt(img.getAttribute('data-syi'), 10) + 1;
+  if(i < l.length){ img.setAttribute('data-syi', i); img.src = l[i]; return; }
+  const fb = document.createElement('span');
+  fb.className = 'sfb';
+  fb.textContent = (img.getAttribute('data-code') || '?').slice(0,3);
+  img.replaceWith(fb);
+}
+// Code d'extension affiché seulement quand le symbole ne le porte pas déjà
+const SYM_HAS_CODE = { 'Écarlate et Violet':1, 'Méga-Évolution':1 };
+function codeHtml(st){
+  if(!st || !st.code) return '';
+  if(SYM_HAS_CODE[st.serie] || (st.date && st.date >= '2023-03-31')) return '';
+  return `<span class="scode">${escHtml(st.code)}</span>`;
+}
+function escHtml(v){ return String(v==null?'':v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+
+// Carte de la base ↔ exemplaire de la collection. Les identifiants de la
+// collection sont variés (TCGdex 'sv01-001', base 'sv1-1', Galeries…) :
+// on les rapporte tous à la carte de la base.
+function collCardOf(c){
+  const id = String(c.id||''), d = id.lastIndexOf('-');
+  let pc = d > 0 ? pksCard(id.slice(0,d), id.slice(d+1)) : null;
+  if(!pc && c.setId && (c.num||c.number)) pc = pksCard(c.setId, c.num||c.number);
+  return pc;
+}
+function ownedIndex(){
+  const m = new Map();
+  for(const c of col){
+    const pc = collCardOf(c);
+    if(pc && !m.has(pc.id)) m.set(pc.id, c);
+  }
+  return m;
+}
+function setsOfRoot(sid){
+  return [sid, ...(_mobileDB?.sets||[]).filter(st => st.parent === sid).map(st => st.id)];
+}
+
 function renderSeries(){
-  const TCGDEX_TO_PTCG = {"me01":"me1","me02":"me2","me02.5":"me2pt5","me03":"me3","me04":"me4","sv01":"sv1","sv02":"sv2","sv03":"sv3","sv03.5":"sv3pt5","sv04":"sv4","sv04.5":"sv4pt5","sv05":"sv5","sv06":"sv6","sv06.5":"sv6pt5","sv07":"sv7","sv08":"sv8","sv08.5":"sv8pt5","sv09":"sv9","sv10":"sv10","sv10.5w":"rsv10pt5","sv10.5b":"zsv10pt5","swsh12.5":"swsh12pt5","swsh12.5gg":"swsh12pt5gg","sm7.5":"sm75","sm3.5":"sm35","sm11.5":"sm115"};
-
-  // Index de la collection par setId pour calcul rapide
-  const collBySet = {};
-  col.forEach(c => {
-    const sid = c.setId || c.set;
-    if(sid){ if(!collBySet[sid]) collBySet[sid]=0; collBySet[sid]++; }
-  });
-
-  const series=[..._seriesData];
-  document.getElementById('series-list').innerHTML=series.map((s,i)=>{
-    const sets=s.sets||[];
-    return`<div class="serie-block">
-      <div class="serie-header" onclick="toggleSerie(${i})">
-        <span class="serie-name">${s.name}</span>
-        <span class="serie-count">${sets.length}</span>
-        <span class="serie-arrow open" id="sa-${i}">▾</span>
-      </div>
-      <div class="serie-sets open" id="ss-${i}">
-        ${sets.map(st=>{
-          const ptcgId = TCGDEX_TO_PTCG[st.id] || st.id;
-          const _sym = [...symbolSources(ptcgId, st.name), ...symbolSources(st.id, st.name)];
-          const symbolUrl = _sym[0] || '';
-          const _symAttr = JSON.stringify([...new Set(_sym)]).replace(/"/g,'&quot;');
-          const total = st.cardCount?.official || 0;
-          const owned = collBySet[ptcgId] || collBySet[st.id] || 0;
-          const pct = total > 0 ? Math.round(owned/total*100) : 0;
-          const pctColor = pct===100 ? '#4ade80' : pct>50 ? '#FFD700' : 'rgba(255,255,255,0.4)';
-          return`<div class="set-item" onclick="openGrid('${escId(st.id)}','${escId(st.name||'')}')">
-            ${symbolUrl?`<img src="${symbolUrl}" data-srcs="${_symAttr}" data-si="0" alt="" style="width:22px;height:22px;object-fit:contain;opacity:.85;flex-shrink:0" onerror="imgNext(this,true)">`:'<span style="width:22px;flex-shrink:0"></span>'}
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-                <span class="set-item-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%">${st.name||st.id}</span>
-                <span style="font-size:10px;font-weight:700;color:${pctColor};flex-shrink:0;margin-left:6px">${owned>0?owned+'/'+total+' · '+pct+'%':total+' cartes'}</span>
-              </div>
-              ${total>0?`<div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${pctColor==='#4ade80'?'#4ade80':pctColor==='#FFD700'?'linear-gradient(90deg,#FFD700,#FFA500)':'rgba(255,255,255,0.15)'}"></div></div>`:''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  }).join('');
+  const el = document.getElementById('series-list');
+  if(!_mobileDB?.sets?.length){ el.innerHTML = '<div class="loader">Chargement des extensions…</div>'; return; }
+  const parent = {};
+  for(const st of _mobileDB.sets) parent[st.id] = st.parent || st.id;
+  // cartes différentes possédées, par extension principale (sous-extensions incluses)
+  const per = {};
+  for(const [pid] of ownedIndex()){
+    const pc = pksCard(pid.slice(0, pid.lastIndexOf('-')), pid.slice(pid.lastIndexOf('-')+1));
+    const r = parent[pc?.setId] || pc?.setId;
+    if(r) per[r] = (per[r]||0) + 1;
+  }
+  const tot = {};
+  for(const c of _mobileDB.cards){ const r = parent[c.setId] || c.setId; tot[r] = (tot[r]||0) + 1; }
+  let h = '';
+  for(const se of _mobileDB.series){
+    const tb = se.sets.reduce((a, st) => a + (per[st.id]||0), 0);
+    h += `<div class="pk-serie">${escHtml(se.name)}<span class="blocN${tb?'':' z'}">${tb||'—'}</span></div>`;
+    for(const s0 of se.sets){
+      const st = _mobileDB.sets.find(x => x.id === s0.id) || s0;
+      const n = per[st.id]||0;
+      h += `<div class="pk-set" onclick="openGrid('${escId(st.id)}')">${symHtml(st)}`+
+           `<div class="sinfo"><b>${escHtml(st.name)}</b>${codeHtml(st)}</div>`+
+           `<span class="sc${n?'':' z'}">${n?n+'<small>/'+(tot[st.id]||0)+'</small>':'—'}</span></div>`;
+    }
+  }
+  el.innerHTML = h;
 }
 
 function toggleSerie(i){
@@ -3081,136 +3156,110 @@ const PARENT_TO_TG = {
   'cel25':    'cel25c',
 };
 
-async function openGrid(setId,setName){
-  _gridSetId=setId;
-  document.getElementById('grid-title').textContent=setName||setId;
-  document.getElementById('grid-pct').textContent='';
-  document.getElementById('grid-stats').style.display='none';
-  document.getElementById('card-grid').innerHTML='<div class="loader">Chargement…</div>';
+// Grille d'une extension : cartes de la base, sous-extensions (Galeries,
+// coffres, collections classiques) à la suite, comme dans PoKoalaShop
+let _gridFilt = 'all', _gridQ = '';
+const GRID_COLS_KEY = 'pk_cols';
+function gridLarge(){ return window.innerWidth >= 760; }
+function gridColsChoix(){ return gridLarge() ? [3,5,6,8,10] : [2,3,4]; }
+function gridColsNow(){
+  let o = {}; try{ o = JSON.parse(localStorage.getItem(GRID_COLS_KEY) || '{}') || {}; }catch(e){}
+  const v = gridLarge() ? o.w : o.n;
+  return gridColsChoix().includes(v) ? v : (gridLarge() ? 6 : 3);
+}
+function gridColsSet(v){
+  let o = {}; try{ o = JSON.parse(localStorage.getItem(GRID_COLS_KEY) || '{}') || {}; }catch(e){}
+  if(gridLarge()) o.w = v; else o.n = v;
+  try{ localStorage.setItem(GRID_COLS_KEY, JSON.stringify(o)); }catch(e){}
+  renderGrid();
+}
+function gridSetFilt(f){ _gridFilt = f; renderGrid(); }
+function gridSearchInput(){
+  clearTimeout(gridSearchInput._t);
+  gridSearchInput._t = setTimeout(() => {
+    _gridQ = document.getElementById('grid-q').value;
+    document.getElementById('grid-qx').style.display = _gridQ ? '' : 'none';
+    renderGrid();
+  }, 200);
+}
+function gridClearQ(){
+  const i = document.getElementById('grid-q');
+  i.value = ''; _gridQ = '';
+  document.getElementById('grid-qx').style.display = 'none';
+  renderGrid();
+}
+function normTxt(v){ return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+
+async function openGrid(setId){
+  if(!_mobileDB?.cards?.length && !(await loadMobileDB())){ toast('Base de cartes indisponible'); return; }
+  // id d'une sous-extension : ouvrir l'extension principale
+  const st0 = _mobileDB.sets.find(x => x.id === setId);
+  if(st0?.parent) setId = st0.parent;
+  const st = _mobileDB.sets.find(x => x.id === setId) || {id:setId, name:setId};
+  _gridSetId = setId;
+  _gridQ = '';
+  document.getElementById('grid-q').value = '';
+  document.getElementById('grid-qx').style.display = 'none';
+  document.getElementById('grid-title').textContent = st.name;
+  document.getElementById('grid-sym').innerHTML = symHtml(st);
+  document.getElementById('grid-code').innerHTML = codeHtml(st);
+  const parts = setsOfRoot(setId);
+  _gridCards = [];
+  for(const p of parts) for(const c of _mobileDB.cards) if(c.setId === p)
+    _gridCards.push({id:c.id, localId:c.number, number:c.number, name:c.name, nameEn:c.nameEn,
+                     rarity:c.rarity, setId:c.setId, setName:c.setName, image:null});
   document.getElementById('grid-overlay').classList.add('open');
   document.body.style.overflow='hidden';
-  try{
-    let d = {};
-    try{
-      const r=await fetch(`${TCGDEX_FR}/sets/${setId}`);
-      if(r.ok) d=await r.json();
-    }catch(e){}
-    _gridCards=d.cards||[];
+  document.querySelector('#grid-overlay .grid-ov-body').scrollTop = 0;
+  renderGrid();
+}
 
-    // TCGdex ne connaît pas cet id (ex. swsh35 vs swsh3.5) : on tente la variante
-    // à point, puis la base locale
-    if(!_gridCards.length){
-      const alt = String(setId).replace(/pt(\d)/g,'.$1');
-      if(alt !== setId){
-        try{
-          const rAlt=await fetch(`${TCGDEX_FR}/sets/${alt}`);
-          if(rAlt.ok){
-            const dAlt=await rAlt.json();
-            if(dAlt.cards?.length) _gridCards=dAlt.cards;
-          }
-        }catch(e){}
-      }
-    }
-    if(!_gridCards.length && _mobileDB?.cards?.length){
-      _gridCards = _mobileDB.cards
-        .filter(c => c.setId === setId)
-        .map(c => ({id:c.id, localId:c.number, name:c.name, image:c.img||''}));
-    }
-
-    // Charger les cartes TG/GG du set parent
-    const tgSetId = PARENT_TO_TG[setId];
-    if(tgSetId){
-      const PTCG_TO_TCGDEX_TG = {'swsh12pt5gg':'swsh12.5gg'};
-      const tcgdexTgId = PTCG_TO_TCGDEX_TG[tgSetId] || tgSetId;
-      let tgCards = [];
-
-      try{
-        const r2=await fetch(`${TCGDEX_FR}/sets/${tcgdexTgId}`);
-        if(r2.ok){
-          const d2=await r2.json();
-          if(d2.cards?.length){
-            tgCards = d2.cards.map(c=>({...c, id:`${tgSetId}-${c.localId}`, _tgSetId:tgSetId}));
-          }
-        }
-      }catch(e){}
-
-      // Fallback _mobileDB si TCGdex ne les a pas
-      if(!tgCards.length && _mobileDB?.cards?.length){
-        tgCards = _mobileDB.cards
-          .filter(c => c.setId === tgSetId)
-          .map(c => ({id:c.id, localId:c.number, name:c.name, image:'', _tgSetId:tgSetId}));
-      }
-
-      if(tgCards.length){
-        // Dédupliquer : retirer les TG déjà dans _gridCards, ajouter celles avec images
-        const tgIds = new Set(tgCards.map(c=>c.id));
-        _gridCards = _gridCards.filter(c => {
-          const id = c.id || (tgSetId+'-'+c.localId);
-          return !tgIds.has(id);
-        });
-        _gridCards = [..._gridCards, ...tgCards];
-      }
-    }
-
-    renderGrid();
-  }catch(e){
-    document.getElementById('card-grid').innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Erreur chargement</div>`;
-  }
+function gridSeg(fn, val, cur, lbl){
+  return `<button class="${String(cur)===String(val)?'on':''}" onclick="${fn}(${typeof val==='number'?val:`'${val}'`})">${lbl}</button>`;
 }
 
 function renderGrid(){
-  const ownedMap=new Map(col.map(c=>[c.id,c]));
-  const owned=_gridCards.filter(c=>{
-    const id=c.id||(_gridSetId+'-'+c.localId);
-    return ownedMap.has(id);
-  });
-  const pct=_gridCards.length?Math.round(owned.length/_gridCards.length*100):0;
-  document.getElementById('grid-pct').textContent=`${owned.length}/${_gridCards.length}`;
-  document.getElementById('grid-count').textContent=`${owned.length} / ${_gridCards.length} cartes · ${pct}%`;
-  const fill=document.getElementById('grid-prog-fill');
-  if(fill) fill.style.width=pct+'%';
-  document.getElementById('grid-stats').style.display='block';
+  const owned = ownedIndex();
+  document.getElementById('grid-filt').innerHTML =
+    gridSeg('gridSetFilt','all',_gridFilt,'Toutes') + gridSeg('gridSetFilt','has',_gridFilt,"J'en ai") + gridSeg('gridSetFilt','none',_gridFilt,'Manquantes');
+  const nc = gridColsNow();
+  document.getElementById('grid-cols').innerHTML = gridColsChoix().map(v => gridSeg('gridColsSet', v, nc, String(v))).join('');
+  updateGridStats(owned);
 
-  document.getElementById('card-grid').innerHTML=_gridCards.map(c=>{
-    const effectiveSetId = c._tgSetId || c.setId || _gridSetId;
-    const localId = c.localId || c.number || '';
-    const id=c.id||(effectiveSetId+'-'+localId);
-    const oc=ownedMap.get(id);
-    // Construire l'URL image comme cardImg : TCGdex FR depuis l'ID
-    const cardId = id;
-    const p = cardId.split('-');
-    const imgSetId = p.slice(0,-1).join('-');
-    const imgNum = p[p.length-1];
-    const imgSerie = imgSetId.match(/^([a-z]+)/i)?.[1] || imgSetId;
-    const _srcs = imgSources(imgSetId, imgNum, c.image || null);
-    const imgUrl = _srcs[0];
+  let vue = _gridCards;
+  if(_gridFilt === 'has')  vue = vue.filter(c => owned.has(c.id));
+  if(_gridFilt === 'none') vue = vue.filter(c => !owned.has(c.id));
+  const q = normTxt(_gridQ.trim());
+  if(q){
+    const qn = _gridQ.trim().toLowerCase().replace(/^0+(?=.)/, '');
+    vue = vue.filter(c => normTxt(c.name).includes(q) || normTxt(c.nameEn).includes(q) ||
+                          String(c.localId).toLowerCase().replace(/^0+(?=.)/, '').startsWith(qn));
+  }
+  const g = document.getElementById('card-grid');
+  g.style.gridTemplateColumns = `repeat(${nc},1fr)`;
+  if(!vue.length){
+    g.innerHTML = `<div class="g-vide">${q ? 'Aucune carte ne correspond dans cette extension.'
+      : _gridFilt === 'has' ? 'Aucune carte de cette extension dans ta collection.'
+      : 'Tu as toutes les cartes de cette extension.'}</div>`;
+    return;
+  }
+  g.innerHTML = vue.map(c => {
+    const oc = owned.get(c.id);
+    const id = oc ? oc.id : c.id;
+    const _srcs = imgSources(c.setId, c.localId, null);
+    const imgUrl = _srcs[0] || '';
     const _srcsAttr = JSON.stringify(_srcs).replace(/"/g,'&quot;');
-    const sid=escId(id);
-    const cname=escId(getCardNameFR(c) || c.name || '');
-    const cimg=escId(imgUrl);
-    return`<div class="grid-card${oc?'':' not-owned'}" data-id="${sid}" data-name="${cname}" data-img="${cimg}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
+    const sid = escId(id);
+    const cname = escId(getCardNameFR(c) || c.name || '');
+    const cimg = escId(imgUrl);
+    return`<div class="grid-card${oc?'':' not-owned'}" data-id="${escHtml(id)}" data-name="${escHtml(getCardNameFR(c) || c.name || '')}" data-img="${escHtml(imgUrl)}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
       <img src="${imgUrl}" data-srcs="${_srcsAttr}" data-si="0" loading="lazy" onerror="imgNext(this)">
-      <span class="grid-card-num">${localId}</span>
+      <span class="grid-card-num">${escHtml(c.localId)}</span>
       ${oc?`<span class="grid-card-qty">${oc.qty}×</span>`:''}
       ${!oc?`<button class="grid-add-btn" onclick="event.stopPropagation();quickAddFromGrid('${sid}','${cname}','${cimg}')">+</button>`:''}
-      <button class="grid-cm-btn" title="Prix Cardmarket (FR, NM)" onclick="event.stopPropagation();openCM('${escId(c.nameEn||c.name||'')}','${escId(localId)}')"><img src="${CM_LOGO}" alt="Cardmarket"></button>
+      <button class="grid-cm-btn" title="Prix Cardmarket (FR, NM)" onclick="event.stopPropagation();openCM('${escId(c.nameEn||c.name||'')}','${escId(c.localId)}')"><img src="${CM_LOGO}" alt="Cardmarket"></button>
     </div>`;
   }).join('');
-
-  // Intersection Observer pour lazy loading
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if(entry.isIntersecting){
-        const img = entry.target.querySelector('img[data-src]');
-        if(img && img.dataset.src && img.src !== img.dataset.src){
-          img.src = img.dataset.src;
-          observer.unobserve(entry.target);
-        }
-      }
-    });
-  }, {rootMargin: '200px'});
-
-  document.querySelectorAll('.grid-card').forEach(card => observer.observe(card));
 }
 
 function gridTapUnowned(id, name, img){
@@ -3225,7 +3274,7 @@ function gridTapUnowned(id, name, img){
     id, name: name||(c?.name||id),
     number: c?.localId||c?.number||id.split('-').pop(),
     rarity: c?.rarity||'',
-    set:{id:_gridSetId, name:document.getElementById('grid-title').textContent},
+    set:{id:c?.setId||_gridSetId, name:c?.setName||document.getElementById('grid-title').textContent},
     images:{small:_srcs[0], large:_srcs[1]||_srcs[0]}
   };
   document.getElementById('card-modal-content').innerHTML=`
@@ -3277,18 +3326,16 @@ function updateGridCard(id){
   updateGridStats();
 }
 
-// Recalcule le compteur et la barre de progression sans toucher aux tuiles
-function updateGridStats(){
+// Compteurs de l'en-tête, sans toucher aux tuiles
+function updateGridStats(owned){
   if(!_gridCards?.length) return;
-  const ids = new Set(col.map(c => c.id));
-  const owned = _gridCards.filter(c => ids.has(c.id || ((c._tgSetId||c.setId||_gridSetId)+'-'+(c.localId||c.number||''))));
-  const pct = Math.round(owned.length / _gridCards.length * 100);
+  owned = owned || ownedIndex();
+  let poss = 0, ex = 0;
+  for(const c of _gridCards){ const oc = owned.get(c.id); if(oc){ poss++; ex += oc.qty||0; } }
   const p = document.getElementById('grid-pct');
-  if(p) p.textContent = `${owned.length}/${_gridCards.length}`;
-  const cnt = document.getElementById('grid-count');
-  if(cnt) cnt.textContent = `${owned.length} / ${_gridCards.length} cartes · ${pct}%`;
-  const fill = document.getElementById('grid-prog-fill');
-  if(fill) fill.style.width = pct + '%';
+  if(p) p.textContent = `${poss}/${_gridCards.length}`;
+  const sub = document.getElementById('grid-sub');
+  if(sub) sub.textContent = `${_gridCards.length} cartes · ${poss} possédée${poss>1?'s':''} · ${ex} exemplaire${ex>1?'s':''}`;
 }
 
 function quickAddFromGrid(id, name, img){
@@ -3297,7 +3344,7 @@ function quickAddFromGrid(id, name, img){
     id, name: name||(c?.name||id),
     number: c?.localId||c?.number||id.split('-').pop(),
     rarity: c?.rarity||'',
-    set:{id:_gridSetId, name:document.getElementById('grid-title').textContent},
+    set:{id:c?.setId||_gridSetId, name:c?.setName||document.getElementById('grid-title').textContent},
     images:(function(){
       const p=String(id).split('-');
       const src=imgSources(p.slice(0,-1).join('-'), p[p.length-1], c?.image||null);
@@ -3729,7 +3776,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.84';
+const APP_VERSION = '4.85';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -3878,9 +3925,8 @@ function onMobileDBLoaded(){
   try{ localStorage.removeItem(SERIES_CACHE_KEY); }catch(e){}
   _seriesData = null;
   if(_mobileDB?.series?.length){
-    _seriesData = augmentSeries(filterTGSets(_mobileDB.series));
-    saveSeriesCache(_mobileDB.series);
-    if(typeof renderSeries === 'function' && document.getElementById('series-list')) renderSeries();
+    _seriesData = _mobileDB.series;
+    if(document.getElementById('series-list')) renderSeries();
   }
 }
 

@@ -1430,7 +1430,11 @@ function _syncFromCopies(c){
 let _saveTimer;
 let _dirty = false; // des modifications attendent d'être envoyées sur le Drive
 function scheduleSave(){
-  if(!_driveToken){ updateSyncBadge(); return; }
+  if(!_driveToken){
+    // jeton en cours de renouvellement : la modification part ensuite
+    if(localStorage.getItem('drive_hint')){ _dirty = true; reauth(); }
+    updateSyncBadge(); return;
+  }
   _dirty = true; updateDriveUI();
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>driveSave(true),3000);
@@ -3426,37 +3430,115 @@ function updateDriveUI(){
   }
 }
 
-function driveSignIn(){
-  const hint=localStorage.getItem('drive_hint');
-  const client=google.accounts.oauth2.initTokenClient({
+// ═══ JETON GOOGLE — même fonctionnement que PoKoalaShop ═══
+// Un jeton Google expire au bout d'une heure. On mémorise son échéance, on le
+// renouvelle en silence 15 min avant, et on surveille en continu (Android
+// suspend les minuteries en arrière-plan). Un refus 401 relance aussitôt le
+// renouvellement au lieu de déconnecter.
+const TOKEN_KEY='drive_token', TOKEN_EXP_KEY='drive_token_exp';
+const REFRESH_MARGIN=15*60*1000, TOKEN_SEUIL=20*60*1000;
+let _tokenExp=0, _tokenClient=null, _refreshTimer=null, _reauthAt=0, _signInManuel=false;
+
+function tokenLeft(){ return _tokenExp - Date.now(); }
+function tokenValid(){ return !!_driveToken && Date.now() < _tokenExp - 10000; }
+
+// Le script Google se charge en asynchrone : on attend qu'il soit prêt
+function gisPret(){ return !!(window.google && google.accounts && google.accounts.oauth2); }
+function initTokenClient(){
+  if(_tokenClient || !gisPret()) return !!_tokenClient;
+  _tokenClient = google.accounts.oauth2.initTokenClient({
     client_id:DRIVE_CLIENT_ID, scope:DRIVE_SCOPE,
-    login_hint:hint||undefined,
+    error_callback:()=>{ if(_signInManuel){ _signInManuel=false; toast('Connexion annulée'); } },
     callback:async(resp)=>{
-      if(resp.error){ toast('Erreur : '+resp.error); return; }
+      const manuel=_signInManuel; _signInManuel=false;
+      if(resp.error){ if(manuel) toast('Erreur : '+resp.error); return; }
       _driveToken=resp.access_token; _driveChecked=true;
-      localStorage.setItem('drive_token',_driveToken);
-      try{
-        const info=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+_driveToken}}).then(r=>r.json());
-        if(info.email) localStorage.setItem('drive_hint',info.email);
-      }catch(e){}
-      updateDriveUI();
-      toast('✅ Connecté à Google Drive');
-      await driveLoad(true);
+      _tokenExp=Date.now()+(parseInt(resp.expires_in,10)||3500)*1000;
+      try{ localStorage.setItem(TOKEN_KEY,_driveToken); localStorage.setItem(TOKEN_EXP_KEY,String(_tokenExp)); }catch(e){}
+      scheduleRefresh();
+      updateDriveUI(); updateSyncBadge();
+      if(manuel){
+        try{
+          const info=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+_driveToken}}).then(r=>r.json());
+          if(info.email) localStorage.setItem('drive_hint',info.email);
+        }catch(e){}
+        toast('✅ Connecté à Google Drive');
+        await driveLoad(true);
+      } else {
+        // Renouvellement silencieux : renvoyer ce qui n'a pas pu partir
+        if(!_driveFileId){ try{ _driveFileId=await driveFindFile(); }catch(e){} }
+        if(_dirty) driveSave(true);
+      }
     }
   });
-  client.requestAccessToken();
+  return true;
 }
+
+function driveSignIn(){
+  if(!initTokenClient()){ toast('Google pas encore chargé, réessaie dans un instant'); return; }
+  _signInManuel=true;
+  const hint=localStorage.getItem('drive_hint');
+  _tokenClient.requestAccessToken(hint ? {prompt:'', hint} : {prompt:''});
+}
+
+// Renouvellement silencieux (pas de fenêtre si la session Google est active)
+function reauth(){
+  if(!localStorage.getItem('drive_hint') && !_driveToken) return; // jamais connecté
+  if(!initTokenClient()){ setTimeout(reauth, 1500); return; }
+  if(Date.now()-_reauthAt < 4000) return;
+  _reauthAt=Date.now();
+  const hint=localStorage.getItem('drive_hint');
+  try{ _tokenClient.requestAccessToken(hint ? {prompt:'', hint} : {prompt:''}); }catch(e){}
+}
+
+function scheduleRefresh(){
+  clearTimeout(_refreshTimer);
+  let wait=tokenLeft()-REFRESH_MARGIN;
+  if(wait<30000) wait=30000;
+  _refreshTimer=setTimeout(()=>{
+    // en arrière-plan le renouvellement ne peut pas aboutir : on repousse
+    if(document.hidden){ _refreshTimer=setTimeout(scheduleRefresh,45000); return; }
+    reauth();
+  }, wait);
+}
+
+// Surveillance continue : au retour dans l'app on renouvelle s'il reste
+// moins de 20 min ; en cours d'utilisation, seulement sous 3 min
+function watchToken(retour){
+  if(document.hidden || !localStorage.getItem('drive_hint')) return;
+  if(!_driveToken){ reauth(); return; }
+  const reste=tokenLeft();
+  if(retour ? (reste<TOKEN_SEUIL) : (reste<3*60*1000)) reauth();
+}
+setInterval(()=>watchToken(false), 60*1000);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') watchToken(true); });
+
+// Toute réponse 401 de Google : jeton refusé → renouvellement immédiat
+const _fetchOrig=window.fetch.bind(window);
+window.fetch=async(...args)=>{
+  const r=await _fetchOrig(...args);
+  try{
+    const u=String(args[0]?.url||args[0]||'');
+    if(r.status===401 && u.includes('googleapis.com') && localStorage.getItem('drive_hint')){
+      _tokenExp=0; reauth();
+    }
+  }catch(e){}
+  return r;
+};
 
 function driveSignOut(){
   if(_driveToken) try{google.accounts.oauth2.revoke(_driveToken);}catch(e){}
-  _driveToken=null; _driveFileId=null; _driveChecked=true;
-  localStorage.removeItem('drive_token');
+  _driveToken=null; _driveFileId=null; _driveChecked=true; _tokenExp=0;
+  clearTimeout(_refreshTimer);
+  localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(TOKEN_EXP_KEY);
+  localStorage.removeItem('drive_hint'); // déconnexion voulue : plus de renouvellement
   updateDriveUI(); closeModal('drive-modal'); toast('Déconnecté de Drive');
 }
 
 async function driveFindFile(){
   if(!_driveToken) return null;
   const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FILE_NAME}'+and+trashed=false&fields=files(id,name)`,{headers:{'Authorization':'Bearer '+_driveToken}});
+  if(!r.ok) throw new Error('drive '+r.status); // jeton refusé ≠ « aucun fichier »
   const d=await r.json(); return d.files?.[0]?.id||null;
 }
 
@@ -3477,7 +3559,9 @@ async function driveSave(silent=false){
       form.append('file',new Blob([data],{type:'application/json'}));
       r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{'Authorization':'Bearer '+_driveToken},body:form});
     }
-    const res=await r.json(); _driveFileId=res.id;
+    // Une sauvegarde refusée (jeton expiré…) ne doit jamais passer pour réussie
+    if(!r.ok) throw new Error('drive '+r.status);
+    const res=await r.json(); if(res.id) _driveFileId=res.id;
     dot.className='drive-dot ok';
     localStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
     _dirty = false;
@@ -3486,7 +3570,8 @@ async function driveSave(silent=false){
     if(!silent){ toast('✅ Collection sauvegardée sur Drive !'); closeModal('drive-modal'); }
     else driveInspect();
   }catch(e){
-    document.getElementById('drive-dot').className='drive-dot';
+    // Échec : les modifications restent en attente, renvoyées après renouvellement
+    _dirty = true; updateDriveUI();
     if(!silent) toast('Erreur sauvegarde Drive');
   }
 }
@@ -3539,6 +3624,10 @@ function updateSyncBadge(){
   // Au lancement, renderHome() s'exécute avant la restauration du jeton :
   // on ne peut pas conclure à une absence de connexion à ce moment-là
   if(!_driveChecked){ el.style.display = 'none'; return; }
+  // Renouvellement du jeton en cours (moins de 2 min) : pas d'alerte prématurée
+  if(!_driveToken && localStorage.getItem('drive_hint') && Date.now()-_reauthAt < 120000){
+    el.style.display = 'none'; return;
+  }
   if(!_driveToken){
     el.style.display = 'block';
     el.textContent = '⚠️ Sauvegarde automatique inactive — connecte-toi à Drive';
@@ -3591,7 +3680,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.81';
+const APP_VERSION = '4.82';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -4618,14 +4707,17 @@ function toast(msg,dur=2500){ const el=document.getElementById('toast'); el.text
 async function init(){
   document.getElementById('app-version').textContent = APP_VERSION;
   load(); renderHome();
-  const t=localStorage.getItem('drive_token');
-  if(t){
-    _driveToken=t; updateDriveUI();
-    try{
-      const fid=await driveFindFile();
-      if(fid){ _driveFileId=fid; document.getElementById('drive-dot').className='drive-dot ok'; }
-      else { _driveToken=null; localStorage.removeItem('drive_token'); updateDriveUI(); }
-    }catch(e){ _driveToken=null; localStorage.removeItem('drive_token'); updateDriveUI(); }
+  const t=localStorage.getItem(TOKEN_KEY);
+  const te=parseInt(localStorage.getItem(TOKEN_EXP_KEY)||'0',10);
+  if(t && te > Date.now()+60000){
+    // Jeton encore valable : on le reprend tel quel
+    _driveToken=t; _tokenExp=te; updateDriveUI(); scheduleRefresh();
+    try{ _driveFileId=await driveFindFile(); }catch(e){}
+  } else if(localStorage.getItem('drive_hint')){
+    // Jeton expiré (ou ancien format sans échéance) : renouvellement silencieux,
+    // sans déconnecter. Le script Google peut ne pas être encore prêt.
+    _driveToken=null;
+    setTimeout(reauth, 300);
   }
   _driveChecked = true;
   updateSyncBadge();

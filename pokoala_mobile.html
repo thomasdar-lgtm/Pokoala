@@ -1931,6 +1931,7 @@ function buildMobileDB(sj, cj){
     setName: setById.get(c.s)?.name || c.s, rarity: c.r || '', img: c.g || '',
     p: c.p || '', v: c.v, d: c.d
   }));
+  frNamesFill(cards);
   const counts = new Map();
   for(const c of cards) counts.set(c.setId, (counts.get(c.setId)||0) + 1);
   // Blocs dans l'ordre de PoKoalaShop ; les sous-extensions (Galeries,
@@ -1947,7 +1948,42 @@ function buildMobileDB(sj, cj){
   // Codes d'extension (scanner) : table historique complétée par ceux de PKS
   const ptcgoMap = Object.assign({}, typeof SET_CODE_MAP === 'object' ? SET_CODE_MAP : {});
   for(const st of sets){ if(st.code && !ptcgoMap[st.code]) ptcgoMap[st.code] = st.parent || st.id; }
-  return { cards, sets, series, ptcgoMap, cardCount: cards.length, generatedAt: sj.built || '' };
+  // code imprimé → toutes les extensions qui le portent (parent + Galerie, kits…)
+  const codeSets = {};
+  for(const st of sets) if(st.code) (codeSets[st.code] = codeSets[st.code] || []).push(st.id);
+  return { cards, sets, series, ptcgoMap, codeSets, cardCount: cards.length, generatedAt: sj.built || '' };
+}
+
+// Cartes sans nom français dans la base (Galeries, certaines promos et
+// anciennes extensions) : nom traduit à partir des autres cartes du même
+// Pokémon, en gardant le suffixe (V, VMAX, ex…) et les formes régionales.
+// Le nom anglais d'origine reste dans nameEn (Cardmarket, recherche).
+function frNamesFill(cards){
+  const cnt = new Map();
+  for(const c of cards){
+    if(!c.nameEn || c.name === c.nameEn) continue;
+    const k = c.nameEn.toLowerCase();
+    let m = cnt.get(k); if(!m){ m = new Map(); cnt.set(k, m); }
+    m.set(c.name, (m.get(c.name)||0) + 1);
+  }
+  const map = new Map();
+  for(const [k, m] of cnt){ let best = null, bn = 0; for(const [n, v] of m) if(v > bn){ best = n; bn = v; } map.set(k, best); }
+  const SUF = /(\s+(?:V|VMAX|VSTAR|V-UNION|ex|EX|GX|BREAK|LV\.X|Prime|LEGEND|δ|Star|★|☆|◇)|-GX|-EX|-ex)$/;
+  const PRE = [['Hisuian ','{} de Hisui'],['Galarian ','{} de Galar'],['Alolan ','{} d’Alola'],['Paldean ','{} de Paldea'],['Radiant ','{} Radieux']];
+  const tr = (e, d) => {
+    if(d > 3 || !e) return null;
+    const k = e.toLowerCase();
+    if(map.has(k)) return map.get(k);
+    const m = e.match(SUF);
+    if(m){ const t = tr(e.slice(0, m.index), d+1); if(t) return t + m[1]; }
+    for(const [en, fr] of PRE) if(e.startsWith(en)){ const t = tr(e.slice(en.length), d+1); if(t) return fr.replace('{}', t); }
+    return null;
+  };
+  for(const c of cards){
+    if(!c.nameEn || c.name !== c.nameEn) continue;
+    const t = tr(c.nameEn, 0);
+    if(t) c.name = t;
+  }
 }
 
 async function driveFindFileByName(name){
@@ -2665,47 +2701,50 @@ async function doSearch(){
   // 'gg07' == 'GG7' : on compare sans les zéros de tête
   const normNum = v => String(v||'').toLowerCase().replace(/^([a-z]*)0+(\d)/, '$1$2');
 
-  // 1. Recherche dans la base mobile locale
-  if(_mobileDB?.cards?.length){
-    const results = _mobileDB.cards.filter(c => {
-      const name = (c.name||'').toLowerCase();
-      const nameEn = (c.nameEn||'').toLowerCase();
-      const num = (c.number||'').toLowerCase();
-      // Les tokens texte doivent matcher le nom de la carte
-      const nameOk = nameTokens.every(t => name.includes(t) || nameEn.includes(t));
-      // Les tokens numériques doivent matcher le numéro (ou, à défaut, le nom :
-      // certains noms contiennent des chiffres)
-      const numOk = numTokens.every(t =>
-        normNum(num) === normNum(t) ||
-        num === t.padStart(3,'0') ||
-        name.includes(t) || nameEn.includes(t));
-      return nameOk && numOk;
-    }).slice(0, 40);
-
-    if(results.length){
-      renderSearchResults(results.map(c=>({
-        id: c.id,
-        name: getCardNameFR(c),
-        nameEn: c.nameEn,
-        number: c.number,
-        rarity: c.rarity,
-        set: {id: c.setId, name: setNameFR(c.setId, c.setName)},
-        images: {small: imgSources(c.setId, c.number, c.img || null)[0]},
-        _srcs: imgSources(c.setId, c.number, c.img || null)
-      })));
-      return;
-    }
+  // Recherche dans la base (celle de PoKoalaShop) : sans accents, nom FR ou EN,
+  // numéro, et code d'extension (« ronflex crz »)
+  if(!_mobileDB?.cards?.length && !(await loadMobileDB())){
+    res.innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Base de cartes indisponible</div>`; return;
   }
-
-  // 2. Fallback API pokemontcg.io
-  res.innerHTML=`<div class="loader">Recherche en cours…</div>`;
-  try{
-    const r=await fetch(`${POKEMONTCG}/cards?q=name:"${encodeURIComponent(tokens[0])}"&pageSize=30&select=id,name,number,rarity,set,images`);
-    const d=await r.json();
-    const cards=d.data||[];
-    if(!cards.length){ res.innerHTML=`<div class="empty-state"><span class="big">🤷</span>Aucune carte trouvée pour "${raw}"</div>`; return; }
-    renderSearchResults(cards);
-  }catch(e){ res.innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Erreur de connexion</div>`; }
+  // Code d'extension : 3 lettres au moins (« ex », « sv » sont des suffixes de
+  // cartes), un seul, et jamais seul (« mew » cherche le Pokémon, pas 151)
+  const codeTok = nameTokens.find(t => t.length >= 3 && _mobileDB.codeSets?.[t.toUpperCase()]);
+  let nameToks = nameTokens.filter(t => t !== codeTok).map(normTxt);
+  let setFilter = null;
+  // il reste un vrai nom (3 lettres au moins) ou un numéro : sinon « mew v » cherche Mew V
+  if(codeTok && (nameToks.some(t => t.length >= 3) || numTokens.length)) setFilter = new Set(_mobileDB.codeSets[codeTok.toUpperCase()]);
+  else nameToks = nameTokens.map(normTxt);
+  const chercher = (setFilter, nameToks) => {
+  const results = [];
+  for(const c of _mobileDB.cards){
+    if(setFilter && !setFilter.has(c.setId)) continue;
+    const name = normTxt(c.name), nameEn = normTxt(c.nameEn);
+    const num = (c.number||'').toLowerCase();
+    const nameOk = nameToks.every(t => name.includes(t) || nameEn.includes(t));
+    // les tokens numériques visent le numéro, ou le nom (certains noms ont des chiffres)
+    const numOk = numTokens.every(t =>
+      normNum(num) === normNum(t) || num === t.padStart(3,'0') ||
+      name.includes(t) || nameEn.includes(t));
+    if(nameOk && numOk){ results.push(c); if(results.length >= 150) break; }
+  }
+  return results;
+  };
+  let results = chercher(setFilter, nameToks);
+  // le mot pris pour un code faisait peut-être partie du nom (« mew v »)
+  if(!results.length && setFilter) results = chercher(null, nameTokens.map(normTxt));
+  if(!results.length){
+    res.innerHTML=`<div class="empty-state"><span class="big">🤷</span>Aucune carte trouvée pour "${escHtml(raw)}"</div>`; return;
+  }
+  renderSearchResults(results.map(c=>({
+    id: c.id,
+    name: c.name,
+    nameEn: c.nameEn,
+    number: c.number,
+    rarity: c.rarity,
+    set: {id: c.setId, name: c.setName},
+    images: {small: imgSources(c.setId, c.number, null)[0]},
+    _srcs: imgSources(c.setId, c.number, null)
+  })));
 }
 
 const _searchCardMap = new Map();
@@ -2714,8 +2753,9 @@ function renderSearchResults(cards){
   _searchCardMap.clear();
   cards.forEach((c,i) => _searchCardMap.set(i,c));
   const res=document.getElementById('search-results');
+  const _own = ownedIndex();
   res.innerHTML=cards.map((c,i)=>{
-    const owned=col.find(x=>x.id===c.id);
+    const owned=_own.get(c.id) || col.find(x=>x.id===c.id);
     const _s = c._srcs || imgSources(c.set?.id, c.number, null);
     const img = c.images?.small || _s[0];
     const _sa = JSON.stringify(_s).replace(/"/g,'&quot;');
@@ -2741,18 +2781,20 @@ function openCardModalFromSearch(idx){
   const c = _searchCardMap.get(idx);
   if(!c) return;
 
-  const owned = col.find(x=>x.id===c.id);
-  const img = c.images?.small || `https://assets.tcgdex.net/fr/${c.set?.id||''}/${c.number||''}/low.webp`;
+  const owned = ownedIndex().get(c.id) || col.find(x=>x.id===c.id);
+  const _hs = imgSources(c.set?.id, c.number, null, 'high');
+  const img = _hs[0];
+  const _hsa = JSON.stringify(_hs).replace(/"/g,'&quot;');
   const nameEn = c.nameEn || c.name;
   const num = c.number || c.localId || '';
-  const setName = setNameFR(c.set?.id || '', c.set?.name || c.set || '');
+  const setName = c.set?.name || setNameFR(c.set?.id || '', c.set || '');
 
   document.getElementById('card-modal-content').innerHTML=`
     <div class="modal-header">
       <span class="modal-title" style="font-size:15px;max-width:calc(100% - 50px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
       <button class="modal-close" onclick="closeModal('card-modal')">✕</button>
     </div>
-    ${img?`<div class="modal-img-wrap"><img src="${img}" onerror="this.style.display='none'"></div>`:''}
+    ${img?`<div class="modal-img-wrap"><img src="${img}" data-srcs="${_hsa}" data-si="0" onerror="imgNext(this)"></div>`:''}
     <div class="modal-section">
       <label>Extension</label>
       <div class="val">${setName}${num?' · N°'+num:''}</div>
@@ -2765,7 +2807,7 @@ function openCardModalFromSearch(idx){
     </div>`:''}
     <div class="btn-row">
       ${owned
-        ? `<button class="btn btn-secondary" style="flex:1" onclick="closeModal('card-modal');openCardModal('${escId(c.id)}')">
+        ? `<button class="btn btn-secondary" style="flex:1" onclick="closeModal('card-modal');openCardModal('${escId(owned.id)}')">
             Voir dans la collection
            </button>`
         : `<button class="btn btn-primary" style="flex:1" onclick="addCard(_searchCardMap.get(${idx}));closeModal('card-modal');toast('✅ Ajoutée')">
@@ -3776,7 +3818,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.85';
+const APP_VERSION = '4.86';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -4071,9 +4113,9 @@ function extractScanSignals(text, anno){
   const IGNORE = new Set(['PV','EX','GX','VX','HP','LV','XY','SV','DP','BW','SM','AP','AR','SAR','RR','SR','CSR','CHR','UR','ACE','TAG','GEM','SIR','IR','HR','TCG','NEO','POP','GYM','TG','GG','KJ','SWSH','HGSS','DTC','TC','DT','BASE','NIVEAU','GAME','ILLUS']);
   const words = T.match(/\b([A-Z]{2,6})\b/g) || [];
   for(const w of words){
-    if(!IGNORE.has(w) && codeMap[w] && !sig.setIds.includes(codeMap[w])){
-      sig.setIds.push(codeMap[w]);
-    }
+    if(IGNORE.has(w)) continue;
+    const ids = [...(codeMap[w] ? [codeMap[w]] : []), ...(_mobileDB?.codeSets?.[w] || [])];
+    for(const id of ids) if(!sig.setIds.includes(id)) sig.setIds.push(id);
   }
 
   // ── Noms candidats (complément) : mots et lignes du haut du texte ──

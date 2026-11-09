@@ -903,11 +903,24 @@ select.cond-select{
   font-size:9px;color:#f4a261;margin-top:2px;
 }
 
+/* ── ACCUEIL : valeur de la collection ── */
+.hv{background:rgba(20,10,40,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius);padding:16px 14px 6px;margin:4px 4px 0}
+.hv-lbl{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,0.45)}
+.hv-tot{font-family:'Raleway',sans-serif;font-size:32px;font-weight:900;color:var(--yellow2);line-height:1.15;margin:3px 0 2px}
+.hv-sub{font-size:11.5px;color:rgba(255,255,255,0.45);font-weight:600}
+.hv-sub b{color:rgba(255,255,255,0.75)}
+.hv-top{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08)}
+.hv-top .hv-lbl{margin-bottom:8px}
+.hv .br-row{background:rgba(255,255,255,0.03)}
+.hv-vide{font-size:12.5px;color:rgba(255,255,255,0.5);padding:4px 0 12px;line-height:1.5}
+.hv-rank{width:18px;flex:none;text-align:center;font-size:12px;font-weight:900;color:rgba(255,255,255,0.35)}
+
 /* ── TABLETTE (≥700px) ── */
 @media (min-width:700px){
   .tab-page{padding:20px 24px calc(24px + var(--safe-bottom))}
   .card-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:14px}
   .home-grid{grid-template-columns:repeat(4,1fr);gap:16px;padding:20px 4px;max-width:1000px;margin:0 auto}
+  .hv{max-width:992px;margin:4px auto 0}
   .stats-row{max-width:1000px;margin:0 auto 12px}
   .stat-val{font-size:22px}
   .stat-lbl{font-size:10px}
@@ -976,6 +989,7 @@ select.cond-select{
     <div class="tab-page active" id="tab-home">
       <div id="sync-warn" onclick="openModal('drive-modal')" style="display:none;background:rgba(255,170,0,0.14);border:1px solid rgba(255,170,0,0.4);color:#ffcc66;font-size:11px;font-weight:700;padding:8px 12px;border-radius:9px;margin-bottom:10px;cursor:pointer"></div>
       <div class="home-grid" id="home-grid"></div>
+      <div id="home-value"></div>
     </div>
 
     <!-- TAB BROWSE -->
@@ -2102,6 +2116,48 @@ function renderHome(){
       <div class="home-tile-val">${forsale}</div>
       <div class="home-tile-lbl">En vente</div>
     </div>`;
+  renderHomeValue();
+}
+
+// Valeur de la collection (prix Cardmarket × état, ou prix saisi) et les 5
+// cartes les plus chères à l'unité
+function renderHomeValue(){
+  const el = document.getElementById('home-value');
+  if(!el) return;
+  if(!col.length){ el.innerHTML = ''; return; }
+  let tot = 0, avec = 0, sans = 0;
+  const top = [];
+  for(const c of col){
+    const copies = c.copies && c.copies.length ? c.copies : [{cond:c.cond||'NM'}];
+    let unit = 0, ok = false;
+    for(const x of copies){
+      const u = cardUnitPrice(c, x.cond);
+      if(u != null){ ok = true; tot += u; if(u > unit) unit = u; }
+    }
+    if(ok){ avec++; if(unit > 0) top.push({c, unit}); } else sans++;
+  }
+  top.sort((a, b) => b.unit - a.unit);
+  let h = `<div class="hv"><div class="hv-lbl">Valeur de ma collection</div>
+    <div class="hv-tot">${fmtEur(tot)}</div>
+    <div class="hv-sub"><b>${avec}</b> carte${avec>1?'s':''} estimée${avec>1?'s':''}${sans ? ` · <b>${sans}</b> sans prix` : ''} · prix Cardmarket</div>`;
+  if(top.length){
+    h += `<div class="hv-top"><div class="hv-lbl">Mes cartes les plus chères</div>`;
+    top.slice(0, 5).forEach(({c, unit}, i) => {
+      const pc = collCardOf(c);
+      const srcs = pc ? imgSources(pc.setId, pc.number, null) : [c.img].filter(Boolean);
+      const setName = pc?.setName || c.set || '';
+      const num = pc?.number || c.num || '';
+      h += `<div class="br-row" onclick="openCardModal('${escId(c.id)}')">`+
+           `<span class="hv-rank">${i+1}</span>`+
+           `<img loading="lazy" src="${escHtml(srcs[0]||'')}" data-srcs="${escHtml(JSON.stringify(srcs))}" data-si="0" onerror="imgNext(this)" alt="">`+
+           `<div class="rt"><b>${escHtml(pc?.name || c.name)}</b><small>${escHtml(setName)}${num ? ' · N° ' + escHtml(num) : ''}</small></div>`+
+           `<div class="rq">${fmtEur(unit)}${(c.qty||1) > 1 ? `<small>×${c.qty}</small>` : ''}</div></div>`;
+    });
+    h += `</div>`;
+  } else {
+    h += `<div class="hv-vide">Les prix arrivent en arrière-plan quand tu es en ligne.</div>`;
+  }
+  el.innerHTML = h + `</div>`;
 }
 
 // ── COLLECTION OVERLAY ──
@@ -2489,6 +2545,7 @@ async function refreshPrices(){
   finally{ _priceRunning=false; }
   savePrices();
   if(document.getElementById('coll-overlay')?.classList.contains('open')) renderCollOverlay();
+  renderHomeValue();
 }
 // Prix unitaire d'un exemplaire : saisi tel quel, sinon tendance × état
 function cardUnitPrice(c, cond){
@@ -4058,7 +4115,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.89';
+const APP_VERSION = '4.90';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -4203,6 +4260,7 @@ function invalidateNameMaps(){ _frNameMap = null; _scanIndex = null; _setCounts 
 // La base mobile vient d'être (re)chargée : les listes dérivées sont périmées
 function onMobileDBLoaded(){
   setTimeout(tcgVerifier, 3000);
+  if(typeof renderHomeValue === 'function') renderHomeValue();
   invalidateNameMaps();
   try{ localStorage.removeItem(SERIES_CACHE_KEY); }catch(e){}
   _seriesData = null;

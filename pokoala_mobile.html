@@ -375,6 +375,13 @@ body::before{
 .br-row .rq small{display:block;font-size:10px;font-weight:700;color:rgba(255,255,255,0.4)}
 .br-row.no{opacity:.75}
 .br-fb{margin:8px 0 0}
+.br-tabs{display:flex;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:3px;gap:3px;margin-bottom:8px}
+.br-tabs button{flex:1;background:none;border:0;color:rgba(255,255,255,0.5);font-size:12.5px;font-weight:800;padding:8px 4px;border-radius:8px;cursor:pointer}
+.br-tabs button.on{background:rgba(255,215,0,0.16);color:var(--yellow2)}
+.art-l{width:24px;height:24px;flex:none;border-radius:50%;background:rgba(255,215,0,0.12);color:var(--yellow2);font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.g-sep{grid-column:1/-1;display:flex;align-items:center;gap:8px;color:#fff;font-size:12.5px;font-weight:800;padding:10px 2px 2px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.g-sep:first-child{padding-top:0}
+.g-sep .ssym,.g-sep .sfb{width:18px;height:18px}
 .br-ph{text-align:center;color:rgba(255,255,255,0.45);font-size:13px;padding:30px 12px;line-height:1.5}
 
 /* ── CARD GRID ── */
@@ -1022,13 +1029,14 @@ select.cond-select{
 
     <!-- TAB BROWSE -->
     <div class="tab-page" id="tab-browse">
-      <div class="br-srch"><div class="in">
+      <div class="br-srch"><div class="br-tabs" id="br-tabs"><button data-m="card" onclick="brSetMode('card')">Par carte</button><button data-m="art" onclick="brSetMode('art')">Par illustrateur</button></div><div class="in">
         <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></span>
         <input type="search" id="br-q" placeholder="Recherche" autocomplete="off" autocorrect="off" spellcheck="false" oninput="brInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">
         <button class="clr" id="br-qx" style="display:none" onmousedown="event.preventDefault()" onclick="brClear(true)" aria-label="Effacer">×</button>
       </div><div class="g-fb br-fb" id="br-fb" style="display:none"><div class="sg" id="br-filt"></div></div></div>
       <div id="br-results" style="display:none"></div>
       <div id="series-list"><div class="loader">Chargement des séries…</div></div>
+      <div id="art-list" style="display:none"></div>
     </div>
 
     <!-- TAB SCAN -->
@@ -1667,9 +1675,9 @@ function switchTab(tab){
   if(tab==='home') renderHome();
   if(tab==='browse'){
     const el = document.getElementById('series-list');
-    if(!_seriesData?.length) loadSeries();
-    else if(document.getElementById('br-q')?.value.trim()) brRender();
-    else renderSeries();   // compteurs à jour
+    if(_brMode === 'art' || document.getElementById('br-q')?.value.trim()) brRender();
+    else if(!_seriesData?.length){ brTabs(); loadSeries(); }
+    else { brTabs(); renderSeries(); }   // compteurs à jour
   }
   if(tab==='scan'){ updateScanDBStatus(); renderScanHistory(); }
   if(tab==='boutiques') renderBoutiques();
@@ -3358,6 +3366,47 @@ function famPastilles(f){
 }
 function brRoot(sid){ const st = _mobileDB.sets.find(x => x.id === sid); return st?.parent || sid; }
 
+// Onglets de Parcourir : « Par carte » (extensions + recherche de cartes)
+// ou « Par illustrateur » (liste des illustrateurs, filtrée par la recherche)
+let _brMode = 'card';
+try{ if(localStorage.getItem('pk_brmode') === 'art') _brMode = 'art'; }catch(e){}
+function brSetMode(m){
+  if(m === _brMode) return;
+  _brMode = m;
+  try{ localStorage.setItem('pk_brmode', m); }catch(e){}
+  const i = document.getElementById('br-q');
+  i.value = ''; document.getElementById('br-qx').style.display = 'none';
+  const sc = document.getElementById('content'); if(sc) sc.scrollTop = 0;
+  brRender();
+}
+function brTabs(){
+  for(const b of document.querySelectorAll('#br-tabs button')) b.classList.toggle('on', b.dataset.m === _brMode);
+  document.getElementById('br-q').placeholder = _brMode === 'art' ? 'Rechercher un illustrateur' : 'Recherche';
+}
+// classement alphabétique sans les guillemets de tête (« "Big Mama" Tagawa » à B)
+function artCle(n){ return String(n).replace(/^[^A-Za-zÀ-ÿ0-9]+/, ''); }
+function renderArtists(q){
+  const el = document.getElementById('art-list');
+  const tot = new Map(), own = new Map(), owned = ownedIndex();
+  for(const c of _mobileDB.cards){
+    if(!c.artist || !/[A-Za-zÀ-ÿ0-9]/.test(c.artist)) continue;   // « — » : pas un nom
+    tot.set(c.artist, (tot.get(c.artist)||0) + 1);
+    if(owned.has(c.id)) own.set(c.artist, (own.get(c.artist)||0) + 1);
+  }
+  const nq = brNorm(q);
+  const noms = [...tot.keys()].filter(n => !nq || brNorm(n).includes(nq))
+    .sort((a, b) => artCle(a).localeCompare(artCle(b), 'fr', {sensitivity:'base'}));
+  if(!tot.size){ el.innerHTML = '<div class="br-ph">Illustrateurs indisponibles.</div>'; return; }
+  if(!noms.length){ el.innerHTML = `<div class="br-ph">Aucun illustrateur pour « ${escHtml(q)} ».</div>`; return; }
+  el.innerHTML = noms.map(n => {
+    const t = tot.get(n), o = own.get(n) || 0;
+    const ini = (n.match(/[A-Za-zÀ-ÿ0-9]/) || ['?'])[0].toUpperCase();
+    return `<div class="pk-set" onclick="openArtistGrid(this.dataset.a)" data-a="${escHtml(n)}"><span class="art-l">${escHtml(ini)}</span>`+
+      `<div class="sinfo"><b>${escHtml(n)}</b></div>`+
+      `<span class="sc${o?'':' z'}">${o ? o + '<small>/' + t + '</small>' : '<small>' + t + '</small>'}</span></div>`;
+  }).join('');
+}
+
 function brInput(){
   const v = document.getElementById('br-q').value;
   document.getElementById('br-qx').style.display = v ? '' : 'none';
@@ -3407,6 +3456,16 @@ function brTap(id){
 async function brRender(){
   const q = (document.getElementById('br-q').value || '').trim();
   const box = document.getElementById('br-results'), list = document.getElementById('series-list');
+  brTabs();
+  const al = document.getElementById('art-list');
+  if(_brMode === 'art'){
+    brFiltBar(false);
+    box.style.display = 'none'; box.innerHTML = ''; list.style.display = 'none'; al.style.display = '';
+    if(!_mobileDB?.cards?.length){ al.innerHTML = '<div class="br-ph">Chargement…</div>'; if(!(await loadMobileDB())) return; }
+    renderArtists(q);
+    return;
+  }
+  al.style.display = 'none'; al.innerHTML = '';
   brFiltBar(!!q);
   if(!q){ box.style.display = 'none'; box.innerHTML = ''; list.style.display = ''; _brMemb = null; renderSeries(); return; }
   box.style.display = ''; list.style.display = 'none';
@@ -3580,15 +3639,44 @@ function gridClearQ(){
 }
 function normTxt(v){ return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 
+let _gridArt = null;   // illustrateur affiché dans la grille (sinon extension)
+async function openArtistGrid(nom){
+  if(!_mobileDB?.cards?.length && !(await loadMobileDB())) return;
+  _gridArt = nom; _gridSetId = null;
+  _gridQ = '';
+  document.getElementById('grid-q').value = '';
+  document.getElementById('grid-q').placeholder = 'Chercher un Pokémon…';
+  document.getElementById('grid-qx').style.display = 'none';
+  document.getElementById('grid-title').textContent = nom;
+  document.getElementById('grid-sym').innerHTML = '<span class="art-l">' + escHtml((nom.match(/[A-Za-zÀ-ÿ0-9]/)||['?'])[0].toUpperCase()) + '</span>';
+  document.getElementById('grid-code').innerHTML = '';
+  // trié par extension (ordre de Parcourir, sous-extensions avec leur parent), puis numéro
+  const rang = new Map(); let k = 0;
+  for(const st of _mobileDB.sets) if(!st.parent) rang.set(st.id, k++);
+  const root = sid => { const st = _mobileDB.sets.find(x => x.id === sid); return st?.parent || sid; };
+  const num = v => { const n = parseInt(String(v).replace(/^\D+/, ''), 10); return isNaN(n) ? 1e9 : n; };
+  _gridCards = _mobileDB.cards.filter(c => c.artist === nom)
+    .map(c => ({id:c.id, localId:c.number, number:c.number, name:c.name, nameEn:c.nameEn, rarity:c.rarity,
+                setId:c.setId, setName:c.setName, root:root(c.setId), image:null}))
+    .sort((a, b) => (rang.get(a.root) ?? 1e9) - (rang.get(b.root) ?? 1e9) || (a.root === a.setId ? 0 : 1) - (b.root === b.setId ? 0 : 1) ||
+                    (a.setId < b.setId ? -1 : a.setId > b.setId ? 1 : 0) || num(a.number) - num(b.number) ||
+                    String(a.number).localeCompare(String(b.number), 'fr', {numeric:true}));
+  document.getElementById('grid-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+  document.querySelector('#grid-overlay .grid-ov-body').scrollTop = 0;
+  renderGrid();
+}
+
 async function openGrid(setId){
   if(!_mobileDB?.cards?.length && !(await loadMobileDB())){ toast('Base de cartes indisponible'); return; }
   // id d'une sous-extension : ouvrir l'extension principale
   const st0 = _mobileDB.sets.find(x => x.id === setId);
   if(st0?.parent) setId = st0.parent;
   const st = _mobileDB.sets.find(x => x.id === setId) || {id:setId, name:setId};
-  _gridSetId = setId;
+  _gridSetId = setId; _gridArt = null;
   _gridQ = '';
   document.getElementById('grid-q').value = '';
+  document.getElementById('grid-q').placeholder = 'Chercher dans cette extension…';
   document.getElementById('grid-qx').style.display = 'none';
   document.getElementById('grid-title').textContent = st.name;
   document.getElementById('grid-sym').innerHTML = symHtml(st);
@@ -3628,12 +3716,20 @@ function renderGrid(){
   const g = document.getElementById('card-grid');
   g.style.gridTemplateColumns = `repeat(${nc},1fr)`;
   if(!vue.length){
-    g.innerHTML = `<div class="g-vide">${q ? 'Aucune carte ne correspond dans cette extension.'
-      : _gridFilt === 'has' ? 'Aucune carte de cette extension dans ta collection.'
-      : 'Tu as toutes les cartes de cette extension.'}</div>`;
+    const de = _gridArt ? 'de cet illustrateur' : 'de cette extension';
+    g.innerHTML = `<div class="g-vide">${q ? 'Aucune carte ne correspond ' + (_gridArt ? 'chez cet illustrateur.' : 'dans cette extension.')
+      : _gridFilt === 'has' ? 'Aucune carte ' + de + ' dans ta collection.'
+      : 'Tu as toutes les cartes ' + de + '.'}</div>`;
     return;
   }
+  let _sep = null;
   g.innerHTML = vue.map(c => {
+    let sep = '';
+    if(_gridArt && c.root !== _sep){
+      _sep = c.root;
+      const st = _mobileDB.sets.find(x => x.id === c.root);
+      sep = `<div class="g-sep">${symHtml(st)}${escHtml(st?.name || c.root)}</div>`;
+    }
     const oc = owned.get(c.id);
     const id = oc ? oc.id : c.id;
     const _srcs = imgSources(c.setId, c.localId, null);
@@ -3642,7 +3738,7 @@ function renderGrid(){
     const sid = escId(id);
     const cname = escId(getCardNameFR(c) || c.name || '');
     const cimg = escId(imgUrl);
-    return`<div class="grid-card${oc?'':' not-owned'}" data-id="${escHtml(id)}" data-name="${escHtml(getCardNameFR(c) || c.name || '')}" data-img="${escHtml(imgUrl)}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
+    return sep+`<div class="grid-card${oc?'':' not-owned'}" data-id="${escHtml(id)}" data-name="${escHtml(getCardNameFR(c) || c.name || '')}" data-img="${escHtml(imgUrl)}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
       <img src="${imgUrl}" data-srcs="${_srcsAttr}" data-si="0" loading="lazy" onerror="imgNext(this)">
       <span class="grid-card-num">${escHtml(c.localId)}</span>
       ${oc?`<span class="grid-card-qty">${oc.qty}×</span>`:''}
@@ -4173,7 +4269,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.92';
+const APP_VERSION = '4.93';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

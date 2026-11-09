@@ -378,6 +378,11 @@ body::before{
 .br-tabs{display:flex;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:3px;gap:3px;margin-bottom:8px}
 .br-tabs button{flex:1;background:none;border:0;color:rgba(255,255,255,0.5);font-size:12.5px;font-weight:800;padding:8px 4px;border-radius:8px;cursor:pointer}
 .br-tabs button.on{background:rgba(255,215,0,0.16);color:var(--yellow2)}
+.art-fb{display:flex;gap:6px;margin:8px 0 0}
+.art-fb .sg{display:flex;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:2px;gap:2px}
+.art-fb .sg.f{flex:1;min-width:0}
+.art-fb button{flex:1;min-width:0;background:none;border:0;color:rgba(255,255,255,0.45);font-size:11px;font-weight:700;padding:6px 7px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.art-fb button.on{background:rgba(255,215,0,0.16);color:var(--yellow2)}
 .art-l{width:24px;height:24px;flex:none;border-radius:50%;background:rgba(255,215,0,0.12);color:var(--yellow2);font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
 .g-sep{grid-column:1/-1;display:flex;align-items:center;gap:8px;color:#fff;font-size:12.5px;font-weight:800;padding:10px 2px 2px;border-bottom:1px solid rgba(255,255,255,0.1)}
 .g-sep:first-child{padding-top:0}
@@ -558,7 +563,10 @@ select.cond-select{
   font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
 .modal-img-wrap{display:flex;justify-content:center;padding:8px 16px}
-.modal-img-wrap img{max-width:190px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+.modal-img-wrap img{max-width:190px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.6);cursor:zoom-in}
+#img-viewer{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.94);align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top,0px)) 12px calc(16px + env(safe-area-inset-bottom,0px));cursor:zoom-out}
+#img-viewer.open{display:flex}
+#img-viewer img{max-width:100%;max-height:100%;object-fit:contain;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,0.7)}
 .modal-section{padding:10px 16px;border-top:1px solid rgba(255,255,255,0.06)}
 .modal-section label{display:block;font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}
 .modal-section .val{font-size:15px;font-weight:700;color:rgba(255,255,255,0.85)}
@@ -1033,7 +1041,7 @@ select.cond-select{
         <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></span>
         <input type="search" id="br-q" placeholder="Recherche" autocomplete="off" autocorrect="off" spellcheck="false" oninput="brInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">
         <button class="clr" id="br-qx" style="display:none" onmousedown="event.preventDefault()" onclick="brClear(true)" aria-label="Effacer">×</button>
-      </div><div class="g-fb br-fb" id="br-fb" style="display:none"><div class="sg" id="br-filt"></div></div></div>
+      </div><div class="g-fb br-fb" id="br-fb" style="display:none"><div class="sg" id="br-filt"></div></div><div class="art-fb" id="art-fb" style="display:none"></div></div>
       <div id="br-results" style="display:none"></div>
       <div id="series-list"><div class="loader">Chargement des séries…</div></div>
       <div id="art-list" style="display:none"></div>
@@ -1330,6 +1338,9 @@ select.cond-select{
     <button id="scan-torch" onclick="toggleTorch()" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center">🔦</button>
   </div>
 </div>
+
+<!-- Visionneuse : carte en grand (toucher ou retour pour fermer) -->
+<div id="img-viewer" onclick="closeViewer()"><img alt=""></div>
 
 <!-- ACHATS MODAL -->
 <div class="modal-bg" id="achats-modal" onclick="if(event.target===this)closeModal('achats-modal')">
@@ -3385,8 +3396,24 @@ function brTabs(){
 }
 // classement alphabétique sans les guillemets de tête (« "Big Mama" Tagawa » à B)
 function artCle(n){ return String(n).replace(/^[^A-Za-zÀ-ÿ0-9]+/, ''); }
+// Filtres de la liste : Tous / Possédés (au moins une carte) / Non possédés,
+// et tri A→Z ou par nombre de cartes illustrées (mémorisés)
+let _artFilt = 'all', _artTri = 'az';
+try{ _artFilt = localStorage.getItem('pk_artfilt') || 'all'; _artTri = localStorage.getItem('pk_arttri') || 'az'; }catch(e){}
+function artSet(k, v){
+  if(k === 'f') _artFilt = v; else _artTri = v;
+  try{ localStorage.setItem(k === 'f' ? 'pk_artfilt' : 'pk_arttri', v); }catch(e){}
+  renderArtists(document.getElementById('br-q').value.trim());
+}
+function artBar(){
+  const b = (k, v, cur, l) => `<button class="${cur===v?'on':''}" onclick="artSet('${k}','${v}')">${l}</button>`;
+  document.getElementById('art-fb').innerHTML =
+    `<div class="sg f">${b('f','all',_artFilt,'Tous')}${b('f','has',_artFilt,'Possédés')}${b('f','none',_artFilt,'Non possédés')}</div>`+
+    `<div class="sg">${b('t','az',_artTri,'A→Z')}${b('t','nb',_artTri,'Nb ↓')}</div>`;
+}
 function renderArtists(q){
   const el = document.getElementById('art-list');
+  artBar();
   const tot = new Map(), own = new Map(), owned = ownedIndex();
   for(const c of _mobileDB.cards){
     if(!c.artist || !/[A-Za-zÀ-ÿ0-9]/.test(c.artist)) continue;   // « — » : pas un nom
@@ -3394,10 +3421,15 @@ function renderArtists(q){
     if(owned.has(c.id)) own.set(c.artist, (own.get(c.artist)||0) + 1);
   }
   const nq = brNorm(q);
+  const alpha = (a, b) => artCle(a).localeCompare(artCle(b), 'fr', {sensitivity:'base'});
   const noms = [...tot.keys()].filter(n => !nq || brNorm(n).includes(nq))
-    .sort((a, b) => artCle(a).localeCompare(artCle(b), 'fr', {sensitivity:'base'}));
+    .filter(n => _artFilt === 'has' ? own.has(n) : _artFilt === 'none' ? !own.has(n) : true)
+    .sort(_artTri === 'nb' ? (a, b) => tot.get(b) - tot.get(a) || alpha(a, b) : alpha);
   if(!tot.size){ el.innerHTML = '<div class="br-ph">Illustrateurs indisponibles.</div>'; return; }
-  if(!noms.length){ el.innerHTML = `<div class="br-ph">Aucun illustrateur pour « ${escHtml(q)} ».</div>`; return; }
+  if(!noms.length){
+    el.innerHTML = `<div class="br-ph">${q ? `Aucun illustrateur pour « ${escHtml(q)} »` : _artFilt === 'has' ? 'Aucune carte de ta collection n\'a d\'illustrateur connu' : 'Tu as au moins une carte de chaque illustrateur'}${q && _artFilt !== 'all' ? ' avec ce filtre' : ''}.</div>`;
+    return;
+  }
   el.innerHTML = noms.map(n => {
     const t = tot.get(n), o = own.get(n) || 0;
     const ini = (n.match(/[A-Za-zÀ-ÿ0-9]/) || ['?'])[0].toUpperCase();
@@ -3458,6 +3490,7 @@ async function brRender(){
   const box = document.getElementById('br-results'), list = document.getElementById('series-list');
   brTabs();
   const al = document.getElementById('art-list');
+  document.getElementById('art-fb').style.display = _brMode === 'art' ? '' : 'none';
   if(_brMode === 'art'){
     brFiltBar(false);
     box.style.display = 'none'; box.innerHTML = ''; list.style.display = 'none'; al.style.display = '';
@@ -3853,7 +3886,35 @@ function closeGrid(){
 // ── MODAL ──
 // ── Gestion bouton retour / swipe Android ──
 // Retourne true si quelque chose a été fermé/navigué
+// Toucher l'image d'une fiche : carte en grand, en haute définition. La
+// visionneuse reprend la chaîne d'images à partir de la source affichée.
+function openViewer(img){
+  const v = document.getElementById('img-viewer'), vi = v.querySelector('img');
+  let srcs = []; try{ srcs = JSON.parse(img.getAttribute('data-srcs') || '[]'); }catch(e){}
+  const cur = img.currentSrc || img.src;
+  // une vignette basse définition affichée : on commence par sa version HD
+  const hd = cur.replace(/\/low\.webp$/, '/high.webp').replace(/\/small$/, '/large');
+  const list = [...new Set([hd, cur, ...srcs.slice(Math.max(0, srcs.indexOf(cur)))])].filter(Boolean);
+  vi.setAttribute('data-srcs', JSON.stringify(list));
+  vi.setAttribute('data-si', '0');
+  vi.onerror = () => imgNext(vi);
+  vi.src = list[0];
+  v.classList.add('open');
+}
+function closeViewer(){
+  const v = document.getElementById('img-viewer');
+  if(!v.classList.contains('open')) return false;
+  v.classList.remove('open');
+  v.querySelector('img').removeAttribute('src');
+  return true;
+}
+document.addEventListener('click', e => {
+  const im = e.target.closest && e.target.closest('.modal-img-wrap img');
+  if(im && im.naturalWidth) openViewer(im);
+});
+
 function _uiBack(){
+  if(closeViewer()) return true;
   // Ordre = empilement visuel, du plus haut au plus bas : une fiche (z 200)
   // s'ouvre par-dessus la collection ou la grille (z 100). La fermer en
   // premier évite qu'un geste ferme un calque caché derrière elle.
@@ -4269,7 +4330,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.93';
+const APP_VERSION = '4.94';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

@@ -925,6 +925,12 @@ select.cond-select{
   font-size:9px;color:#f4a261;margin-top:2px;
 }
 
+.coll-grp{display:flex;align-items:baseline;gap:8px;padding:12px 14px 6px;font-size:13px;font-weight:800;color:var(--yellow2);border-top:1px solid rgba(255,255,255,0.08)}
+.coll-grp:first-child{border-top:0}
+.coll-grp span{margin-left:auto;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4)}
+.modal-art{margin-top:6px;font-size:12.5px;color:rgba(255,255,255,0.6)}
+.modal-art b{color:#fff;font-weight:700}
+
 /* ── ACCUEIL : valeur de la collection ── */
 .hv{background:rgba(20,10,40,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius);padding:16px 14px 6px;margin:4px 4px 0}
 .hv-lbl{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,0.45)}
@@ -1250,6 +1256,7 @@ select.cond-select{
         <option value="name">Nom A→Z</option>
         <option value="value">Valeur ↓</option>
         <option value="set">Extension</option>
+        <option value="artist">Illustrateur</option>
       </select>
     </div>
     <div style="display:flex;gap:6px;margin-top:6px">
@@ -1965,7 +1972,7 @@ let _mobileDB = null; // {cards, sets, series}
 // ═══ BASE DE CARTES — copie de celle de PoKoalaShop (data/) ═══
 // Générée par outils/sync_pks.py. Modifier un fichier de data/ ⇒ incrémenter
 // DATA_VER (clé de cache : ?v=DATA_VER). Plus de base sur Drive ni de PC.
-const DATA_VER = '2';
+const DATA_VER = '3';
 let _mobileDBP = null;
 function loadMobileDB(){
   if(_mobileDB?.cards?.length) return Promise.resolve(true);
@@ -1978,7 +1985,9 @@ function loadMobileDB(){
       ]);
       if(!rs.ok || !rc.ok) throw new Error('data ' + rs.status + '/' + rc.status);
       const sj = await rs.json(), cj = await rc.json();
-      _mobileDB = buildMobileDB(sj, cj);
+      let aj = null;
+      try{ const ra = await fetch('./data/artistes.json?v=' + DATA_VER); if(ra.ok) aj = await ra.json(); }catch(e){}
+      _mobileDB = buildMobileDB(sj, cj, aj);
       try{
         localStorage.removeItem('pk_db_light');   // ancienne base (~4 Mo) : libère le stockage
         localStorage.setItem(MOBILE_DB_DATE_KEY, sj.built || new Date().toISOString());
@@ -1998,7 +2007,7 @@ function loadMobileDB(){
 
 // Adapte le format de PoKoalaShop ({i,n,e,u,s,r,g,…}) à celui qu'attend le
 // reste de l'app ({id,name,nameEn,number,setId,setName,rarity,img}).
-function buildMobileDB(sj, cj){
+function buildMobileDB(sj, cj, aj){
   const sets = sj.sets || [];
   const setById = new Map(sets.map(st => [st.id, st]));
   const cards = cj.map(c => ({
@@ -2007,6 +2016,8 @@ function buildMobileDB(sj, cj){
     p: c.p || '', v: c.v, d: c.d
   }));
   frNamesFill(cards);
+  // Illustrateur (data/artistes.json, outils/illustrateurs.py)
+  if(aj && aj.a && aj.c) for(const c of cards){ const k = aj.c[c.id]; if(k != null) c.artist = aj.a[k]; }
   const counts = new Map();
   for(const c of cards) counts.set(c.setId, (counts.get(c.setId)||0) + 1);
   // Blocs dans l'ordre de PoKoalaShop ; les sous-extensions (Galeries,
@@ -2324,6 +2335,17 @@ function renderCollOverlay(){
   if(sort==='name') items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','fr'));
   if(sort==='value') items.sort((a,b)=>cardValue(b)-cardValue(a));
   if(sort==='set') items.sort((a,b)=>(a.set||'').localeCompare(b.set||'','fr'));
+  // Illustrateur : regroupé de A à Z (inconnus à la fin), puis extension et numéro
+  const _art=new Map();
+  if(sort==='artist'){
+    for(const c of items) _art.set(c, collCardOf(c)?.artist || '');
+    items.sort((a,b)=>{
+      const x=_art.get(a), y=_art.get(b);
+      if(!x!==!y) return x?-1:1;
+      return x.localeCompare(y,'fr',{sensitivity:'base'}) || (a.set||'').localeCompare(b.set||'','fr') ||
+             String(a.num||'').localeCompare(String(b.num||''),'fr',{numeric:true});
+    });
+  }
   if(sort==='date' || sort==='date_asc'){
     // Les cartes ajoutées avant la v4.43 n'ont pas d'addedAt : on retombe sur
     // leur position dans `col`, qui reflète l'ordre d'insertion.
@@ -2353,7 +2375,16 @@ function renderCollOverlay(){
     list.innerHTML=`<div class="empty-state">${vide}</div>`;
     return;
   }
+  let _grp=null;
+  const _nGrp=new Map();
+  if(sort==='artist') for(const c of items){ const k=_art.get(c); _nGrp.set(k,(_nGrp.get(k)||0)+1); }
   list.innerHTML=items.map(c=>{
+    let _hd='';
+    if(sort==='artist' && _art.get(c)!==_grp){
+      _grp=_art.get(c);
+      const n=_nGrp.get(_grp);
+      _hd=`<div class="coll-grp">${_grp?escHtml(_grp):'Illustrateur inconnu'}<span>${n} carte${n>1?'s':''}</span></div>`;
+    }
     const _p=(c.id||'').split('-');
     const _sid=_p.length>=2?_p.slice(0,-1).join('-'):(c.setId||'');
     const _num=_p.length>=2?_p[_p.length-1]:(c.num||c.number||'');
@@ -2365,7 +2396,7 @@ function renderCollOverlay(){
     const price=cardUnitPrice(c, c.cond);
     const manual=c.priceManual!=null;
     const sid=escId(c.id);
-    return `<div class="coll-item" onclick="openCardModal('${sid}')">
+    return _hd+`<div class="coll-item" onclick="openCardModal('${sid}')">
       ${img?`<img class="coll-thumb" src="${img}" data-srcs="${_isa}" data-si="0" loading="lazy" onerror="imgNext(this)">`:`<div class="coll-thumb-ph"></div>`}
       <div class="coll-info">
         <div class="coll-name">${c.name}</div>
@@ -2642,6 +2673,7 @@ function _renderCardModal(c){
       <label>Extension</label>
       <div class="val">${setNameFR(c.setId, c.set||'—')}${c.num?' · N°'+c.num:''}</div>
       ${c.rarity?`<div style="margin-top:4px">${rareBadge(c.rarity)}</div>`:''}
+      ${collCardOf(c)?.artist?`<div class="modal-art">Illustrateur : <b>${escHtml(collCardOf(c).artist)}</b></div>`:''}
     </div>
 
     ${inCol ? `
@@ -3642,7 +3674,8 @@ function gridTapUnowned(id, name, img){
     </div>
     <div class="modal-img-wrap"><img src="${largImg}" data-srcs="${_srcsAttr}" data-si="0" onerror="imgNext(this)"></div>
     <div class="modal-section">
-      <div style="font-size:13px;color:rgba(255,255,255,0.55)">${document.getElementById('grid-title').textContent}${c?.localId?' · N°'+c.localId:''}${c?.rarity?' · '+c.rarity:''}</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.55)">${escHtml(c?.setName||document.getElementById('grid-title').textContent)}${(c?.localId||c?.number)?' · N°'+(c.localId||c.number):''}${c?.rarity?' · '+c.rarity:''}</div>
+      ${pksCard(c?.setId, c?.localId||c?.number)?.artist?`<div class="modal-art">Illustrateur : <b>${escHtml(pksCard(c.setId, c.localId||c.number).artist)}</b></div>`:''}
     </div>
     <div class="btn-row">
       <button class="btn btn-primary btn-full" onclick="addCard(window._addCard);closeModal('card-modal');updateGridCard(window._addCard.id)">
@@ -4140,7 +4173,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.91';
+const APP_VERSION = '4.92';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -5194,6 +5227,7 @@ function openScanCardDetail(cardId){
       <label>Extension</label>
       <div class="val">${setNameFR(card.setId, card.setName||'—')} · N°${card.number||'—'}</div>
       ${card.rarity?`<div style="margin-top:4px">${rareBadge(card.rarity)}</div>`:''}
+      ${card.artist?`<div class="modal-art">Illustrateur : <b>${escHtml(card.artist)}</b></div>`:''}
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" style="flex:1" onclick="addCardFromScan('${escId(card.id)}');closeModal('card-modal')">

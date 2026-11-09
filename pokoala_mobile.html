@@ -374,6 +374,7 @@ body::before{
 .br-row .rq{font-size:13px;font-weight:900;color:var(--yellow2);flex:none;text-align:right;line-height:1.15}
 .br-row .rq small{display:block;font-size:10px;font-weight:700;color:rgba(255,255,255,0.4)}
 .br-row.no{opacity:.75}
+.br-fb{margin:8px 0 0}
 .br-ph{text-align:center;color:rgba(255,255,255,0.45);font-size:13px;padding:30px 12px;line-height:1.5}
 
 /* ── CARD GRID ── */
@@ -983,7 +984,7 @@ select.cond-select{
         <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></span>
         <input type="search" id="br-q" placeholder="Recherche" autocomplete="off" autocorrect="off" spellcheck="false" oninput="brInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">
         <button class="clr" id="br-qx" style="display:none" onmousedown="event.preventDefault()" onclick="brClear(true)" aria-label="Effacer">×</button>
-      </div></div>
+      </div><div class="g-fb br-fb" id="br-fb" style="display:none"><div class="sg" id="br-filt"></div></div></div>
       <div id="br-results" style="display:none"></div>
       <div id="series-list"><div class="loader">Chargement des séries…</div></div>
     </div>
@@ -3271,6 +3272,20 @@ document.addEventListener('click', e => {
   _brMembQ = document.getElementById('br-q').value.trim();
   brRender();
 });
+// Filtre des résultats : Toutes / Possédées / Non possédées (mémorisé)
+let _brFilt = 'all';
+try{ const f = localStorage.getItem('pk_brfilt'); if(f === 'has' || f === 'none') _brFilt = f; }catch(e){}
+function brSetFilt(f){
+  _brFilt = f;
+  try{ localStorage.setItem('pk_brfilt', f); }catch(e){}
+  brRender();
+}
+function brFiltBar(on){
+  document.getElementById('br-fb').style.display = on ? '' : 'none';
+  if(on) document.getElementById('br-filt').innerHTML =
+    [['all','Toutes'],['has','Possédées'],['none','Non possédées']]
+      .map(([v,l]) => `<button class="${_brFilt===v?'on':''}" onclick="brSetFilt('${v}')">${l}</button>`).join('');
+}
 function brTap(id){
   const oc = ownedIndex().get(id);
   if(oc){ openCardModal(oc.id); return; }
@@ -3281,6 +3296,7 @@ function brTap(id){
 async function brRender(){
   const q = (document.getElementById('br-q').value || '').trim();
   const box = document.getElementById('br-results'), list = document.getElementById('series-list');
+  brFiltBar(!!q);
   if(!q){ box.style.display = 'none'; box.innerHTML = ''; list.style.display = ''; _brMemb = null; renderSeries(); return; }
   box.style.display = ''; list.style.display = 'none';
   const vue = h => { box.innerHTML = h; };
@@ -3388,8 +3404,15 @@ async function brRender(){
   if(coupe) h += `<div class="br-warn">${cards.length} cartes correspondent, seules les ${LIM} premières sont affichées. Affine la recherche.</div>`;
   const order = _mobileDB.sets.filter(st => !st.parent).map(st => st.id);
   const sections = [];
-  if(withQ.length) sections.push({t:'Dans ma collection', g:grpOui});
-  sections.push({t: withQ.length ? 'Autres cartes' : '', g:grpNon});
+  if(_brFilt === 'has') sections.push({t:'', g:grpOui});
+  else if(_brFilt === 'none') sections.push({t:'', g:grpNon});
+  else {
+    if(withQ.length) sections.push({t:'Dans ma collection', g:grpOui});
+    sections.push({t: withQ.length ? 'Autres cartes' : '', g:grpNon});
+  }
+  if(!sections.some(sc => Object.keys(sc.g).length) && !(_brFilt === 'has' && !withQ.length)){
+    h += `<div class="br-ph">${_brFilt === 'has' ? 'Aucune de ces cartes dans ta collection.' : 'Tu as déjà toutes ces cartes.'}</div>`;
+  }
   for(const sec of sections){
     if(!Object.keys(sec.g).length) continue;
     if(sec.t) h += `<div class="pk-serie sect">${sec.t}</div>`;
@@ -4035,7 +4058,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.88';
+const APP_VERSION = '4.89';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

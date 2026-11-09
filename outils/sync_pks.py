@@ -12,6 +12,8 @@ puis en incrémentant DATA_VER dans pokoala_mobile.html.
   data/cartes.json toutes les cartes des fichiers cards/<id>.json, réunies en
                    un seul fichier (une requête au lieu de ~205), dans l'ordre
                    des extensions de sets.json
+  data/familles.json  copie de pks_familles.json (pastilles de famille)
+  data/especes.json   copie de pks_especes.json (espèces, ordre d'évolution)
 """
 import json
 import os
@@ -55,6 +57,12 @@ def main():
         json.dump(sets, f, ensure_ascii=False, separators=(',', ':'))
     with open(os.path.join(dst, 'cartes.json'), 'w', encoding='utf-8') as f:
         json.dump(cartes, f, ensure_ascii=False, separators=(',', ':'))
+
+    for a, b in (('pks_familles.json', 'familles.json'), ('pks_especes.json', 'especes.json')):
+        with open(os.path.join(src, a), encoding='utf-8') as f:
+            j = json.load(f)
+        with open(os.path.join(dst, b), 'w', encoding='utf-8') as f:
+            json.dump(j, f, ensure_ascii=False, separators=(',', ':'))
 
     print(f"{len(sets['sets'])} extensions, {len(cartes)} cartes copiées")
     if manquants:

@@ -3424,7 +3424,10 @@ function renderArtists(q){
   const alpha = (a, b) => artCle(a).localeCompare(artCle(b), 'fr', {sensitivity:'base'});
   const noms = [...tot.keys()].filter(n => !nq || brNorm(n).includes(nq))
     .filter(n => _artFilt === 'has' ? own.has(n) : _artFilt === 'none' ? !own.has(n) : true)
-    .sort(_artTri === 'nb' ? (a, b) => tot.get(b) - tot.get(a) || alpha(a, b) : alpha);
+    // « Possédés » : classé par nombre de cartes que tu as de l'illustrateur
+    .sort(_artTri === 'nb' ? (_artFilt === 'has'
+      ? (a, b) => (own.get(b)||0) - (own.get(a)||0) || tot.get(b) - tot.get(a) || alpha(a, b)
+      : (a, b) => tot.get(b) - tot.get(a) || alpha(a, b)) : alpha);
   if(!tot.size){ el.innerHTML = '<div class="br-ph">Illustrateurs indisponibles.</div>'; return; }
   if(!noms.length){
     el.innerHTML = `<div class="br-ph">${q ? `Aucun illustrateur pour « ${escHtml(q)} »` : _artFilt === 'has' ? 'Aucune carte de ta collection n\'a d\'illustrateur connu' : 'Tu as au moins une carte de chaque illustrateur'}${q && _artFilt !== 'all' ? ' avec ce filtre' : ''}.</div>`;
@@ -4330,7 +4333,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.94';
+const APP_VERSION = '4.95';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 

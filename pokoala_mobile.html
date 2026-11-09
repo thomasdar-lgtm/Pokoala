@@ -340,6 +340,42 @@ body::before{
 .g-fb button.on{background:rgba(255,215,0,0.16);color:var(--yellow2)}
 .g-vide{grid-column:1/-1;text-align:center;color:rgba(255,255,255,0.45);font-size:13px;padding:30px 10px}
 
+/* ── RECHERCHE DE PARCOURIR façon PoKoalaShop ── */
+.br-srch{position:sticky;top:-14px;z-index:5;margin:-14px -14px 10px;padding:14px 14px 8px;background:linear-gradient(#0d0418 80%,rgba(13,4,24,0))}
+.br-srch .in{position:relative}
+.br-srch input{width:100%;background:rgba(20,10,40,0.95);border:1px solid rgba(255,255,255,0.12);border-radius:11px;padding:10px 36px 10px 36px;color:#fff;font-size:14px;outline:none}
+.br-srch input:focus{border-color:rgba(255,215,0,0.45)}
+.br-srch input::-webkit-search-cancel-button,.br-srch input::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
+.br-srch .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:rgba(255,255,255,0.4)}
+.br-srch .clr{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.12);border:0;color:#fff;width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer}
+.br-srch .clr::after{content:'';position:absolute;inset:-10px}
+.fmbR{display:flex;gap:6px;overflow-x:auto;margin:0 0 11px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.fmbR::-webkit-scrollbar{display:none}
+.famC{flex:none;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);border-radius:9px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.famC.on{background:rgba(255,215,0,0.14);border-color:var(--yellow2);color:var(--yellow2)}
+.famC.z{opacity:.5}
+.fmbN{font-size:11px;font-weight:800;color:rgba(255,255,255,0.4)}
+.famC.on .fmbN{color:var(--yellow2)}
+.br-tot{background:rgba(20,10,40,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:11px;margin-bottom:12px;display:flex;gap:9px}
+.br-tot div{flex:1;min-width:0}
+.br-tot span{display:block;font-size:9px;color:rgba(255,255,255,0.45);font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.br-tot b{font-size:19px;font-weight:900;line-height:1.15;color:#fff}
+.br-warn{background:rgba(210,153,34,.11);border:1px solid rgba(210,153,34,.34);color:#e0a83a;border-radius:9px;padding:8px 11px;font-size:11px;font-weight:600;margin-bottom:11px;line-height:1.4}
+.pk-serie.sect{font-size:18px}
+.br-sous{display:flex;align-items:center;gap:9px;position:relative;color:#fff;font-size:14px;font-weight:800;margin:14px 0 8px;padding:0 0 6px 11px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.br-sous::before{content:'';position:absolute;left:0;top:1px;bottom:8px;width:3px;border-radius:3px;background:rgba(255,255,255,0.35)}
+.br-sous .ssym,.br-sous .sfb{width:20px;height:20px}
+.br-row{display:flex;align-items:center;gap:10px;background:rgba(20,10,40,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:9px 11px;margin-bottom:7px;cursor:pointer}
+.br-row:active{background:rgba(255,255,255,0.06)}
+.br-row img{width:36px;height:50px;object-fit:cover;border-radius:5px;background:#0c1428;flex:none}
+.br-row .rt{flex:1;min-width:0}
+.br-row .rt b{display:block;font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.br-row .rt small{color:rgba(255,255,255,0.45);font-size:11px;font-weight:600}
+.br-row .rq{font-size:13px;font-weight:900;color:var(--yellow2);flex:none;text-align:right;line-height:1.15}
+.br-row .rq small{display:block;font-size:10px;font-weight:700;color:rgba(255,255,255,0.4)}
+.br-row.no{opacity:.75}
+.br-ph{text-align:center;color:rgba(255,255,255,0.45);font-size:13px;padding:30px 12px;line-height:1.5}
+
 /* ── CARD GRID ── */
 .card-grid{
   display:grid;
@@ -939,18 +975,16 @@ select.cond-select{
     <div class="tab-page active" id="tab-home">
       <div id="sync-warn" onclick="openModal('drive-modal')" style="display:none;background:rgba(255,170,0,0.14);border:1px solid rgba(255,170,0,0.4);color:#ffcc66;font-size:11px;font-weight:700;padding:8px 12px;border-radius:9px;margin-bottom:10px;cursor:pointer"></div>
       <div class="home-grid" id="home-grid"></div>
-      <div style="margin-top:4px;position:sticky;top:0;z-index:5;background:transparent">
-        <div class="search-wrap">
-          <input class="search-input" id="search-q" type="search" placeholder="Rechercher une carte Pokémon…" oninput="debounceSearch()" autocomplete="off" inputmode="search">
-        </div>
-      </div>
-      <div class="card-block" id="search-results" style="max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
-        <div class="empty-state"><span class="empty-ico"><svg viewBox="56 22 104 120" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="iFrame" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0" stop-color="#2b2b52"/><stop offset="1" stop-color="#12122a"/></linearGradient><linearGradient id="iArt" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#3d568c"/><stop offset="1" stop-color="#1d2b4d"/></linearGradient><linearGradient id="iBand" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6b2fb5"/><stop offset="1" stop-color="#3c1478"/></linearGradient><linearGradient id="iHolo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="0.45" stop-color="#fff" stop-opacity="0.05"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><linearGradient id="iBody" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#FFE47A"/><stop offset="1" stop-color="#E8A600"/></linearGradient><linearGradient id="iGlass" x1="0.2" y1="0.1" x2="0.8" y2="0.9"><stop offset="0" stop-color="#dCEBFF" stop-opacity="0.5"/><stop offset="1" stop-color="#7FA8DD" stop-opacity="0.22"/></linearGradient><linearGradient id="iGold" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#FFE68A"/><stop offset="1" stop-color="#C08A00"/></linearGradient><clipPath id="iClip"><rect x="7" y="25" width="62" height="40" rx="4"/></clipPath></defs><g transform="translate(62,26)"><rect x="0" y="0" width="76" height="104" rx="8" fill="url(#iFrame)" stroke="#C8A800" stroke-width="2"/><rect x="4" y="4" width="68" height="96" rx="6" fill="none" stroke="#8a6c00" stroke-width="0.8"/><rect x="7" y="7" width="62" height="14" rx="4" fill="url(#iBand)"/><circle cx="15.5" cy="14" r="5" fill="#FF9E1B" stroke="#B86A00" stroke-width="0.9"/><rect x="48" y="9.5" width="18" height="9" rx="3" fill="#D02020"/><rect x="7" y="25" width="62" height="40" rx="4" fill="url(#iArt)" stroke="#5b7fbf" stroke-width="0.7"/><g clip-path="url(#iClip)"><circle cx="20" cy="62" r="20" fill="#4a6ea8" opacity="0.5"/><circle cx="56" cy="60" r="16" fill="#4a6ea8" opacity="0.35"/><path d="M53 58 L60 50 L55 48.5 L62.5 39 L57 38 L64 29.5 L66 33 L60.5 40.5 L65.5 41.5 L58.5 50.5 L63 52 Z" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.7" stroke-linejoin="round"/><path d="M29.5 38 L21.5 21.5 L35 30.5 Z" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.8" stroke-linejoin="round"/><path d="M46.5 38 L54.5 21.5 L41 30.5 Z" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.8" stroke-linejoin="round"/><ellipse cx="38" cy="59.5" rx="12.5" ry="10.5" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.8"/><ellipse cx="24.5" cy="57" rx="3.6" ry="5.4" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.7" transform="rotate(24 24.5 57)"/><ellipse cx="51.5" cy="57" rx="3.6" ry="5.4" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.7" transform="rotate(-24 51.5 57)"/><ellipse cx="31" cy="68.5" rx="5.2" ry="3.4" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.7"/><ellipse cx="45" cy="68.5" rx="5.2" ry="3.4" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.7"/><circle cx="38" cy="44.5" r="13" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.8"/><ellipse cx="27.5" cy="48.5" rx="3.5" ry="2.7" fill="#E8483F" opacity="0.9"/><ellipse cx="48.5" cy="48.5" rx="3.5" ry="2.7" fill="#E8483F" opacity="0.9"/><circle cx="33.6" cy="43" r="3" fill="#20202e"/><circle cx="42.4" cy="43" r="3" fill="#20202e"/><circle cx="34.6" cy="41.8" r="1.1" fill="#fff"/><circle cx="43.4" cy="41.8" r="1.1" fill="#fff"/><path d="M35 50q3 2.8 6 0" fill="none" stroke="#8a5a00" stroke-width="1.3" stroke-linecap="round"/><path d="M7 65L44 25h13L7 79z" fill="url(#iHolo)"/></g><rect x="7" y="70" width="62" height="7" rx="2.5" fill="#242444"/><rect x="7" y="81" width="44" height="7" rx="2.5" fill="#242444"/><rect x="7" y="92" width="30" height="4.5" rx="2" fill="#1e1e3a"/><g transform="translate(24,42)"><line x1="45.9" y1="45.9" x2="66" y2="66" stroke="#6b4b00" stroke-width="10" stroke-linecap="round"/><line x1="45.9" y1="45.9" x2="66" y2="66" stroke="url(#iGold)" stroke-width="6.5" stroke-linecap="round"/><circle cx="28" cy="28" r="25" fill="url(#iGlass)"/><circle cx="28" cy="28" r="25" fill="none" stroke="#6b4b00" stroke-width="6"/><circle cx="28" cy="28" r="25" fill="none" stroke="url(#iGold)" stroke-width="3.5"/><path d="M12 20a25 25 0 0 1 16 -10" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity="0.5"/></g></g></svg></span>Tape un nom de carte pour commencer</div>
-      </div>
     </div>
 
     <!-- TAB BROWSE -->
     <div class="tab-page" id="tab-browse">
+      <div class="br-srch"><div class="in">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></span>
+        <input type="search" id="br-q" placeholder="Recherche" autocomplete="off" autocorrect="off" spellcheck="false" oninput="brInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">
+        <button class="clr" id="br-qx" style="display:none" onmousedown="event.preventDefault()" onclick="brClear(true)" aria-label="Effacer">×</button>
+      </div></div>
+      <div id="br-results" style="display:none"></div>
       <div id="series-list"><div class="loader">Chargement des séries…</div></div>
     </div>
 
@@ -1534,7 +1568,7 @@ let _seriesData=[], _gridCards=[], _gridSetId=null;
 let _collFilter='', _activeTab='home', _searchTimer=null;
 
 // ── PERSISTENCE ──
-function save(){ try{ localStorage.setItem('pk_col',JSON.stringify(col)); }catch(e){} scheduleSave(); }
+function save(){ try{ localStorage.setItem('pk_col',JSON.stringify(col)); }catch(e){} scheduleSave(); if(typeof brMaj==='function') brMaj(); }
 function load(){
   try{
     const s=localStorage.getItem('pk_col');
@@ -1590,6 +1624,7 @@ function switchTab(tab){
   if(tab==='browse'){
     const el = document.getElementById('series-list');
     if(!_seriesData?.length) loadSeries();
+    else if(document.getElementById('br-q')?.value.trim()) brRender();
     else renderSeries();   // compteurs à jour
   }
   if(tab==='scan'){ updateScanDBStatus(); renderScanHistory(); }
@@ -1893,7 +1928,7 @@ let _mobileDB = null; // {cards, sets, series}
 // ═══ BASE DE CARTES — copie de celle de PoKoalaShop (data/) ═══
 // Générée par outils/sync_pks.py. Modifier un fichier de data/ ⇒ incrémenter
 // DATA_VER (clé de cache : ?v=DATA_VER). Plus de base sur Drive ni de PC.
-const DATA_VER = '1';
+const DATA_VER = '2';
 let _mobileDBP = null;
 function loadMobileDB(){
   if(_mobileDB?.cards?.length) return Promise.resolve(true);
@@ -2708,144 +2743,6 @@ function addCard(cardData){
   save(); renderCollOverlay(); renderHome();
 }
 
-// ── SEARCH ──
-function debounceSearch(){ clearTimeout(_searchTimer); _searchTimer=setTimeout(doSearch,400); }
-
-async function doSearch(){
-  const raw = document.getElementById('search-q').value.trim().toLowerCase();
-  const res = document.getElementById('search-results');
-  if(raw.length < 2){ res.innerHTML=`<div class="empty-state"><span class="empty-ico"><svg viewBox="56 22 104 120" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="iFrame" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0" stop-color="#2b2b52"/><stop offset="1" stop-color="#12122a"/></linearGradient><linearGradient id="iArt" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#3d568c"/><stop offset="1" stop-color="#1d2b4d"/></linearGradient><linearGradient id="iBand" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6b2fb5"/><stop offset="1" stop-color="#3c1478"/></linearGradient><linearGradient id="iHolo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="0.45" stop-color="#fff" stop-opacity="0.05"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><linearGradient id="iBody" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#FFE47A"/><stop offset="1" stop-color="#E8A600"/></linearGradient><linearGradient id="iGlass" x1="0.2" y1="0.1" x2="0.8" y2="0.9"><stop offset="0" stop-color="#dCEBFF" stop-opacity="0.5"/><stop offset="1" stop-color="#7FA8DD" stop-opacity="0.22"/></linearGradient><linearGradient id="iGold" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#FFE68A"/><stop offset="1" stop-color="#C08A00"/></linearGradient><clipPath id="iClip"><rect x="7" y="25" width="62" height="40" rx="4"/></clipPath></defs><g transform="translate(62,26)"><rect x="0" y="0" width="76" height="104" rx="8" fill="url(#iFrame)" stroke="#C8A800" stroke-width="2"/><rect x="4" y="4" width="68" height="96" rx="6" fill="none" stroke="#8a6c00" stroke-width="0.8"/><rect x="7" y="7" width="62" height="14" rx="4" fill="url(#iBand)"/><circle cx="15.5" cy="14" r="5" fill="#FF9E1B" stroke="#B86A00" stroke-width="0.9"/><rect x="48" y="9.5" width="18" height="9" rx="3" fill="#D02020"/><rect x="7" y="25" width="62" height="40" rx="4" fill="url(#iArt)" stroke="#5b7fbf" stroke-width="0.7"/><g clip-path="url(#iClip)"><circle cx="20" cy="62" r="20" fill="#4a6ea8" opacity="0.5"/><circle cx="56" cy="60" r="16" fill="#4a6ea8" opacity="0.35"/><path d="M53 58 L60 50 L55 48.5 L62.5 39 L57 38 L64 29.5 L66 33 L60.5 40.5 L65.5 41.5 L58.5 50.5 L63 52 Z" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.7" stroke-linejoin="round"/><path d="M29.5 38 L21.5 21.5 L35 30.5 Z" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.8" stroke-linejoin="round"/><path d="M46.5 38 L54.5 21.5 L41 30.5 Z" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.8" stroke-linejoin="round"/><ellipse cx="38" cy="59.5" rx="12.5" ry="10.5" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.8"/><ellipse cx="24.5" cy="57" rx="3.6" ry="5.4" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.7" transform="rotate(24 24.5 57)"/><ellipse cx="51.5" cy="57" rx="3.6" ry="5.4" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.7" transform="rotate(-24 51.5 57)"/><ellipse cx="31" cy="68.5" rx="5.2" ry="3.4" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.7"/><ellipse cx="45" cy="68.5" rx="5.2" ry="3.4" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.7"/><circle cx="38" cy="44.5" r="13" fill="url(#iBody)" stroke="#B37F00" stroke-width="0.8"/><ellipse cx="27.5" cy="48.5" rx="3.5" ry="2.7" fill="#E8483F" opacity="0.9"/><ellipse cx="48.5" cy="48.5" rx="3.5" ry="2.7" fill="#E8483F" opacity="0.9"/><circle cx="33.6" cy="43" r="3" fill="#20202e"/><circle cx="42.4" cy="43" r="3" fill="#20202e"/><circle cx="34.6" cy="41.8" r="1.1" fill="#fff"/><circle cx="43.4" cy="41.8" r="1.1" fill="#fff"/><path d="M35 50q3 2.8 6 0" fill="none" stroke="#8a5a00" stroke-width="1.3" stroke-linecap="round"/><path d="M7 65L44 25h13L7 79z" fill="url(#iHolo)"/></g><rect x="7" y="70" width="62" height="7" rx="2.5" fill="#242444"/><rect x="7" y="81" width="44" height="7" rx="2.5" fill="#242444"/><rect x="7" y="92" width="30" height="4.5" rx="2" fill="#1e1e3a"/><g transform="translate(24,42)"><line x1="45.9" y1="45.9" x2="66" y2="66" stroke="#6b4b00" stroke-width="10" stroke-linecap="round"/><line x1="45.9" y1="45.9" x2="66" y2="66" stroke="url(#iGold)" stroke-width="6.5" stroke-linecap="round"/><circle cx="28" cy="28" r="25" fill="url(#iGlass)"/><circle cx="28" cy="28" r="25" fill="none" stroke="#6b4b00" stroke-width="6"/><circle cx="28" cy="28" r="25" fill="none" stroke="url(#iGold)" stroke-width="3.5"/><path d="M12 20a25 25 0 0 1 16 -10" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity="0.5"/></g></g></svg></span>Tape un nom de carte pour commencer</div>`; return; }
-
-  // Découper en tokens : séparer nom et numéro
-  // Un numéro peut être préfixé (TG05, GG07, SWSH004, SV001, RC12, H09)
-  const tokens = raw.split(/\s+/).filter(t => t.length > 0);
-  const isNumTok = t => /^[a-z]{0,4}\d{1,3}[a-z]?$/.test(t) && /\d/.test(t);
-  const numTokens = tokens.filter(isNumTok);
-  const nameTokens = tokens.filter(t => !isNumTok(t));
-  // 'gg07' == 'GG7' : on compare sans les zéros de tête
-  const normNum = v => String(v||'').toLowerCase().replace(/^([a-z]*)0+(\d)/, '$1$2');
-
-  // Recherche dans la base (celle de PoKoalaShop) : sans accents, nom FR ou EN,
-  // numéro, et code d'extension (« ronflex crz »)
-  if(!_mobileDB?.cards?.length && !(await loadMobileDB())){
-    res.innerHTML=`<div class="empty-state"><span class="big">⚠️</span>Base de cartes indisponible</div>`; return;
-  }
-  // Code d'extension : 3 lettres au moins (« ex », « sv » sont des suffixes de
-  // cartes), un seul, et jamais seul (« mew » cherche le Pokémon, pas 151)
-  const codeTok = nameTokens.find(t => t.length >= 3 && _mobileDB.codeSets?.[t.toUpperCase()]);
-  let nameToks = nameTokens.filter(t => t !== codeTok).map(normTxt);
-  let setFilter = null;
-  // il reste un vrai nom (3 lettres au moins) ou un numéro : sinon « mew v » cherche Mew V
-  if(codeTok && (nameToks.some(t => t.length >= 3) || numTokens.length)) setFilter = new Set(_mobileDB.codeSets[codeTok.toUpperCase()]);
-  else nameToks = nameTokens.map(normTxt);
-  const chercher = (setFilter, nameToks) => {
-  const results = [];
-  for(const c of _mobileDB.cards){
-    if(setFilter && !setFilter.has(c.setId)) continue;
-    const name = normTxt(c.name), nameEn = normTxt(c.nameEn);
-    const num = (c.number||'').toLowerCase();
-    const nameOk = nameToks.every(t => name.includes(t) || nameEn.includes(t));
-    // les tokens numériques visent le numéro, ou le nom (certains noms ont des chiffres)
-    const numOk = numTokens.every(t =>
-      normNum(num) === normNum(t) || num === t.padStart(3,'0') ||
-      name.includes(t) || nameEn.includes(t));
-    if(nameOk && numOk){ results.push(c); if(results.length >= 150) break; }
-  }
-  return results;
-  };
-  let results = chercher(setFilter, nameToks);
-  // le mot pris pour un code faisait peut-être partie du nom (« mew v »)
-  if(!results.length && setFilter) results = chercher(null, nameTokens.map(normTxt));
-  if(!results.length){
-    res.innerHTML=`<div class="empty-state"><span class="big">🤷</span>Aucune carte trouvée pour "${escHtml(raw)}"</div>`; return;
-  }
-  renderSearchResults(results.map(c=>({
-    id: c.id,
-    name: c.name,
-    nameEn: c.nameEn,
-    number: c.number,
-    rarity: c.rarity,
-    set: {id: c.setId, name: c.setName},
-    images: {small: imgSources(c.setId, c.number, null)[0]},
-    _srcs: imgSources(c.setId, c.number, null)
-  })));
-}
-
-const _searchCardMap = new Map();
-
-function renderSearchResults(cards){
-  _searchCardMap.clear();
-  cards.forEach((c,i) => _searchCardMap.set(i,c));
-  const res=document.getElementById('search-results');
-  const _own = ownedIndex();
-  res.innerHTML=cards.map((c,i)=>{
-    const owned=_own.get(c.id) || col.find(x=>x.id===c.id);
-    const _s = c._srcs || imgSources(c.set?.id, c.number, null);
-    const img = c.images?.small || _s[0];
-    const _sa = JSON.stringify(_s).replace(/"/g,'&quot;');
-    return`<div class="search-result" data-idx="${i}">
-      ${img?`<img class="search-result-img" src="${img}" data-srcs="${_sa}" data-si="0" loading="lazy" onerror="imgNext(this)">`:'<div class="search-result-img"></div>'}
-      <div class="search-result-info">
-        <div class="search-result-name">${c.name}</div>
-        <div class="search-result-sub">${c.set?.name||''} · N°${c.number||'—'} · ${c.rarity||'—'}</div>
-        ${owned?`<div style="font-size:10px;color:var(--yellow2);margin-top:2px;font-weight:700">✓ Dans la collection (${owned.qty}×)</div>`:''}
-      </div>
-      <div class="add-btn" data-add="${i}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="var(--red2)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function addCardFromJson(jsonStr){
-  try{ addCard(JSON.parse(jsonStr)); }catch(e){ toast('Erreur ajout'); }
-}
-
-function openCardModalFromSearch(idx){
-  const c = _searchCardMap.get(idx);
-  if(!c) return;
-
-  const owned = ownedIndex().get(c.id) || col.find(x=>x.id===c.id);
-  const _hs = imgSources(c.set?.id, c.number, null, 'high');
-  const img = _hs[0];
-  const _hsa = JSON.stringify(_hs).replace(/"/g,'&quot;');
-  const nameEn = c.nameEn || c.name;
-  const num = c.number || c.localId || '';
-  const setName = c.set?.name || setNameFR(c.set?.id || '', c.set || '');
-
-  document.getElementById('card-modal-content').innerHTML=`
-    <div class="modal-header">
-      <span class="modal-title" style="font-size:15px;max-width:calc(100% - 50px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
-      <button class="modal-close" onclick="closeModal('card-modal')">✕</button>
-    </div>
-    ${img?`<div class="modal-img-wrap"><img src="${img}" data-srcs="${_hsa}" data-si="0" onerror="imgNext(this)"></div>`:''}
-    <div class="modal-section">
-      <label>Extension</label>
-      <div class="val">${setName}${num?' · N°'+num:''}</div>
-      ${c.rarity?`<div style="margin-top:4px">${rareBadge(c.rarity)}</div>`:''}
-    </div>
-    ${owned?`
-    <div class="modal-section">
-      <label>Dans ta collection</label>
-      <div class="val" style="color:var(--yellow2)">✓ ${owned.qty}× · État ${owned.cond||'NM'}</div>
-    </div>`:''}
-    <div class="btn-row">
-      ${owned
-        ? `<button class="btn btn-secondary" style="flex:1" onclick="closeModal('card-modal');openCardModal('${escId(owned.id)}')">
-            Voir dans la collection
-           </button>`
-        : `<button class="btn btn-primary" style="flex:1" onclick="addCard(_searchCardMap.get(${idx}));closeModal('card-modal');toast('✅ Ajoutée')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Ajouter
-           </button>`
-      }
-      <button class="cm-link-btn" style="flex:1;justify-content:center" onclick="openCM('${escId(nameEn)}','${escId(num)}')">
-        <img src="${CM_LOGO}" alt="">Cardmarket
-      </button>
-    </div>`;
-  openModal('card-modal');
-}
-
 // ── SYMBOLES EXTENSIONS (identiques à la version PC) ──
 const SYMBOL_FALLBACK = {
   "base1":"https://images.pokemontcg.io/base1/symbol.png","base2":"https://images.pokemontcg.io/base2/symbol.png","base3":"https://images.pokemontcg.io/base3/symbol.png","base4":"https://images.pokemontcg.io/base4/symbol.png","base5":"https://images.pokemontcg.io/base5/symbol.png","base6":"https://images.pokemontcg.io/base6/symbol.png","bw1":"https://images.pokemontcg.io/bw1/symbol.png","bw10":"https://images.pokemontcg.io/bw10/symbol.png","bw11":"https://images.pokemontcg.io/bw11/symbol.png","bw2":"https://images.pokemontcg.io/bw2/symbol.png","bw3":"https://images.pokemontcg.io/bw3/symbol.png","bw4":"https://images.pokemontcg.io/bw4/symbol.png","bw5":"https://images.pokemontcg.io/bw5/symbol.png","bw6":"https://images.pokemontcg.io/bw6/symbol.png","bw7":"https://images.pokemontcg.io/bw7/symbol.png","bw8":"https://images.pokemontcg.io/bw8/symbol.png","bw9":"https://images.pokemontcg.io/bw9/symbol.png","cel25":"https://images.pokemontcg.io/cel25/symbol.png","col1":"https://images.pokemontcg.io/col1/symbol.png","dc1":"https://images.pokemontcg.io/dc1/symbol.png","dp1":"https://images.pokemontcg.io/dp1/symbol.png","dp2":"https://images.pokemontcg.io/dp2/symbol.png","dp3":"https://images.pokemontcg.io/dp3/symbol.png","dp4":"https://images.pokemontcg.io/dp4/symbol.png","dp5":"https://images.pokemontcg.io/dp5/symbol.png","dp6":"https://images.pokemontcg.io/dp6/symbol.png","dp7":"https://images.pokemontcg.io/dp7/symbol.png","dv1":"https://images.pokemontcg.io/dv1/symbol.png","ecard1":"https://images.pokemontcg.io/ecard1/symbol.png","ecard2":"https://images.pokemontcg.io/ecard2/symbol.png","ecard3":"https://images.pokemontcg.io/ecard3/symbol.png","ex1":"https://images.pokemontcg.io/ex1/symbol.png","ex10":"https://images.pokemontcg.io/ex10/symbol.png","ex11":"https://images.pokemontcg.io/ex11/symbol.png","ex12":"https://images.pokemontcg.io/ex12/symbol.png","ex13":"https://images.pokemontcg.io/ex13/symbol.png","ex14":"https://images.pokemontcg.io/ex14/symbol.png","ex15":"https://images.pokemontcg.io/ex15/symbol.png","ex16":"https://images.pokemontcg.io/ex16/symbol.png","ex2":"https://images.pokemontcg.io/ex2/symbol.png","ex3":"https://images.pokemontcg.io/ex3/symbol.png","ex4":"https://images.pokemontcg.io/ex4/symbol.png","ex5":"https://images.pokemontcg.io/ex5/symbol.png","ex6":"https://images.pokemontcg.io/ex6/symbol.png","ex7":"https://images.pokemontcg.io/ex7/symbol.png","ex8":"https://images.pokemontcg.io/ex8/symbol.png","ex9":"https://images.pokemontcg.io/ex9/symbol.png","g1":"https://images.pokemontcg.io/g1/symbol.png","gym1":"https://images.pokemontcg.io/gym1/symbol.png","gym2":"https://images.pokemontcg.io/gym2/symbol.png","hgss1":"https://images.pokemontcg.io/hgss1/symbol.png","hgss2":"https://images.pokemontcg.io/hgss2/symbol.png","hgss3":"https://images.pokemontcg.io/hgss3/symbol.png","hgss4":"https://images.pokemontcg.io/hgss4/symbol.png","me1":"https://images.pokemontcg.io/me1/symbol.png","me2":"https://images.pokemontcg.io/me2/symbol.png","me2pt5":"https://images.scrydex.com/pokemon/me2pt5-symbol/symbol","me3":"https://images.scrydex.com/pokemon/me3-symbol/symbol","me4":"https://images.scrydex.com/pokemon/me4-symbol/symbol","me5":"https://archives.bulbagarden.net/media/upload/c/c4/SetSymbolPitch_Black.png","me05":"https://archives.bulbagarden.net/media/upload/c/c4/SetSymbolPitch_Black.png","neo1":"https://images.pokemontcg.io/neo1/symbol.png","neo2":"https://images.pokemontcg.io/neo2/symbol.png","neo3":"https://images.pokemontcg.io/neo3/symbol.png","neo4":"https://images.pokemontcg.io/neo4/symbol.png","pgo":"https://images.pokemontcg.io/pgo/symbol.png","pl1":"https://images.pokemontcg.io/pl1/symbol.png","pl2":"https://images.pokemontcg.io/pl2/symbol.png","pl3":"https://images.pokemontcg.io/pl3/symbol.png","pl4":"https://images.pokemontcg.io/pl4/symbol.png","rsv10pt5":"https://images.pokemontcg.io/rsv10pt5/symbol.png","sm1":"https://images.pokemontcg.io/sm1/symbol.png","sm10":"https://images.pokemontcg.io/sm10/symbol.png","sm11":"https://images.pokemontcg.io/sm11/symbol.png","sm115":"https://images.pokemontcg.io/sm115/symbol.png","sm12":"https://images.pokemontcg.io/sm12/symbol.png","sm2":"https://images.pokemontcg.io/sm2/symbol.png","sm3":"https://images.pokemontcg.io/sm3/symbol.png","sm35":"https://images.pokemontcg.io/sm35/symbol.png","sm4":"https://images.pokemontcg.io/sm4/symbol.png","sm5":"https://images.pokemontcg.io/sm5/symbol.png","sm6":"https://images.pokemontcg.io/sm6/symbol.png","sm7":"https://images.pokemontcg.io/sm7/symbol.png","sm75":"https://images.pokemontcg.io/sm75/symbol.png","sm8":"https://images.pokemontcg.io/sm8/symbol.png","sm9":"https://images.pokemontcg.io/sm9/symbol.png","sv1":"https://images.pokemontcg.io/sv1/symbol.png","sv10":"https://images.pokemontcg.io/sv10/symbol.png","sv2":"https://images.pokemontcg.io/sv2/symbol.png","sv3":"https://images.pokemontcg.io/sv3/symbol.png","sv3pt5":"https://images.pokemontcg.io/sv3pt5/symbol.png","sv4":"https://images.pokemontcg.io/sv4/symbol.png","sv4pt5":"https://images.pokemontcg.io/sv4pt5/symbol.png","sv5":"https://images.pokemontcg.io/sv5/symbol.png","sv6":"https://images.pokemontcg.io/sv6/symbol.png","sv6pt5":"https://images.pokemontcg.io/sv6pt5/symbol.png","sv7":"https://images.pokemontcg.io/sv7/symbol.png","sv8":"https://images.pokemontcg.io/sv8/symbol.png","sv8pt5":"https://images.pokemontcg.io/sv8pt5/symbol.png","sv9":"https://images.pokemontcg.io/sv9/symbol.png","swsh1":"https://images.pokemontcg.io/swsh1/symbol.png","swsh10":"https://images.pokemontcg.io/swsh10/symbol.png","swsh11":"https://images.pokemontcg.io/swsh11/symbol.png","swsh12":"https://images.pokemontcg.io/swsh12/symbol.png","swsh12pt5":"https://images.pokemontcg.io/swsh12pt5/symbol.png","swsh2":"https://images.pokemontcg.io/swsh2/symbol.png","swsh3":"https://images.pokemontcg.io/swsh3/symbol.png","swsh35":"https://images.pokemontcg.io/swsh35/symbol.png","swsh4":"https://images.pokemontcg.io/swsh4/symbol.png","swsh45":"https://images.pokemontcg.io/swsh45/symbol.png","swsh5":"https://images.pokemontcg.io/swsh5/symbol.png","swsh6":"https://images.pokemontcg.io/swsh6/symbol.png","swsh7":"https://images.pokemontcg.io/swsh7/symbol.png","swsh8":"https://images.pokemontcg.io/swsh8/symbol.png","swsh9":"https://images.pokemontcg.io/swsh9/symbol.png","xy0":"https://images.pokemontcg.io/xy0/symbol.png","xy1":"https://images.pokemontcg.io/xy1/symbol.png","xy10":"https://images.pokemontcg.io/xy10/symbol.png","xy11":"https://images.pokemontcg.io/xy11/symbol.png","xy12":"https://images.pokemontcg.io/xy12/symbol.png","xy2":"https://images.pokemontcg.io/xy2/symbol.png","xy3":"https://images.pokemontcg.io/xy3/symbol.png","xy4":"https://images.pokemontcg.io/xy4/symbol.png","xy5":"https://images.pokemontcg.io/xy5/symbol.png","xy6":"https://images.pokemontcg.io/xy6/symbol.png","xy7":"https://images.pokemontcg.io/xy7/symbol.png","xy8":"https://images.pokemontcg.io/xy8/symbol.png","xy9":"https://images.pokemontcg.io/xy9/symbol.png","zsv10pt5":"https://images.pokemontcg.io/zsv10pt5/symbol.png"
@@ -3222,6 +3119,299 @@ const PARENT_TO_TG = {
   'cel25':    'cel25c',
 };
 
+// ═══ RECHERCHE DE PARCOURIR — même fonctionnement que celle du Stock de PoKoalaShop ═══
+// Nom (FR ou EN, sans accents ni ponctuation), numéro, code d'extension ;
+// pastilles de famille ; cartes possédées d'abord, regroupées par extension.
+function brNorm(v){ return String(v==null?'':v).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function brNum(v){ return brNorm(v).replace(/^0+(?=.)/, ''); }
+let _brIdx = null, _brCodes = null, _familles = null, _especes = null, _espOrdre = {}, _brAux = null;
+let _brMemb = null, _brMembQ = null, _brMembBase = null, _brFamNoms = [], _brTimer = null;
+const BR_TOUS = '*';
+function brIndex(){
+  if(_brIdx && _brIdx.src === _mobileDB) return _brIdx;
+  const m = new Map(), add = (k, id) => { if(!k) return; let l = m.get(k); if(!l){ l = []; m.set(k, l); } if(l[l.length-1] !== id) l.push(id); };
+  for(const c of _mobileDB.cards){ add(brNorm(c.name), c.id); if(c.nameEn && c.nameEn !== c.name) add(brNorm(c.nameEn), c.id); }
+  const byId = new Map(_mobileDB.cards.map(c => [c.id, c]));
+  const codes = {};
+  for(const [k, ids] of Object.entries(_mobileDB.codeSets || {})) codes[brNorm(k)] = ids;
+  _brIdx = { src: _mobileDB, m, byId, codes };
+  return _brIdx;
+}
+function brAuxLoad(){
+  if(_brAux) return _brAux;
+  _brAux = Promise.all([
+    fetch('./data/familles.json?v=' + DATA_VER).then(r => r.ok ? r.json() : null),
+    fetch('./data/especes.json?v=' + DATA_VER).then(r => r.ok ? r.json() : null)
+  ]).then(([f, e]) => { _familles = f || {}; _especes = (e && e.e) || {}; _espOrdre = (e && e.o) || {}; })
+    .catch(() => { _brAux = null; });
+  return _brAux;
+}
+function brParse(q){
+  const mots = String(q||'').trim().split(/\s+/), codes = brIndex().codes, nom = [];
+  let num = '', code = '', sids = null;
+  for(const m0 of mots){
+    const w = brNorm(m0);
+    if(!w) continue;
+    // 3 lettres au moins : « ex », « gx », « sv » sont des suffixes de cartes
+    if(!code && w.length >= 3 && codes[w]){ code = w; sids = codes[w]; continue; }
+    if(!num && (/^\d+[a-z]?$/.test(w) || /^(tg|gg|sv|sh|h|xy)\d+$/.test(w))){ num = brNum(w); continue; }
+    nom.push(w);
+  }
+  // un code seul reste un nom : « mew » cherche le Pokémon, pas l'extension 151
+  if(!nom.length && code){ nom.push(code); code = ''; sids = null; }
+  return { nom: nom.join(''), num, code, sids };
+}
+// Noms de Pokémon contenus dans un nom plus long (« melo » dans « melofee »)
+const ESP_SUP = {"marill":["azumarill"],"woobat":["swoobat"],"porygon":["porygon2","porygonz"],"clic":["cliticlic"],"abra":["crabrawler","kadabra","simiabraz"],"natu":["eternatus"],"rattata":["rattatac"],"rapion":["drapion"],"pohm":["pohmarmotte","pohmotte"],"klang":["klinklang"],"dunsparce":["dudunsparce"],"aron":["darumarond","volcarona"],"lairon":["piclairon"],"aggron":["laggron"],"mantine":["lamantine"],"pidgeot":["pidgeotto"],"pawmo":["pawmot"],"abo":["abomasnow","bacabouh","badabouin","crabominable","mabosstiff","pumpkaboo","raboot","rillaboom","rocabot"],"voltorb":["voltorbe"],"muk":["pyukumuku"],"klink":["klinklang"],"mew":["mewtwo"],"tarinor":["tarinorme"],"smogo":["smogogo"],"draco":["dracolosse","dracovish","dracozolt","minidraco"],"gigalith":["gigalithe"],"wattrel":["kilowattrel"],"coxy":["coxyclaque"],"dofin":["superdofin"],"tadmorv":["grotadmorv"],"golem":["golemastoc","gringolem"],"hypno":["hypnomade"],"machop":["machopeur"],"paras":["parasect"],"arcanin":["arcanine"],"kabuto":["kabutops"],"araqua":["araquanid"],"tic":["articuno","beartic","canarticho","cliticlic","denticrisse","grotichon","meowstic","milotic","ouisticram","palarticho","raticate","shiinotic","togetic"],"melo":["melodelfe","meloetta","melofee","melokrik"]};
+const ESP_LONG = {};
+for(const k in ESP_SUP) for(const x of ESP_SUP[k]) ESP_LONG[x] = 1;
+function nomContient(k, m){
+  let p = k.indexOf(m); const sup = ESP_SUP[m];
+  if(p < 0 || !sup) return p >= 0;
+  while(p >= 0){
+    let couvert = false;
+    for(let i=0;i<sup.length && !couvert;i++){
+      const off = sup[i].indexOf(m); let q = k.indexOf(sup[i]);
+      while(q >= 0){ if(q + off === p){ couvert = true; break; } q = k.indexOf(sup[i], q + 1); }
+    }
+    if(!couvert) return true;
+    p = k.indexOf(m, p + 1);
+  }
+  return false;
+}
+function famNomOk(nm, mn){
+  if(mn !== BR_TOUS) return nomContient(nm, mn);
+  return _brFamNoms.some(f => nomContient(nm, f));
+}
+const _espCache = {}, _espTous = {};
+function brMots(nom){ return String(nom).split(/[\s\-'’.,:;()&\/+_]+/).map(brNorm).filter(Boolean); }
+function especeDe(nom){
+  if(!_especes || !nom) return null;
+  if(nom in _espCache) return _espCache[nom];
+  const mots = brMots(nom); let r = null;
+  for(let i=0;i<mots.length && !r;i++){
+    let acc = '';
+    for(let j=i;j<Math.min(i+3, mots.length);j++){
+      acc += mots[j];
+      if(_especes[acc]) r = _especes[acc];
+      else if(acc.indexOf('primo') === 0 && _especes[acc.slice(5)]) r = _especes[acc.slice(5)];
+    }
+  }
+  return (_espCache[nom] = r);
+}
+function especesDe(nom){
+  if(!_especes || !nom) return [];
+  if(nom in _espTous) return _espTous[nom];
+  const mots = brMots(nom), out = [];
+  for(let i=0;i<mots.length;i++){
+    let acc = '', r = null;
+    for(let j=i;j<Math.min(i+3, mots.length);j++){
+      acc += mots[j];
+      if(_especes[acc]) r = _especes[acc];
+      else if(acc.indexOf('primo') === 0 && _especes[acc.slice(5)]) r = _especes[acc.slice(5)];
+    }
+    if(r && !out.includes(r)) out.push(r);
+  }
+  return (_espTous[nom] = out);
+}
+function carteDuMembre(c, mn){
+  if(!_especes || !c) return true;
+  const sp = especesDe(c.name);
+  if(mn !== BR_TOUS) return sp.includes(mn);
+  return _brFamNoms.some(f => sp.includes(f));
+}
+function brFamOf(n){
+  if(!_familles || !n || n.length < 2) return null;
+  if(_familles[n]) return _familles[n];
+  let f = null;   // saisie partielle : famille retenue seulement si unique
+  for(const k in _familles){
+    if(k.indexOf(n) !== 0) continue;
+    if(f && f.b !== _familles[k].b) return null;
+    f = _familles[k];
+  }
+  return f;
+}
+function famPastilles(f){
+  const ms = (f && f.m) || [], ns = ms.map(brNorm), out = [], vu = {};
+  for(let i=0;i<ms.length;i++){
+    const mn = ns[i];
+    if(!mn || vu[mn]) continue;
+    let variante = false;
+    if(!ESP_LONG[mn]) for(const n2 of ns) if(n2 !== mn && n2.length >= 3 && mn.indexOf(n2) >= 0) variante = true;
+    if(variante) continue;
+    vu[mn] = 1;
+    out.push({ lab: ms[i].replace(/[♀♂]/g, ''), n: mn });
+  }
+  return out.length > 1 ? out : null;
+}
+function brRoot(sid){ const st = _mobileDB.sets.find(x => x.id === sid); return st?.parent || sid; }
+
+function brInput(){
+  const v = document.getElementById('br-q').value;
+  document.getElementById('br-qx').style.display = v ? '' : 'none';
+  const sc = document.getElementById('content'); if(sc) sc.scrollTop = 0;
+  clearTimeout(_brTimer);
+  _brTimer = setTimeout(brRender, 180);
+}
+function brClear(focus){
+  const i = document.getElementById('br-q');
+  i.value = '';
+  document.getElementById('br-qx').style.display = 'none';
+  brRender();
+  if(focus) i.focus();
+}
+function brMaj(){ if(document.getElementById('br-q')?.value.trim()){ clearTimeout(_brTimer); _brTimer = setTimeout(brRender, 300); } }
+document.addEventListener('click', e => {
+  const t = e.target.closest && e.target.closest('[data-fmb]');
+  if(!t) return;
+  const v = t.getAttribute('data-fmb');
+  if(_brMemb === v) _brMemb = null;                 // second appui : retour au résultat de base
+  else if(!_brMemb && v === _brMembBase) return;    // déjà le résultat affiché
+  else _brMemb = v;
+  _brMembQ = document.getElementById('br-q').value.trim();
+  brRender();
+});
+function brTap(id){
+  const oc = ownedIndex().get(id);
+  if(oc){ openCardModal(oc.id); return; }
+  const c = _mobileDB.cards.find(x => x.id === id);
+  gridTapUnowned(id, c?.name || id, imgSources(c?.setId, c?.number, null)[0] || '');
+}
+
+async function brRender(){
+  const q = (document.getElementById('br-q').value || '').trim();
+  const box = document.getElementById('br-results'), list = document.getElementById('series-list');
+  if(!q){ box.style.display = 'none'; box.innerHTML = ''; list.style.display = ''; _brMemb = null; renderSeries(); return; }
+  box.style.display = ''; list.style.display = 'none';
+  const vue = h => { box.innerHTML = h; };
+  if(!_mobileDB?.cards?.length){ vue('<div class="br-ph">Chargement de la base…</div>'); if(!(await loadMobileDB())){ vue('<div class="br-ph">Base de cartes indisponible.</div>'); return; } }
+  if(!_familles){ await brAuxLoad(); if(document.getElementById('br-q').value.trim() !== q) return; }
+  if(_brMembQ !== q){ _brMemb = null; _brMembQ = q; }   // nouvelle saisie : plus de pastille choisie
+  const P = brParse(q);
+  const n = (_brMemb && _brMemb !== BR_TOUS) ? _brMemb : P.nom;
+  if(P.nom.length < 2){
+    vue('<div class="br-ph">Tape au moins deux lettres du nom' + ((P.num || P.code) ? ', par exemple « ronflex ' + escHtml(P.num || P.code) + ' »' : '') + '.</div>');
+    return;
+  }
+  const X = brIndex(), owned = ownedIndex();
+  const filtreSid = P.sids ? new Set(P.sids) : null;
+  const garde = id => {
+    const d = id.lastIndexOf('-');
+    if(d < 0) return !P.num && !filtreSid;
+    if(P.num && brNum(id.slice(d+1)) !== P.num) return false;
+    if(filtreSid && !filtreSid.has(id.slice(0, d))) return false;
+    return true;
+  };
+  const chipQ = mn => {
+    const vus = new Set(); let t = 0;
+    for(const [nm, l] of X.m){
+      if(!famNomOk(nm, mn)) continue;
+      for(const id of l){
+        if(vus.has(id) || !garde(id)) continue;
+        vus.add(id);
+        if(owned.has(id) && carteDuMembre(X.byId.get(id), mn)) t++;
+      }
+    }
+    return t;
+  };
+  let chipsH = '';
+  const fm = famPastilles(brFamOf(P.nom));
+  _brMembBase = null;
+  if(fm){
+    for(const x of fm) if(x.n === P.nom) _brMembBase = x.n;
+    if(!_brMembBase){ const deb = fm.filter(x => x.n.indexOf(P.nom) === 0); if(deb.length === 1) _brMembBase = deb[0].n; }
+    if(_brMemb && _brMemb !== BR_TOUS && !fm.some(x => x.n === _brMemb)) _brMemb = null;
+    _brFamNoms = fm.map(x => x.n);
+    const qt = chipQ(BR_TOUS);
+    chipsH = `<div class="fmbR"><button class="famC${_brMemb === BR_TOUS ? ' on' : ''}${qt ? '' : ' z'}" data-fmb="${BR_TOUS}">Tous<span class="fmbN">${qt}</span></button>`;
+    for(const x of fm){
+      const qn = chipQ(x.n), on = _brMemb ? (x.n === _brMemb) : (x.n === _brMembBase);
+      chipsH += `<button class="famC${on ? ' on' : ''}${qn ? '' : ' z'}" data-fmb="${escHtml(x.n)}">${escHtml(x.lab)}<span class="fmbN">${qn}</span></button>`;
+    }
+    chipsH += '</div>';
+  }
+  const nn = (_brMemb && _brMemb !== BR_TOUS) ? _brMemb : P.nom;
+  const tous = (_brMemb === BR_TOUS && fm);
+  const vusId = new Set(), ids = [], large = (P.num || filtreSid || tous) ? 4000 : 900;
+  for(const [nm, l] of X.m){
+    if(tous ? !famNomOk(nm, BR_TOUS) : (_brMemb ? !nomContient(nm, nn) : nm.indexOf(nn) < 0)) continue;
+    for(const id of l){ if(vusId.has(id) || !garde(id)) continue; vusId.add(id); ids.push(id); }
+    if(ids.length > large) break;
+  }
+  let cards = ids.map(id => X.byId.get(id)).filter(Boolean);
+  if(_brMemb && fm) cards = cards.filter(c => carteDuMembre(c, _brMemb));
+  const LIM = tous ? 1500 : 400, coupe = cards.length > LIM, show = cards.slice(0, LIM);
+  if(!show.length){
+    vue(chipsH + `<div class="br-ph">Aucun résultat pour « ${escHtml(q)} »<br>dans ${P.num || P.code ? 'cette carte' : 'ce Pokémon'}.</div>`);
+    return;
+  }
+  const withQ = show.filter(c => owned.has(c.id));
+  let ex = 0; for(const c of withQ) ex += owned.get(c.id).qty || 0;
+  const grpOui = {}, grpNon = {}, exts = new Set();
+  for(const c of show){
+    const r = brRoot(c.setId); exts.add(r);
+    const dest = owned.has(c.id) ? grpOui : grpNon;
+    (dest[r] = dest[r] || []).push(c);
+  }
+  // dans chaque extension : extension principale avant ses sous-extensions,
+  // puis ordre d'évolution (bébé, base, 1re, 2e), puis numéro
+  const rangEvo = c => {
+    const sp = especeDe(c.name); let r = sp ? _espOrdre[sp] : null;
+    if(sp === 'nidoran' && /♂|\bm\b|male/i.test(c.name)) r = 33.5;
+    return r == null ? 99999 : r;
+  };
+  const parNumero = (x, y) => {
+    const px = brRoot(x.setId) === x.setId ? 0 : 1, py = brRoot(y.setId) === y.setId ? 0 : 1;
+    if(px !== py) return px - py;
+    if(x.setId !== y.setId) return x.setId < y.setId ? -1 : 1;
+    const ex2 = rangEvo(x), ey = rangEvo(y);
+    if(ex2 !== ey) return ex2 - ey;
+    const nx = parseInt(String(x.number).replace(/^\D+/, ''), 10), ny = parseInt(String(y.number).replace(/^\D+/, ''), 10);
+    if(isNaN(nx) !== isNaN(ny)) return isNaN(nx) ? 1 : -1;
+    if(!isNaN(nx) && nx !== ny) return nx - ny;
+    return String(x.number).localeCompare(String(y.number), 'fr', {numeric:true});
+  };
+  for(const k in grpOui) grpOui[k].sort(parNumero);
+  for(const k in grpNon) grpNon[k].sort(parNumero);
+
+  let h = chipsH;
+  if(P.num || P.code){
+    const si0 = P.code && P.sids ? _mobileDB.sets.find(x => x.id === P.sids[0]) : null;
+    h += `<div class="br-warn">Recherche : ${escHtml(tous ? 'famille ' + nn : nn)}${P.num ? ' · n° ' + escHtml(P.num) : ''}${P.code ? ' · ' + escHtml(si0 ? si0.name : P.code.toUpperCase()) : ''}</div>`;
+  }
+  if(withQ.length){
+    h += `<div class="br-tot"><div><span>Trouvées</span><b>${show.length}</b></div><div><span>J'en ai</span><b>${withQ.length}</b></div><div><span>Exempl.</span><b>${ex}</b></div><div><span>Extensions</span><b>${exts.size}</b></div></div>`;
+  } else {
+    h += `<div class="br-tot"><div><span>Cartes trouvées</span><b>${show.length}</b></div><div><span>Extensions</span><b>${exts.size}</b></div></div>`;
+    h += `<div class="br-warn">Aucune de ces cartes dans ta collection.</div>`;
+  }
+  if(coupe) h += `<div class="br-warn">${cards.length} cartes correspondent, seules les ${LIM} premières sont affichées. Affine la recherche.</div>`;
+  const order = _mobileDB.sets.filter(st => !st.parent).map(st => st.id);
+  const sections = [];
+  if(withQ.length) sections.push({t:'Dans ma collection', g:grpOui});
+  sections.push({t: withQ.length ? 'Autres cartes' : '', g:grpNon});
+  for(const sec of sections){
+    if(!Object.keys(sec.g).length) continue;
+    if(sec.t) h += `<div class="pk-serie sect">${sec.t}</div>`;
+    for(const sid of order){
+      const a = sec.g[sid]; if(!a) continue;
+      const st = _mobileDB.sets.find(x => x.id === sid);
+      h += `<div class="br-sous">${symHtml(st)}${escHtml(st?.name || sid)}</div>`;
+      for(const c of a){
+        const oc = owned.get(c.id);
+        const srcs = imgSources(c.setId, c.number, null);
+        const val = oc ? cardValue(oc) : 0;
+        h += `<div class="br-row${oc ? '' : ' no'}" onclick="brTap('${escId(c.id)}')">`+
+             `<img loading="lazy" src="${escHtml(srcs[0]||'')}" data-srcs="${escHtml(JSON.stringify(srcs))}" data-si="0" onerror="imgNext(this)" alt="">`+
+             `<div class="rt"><b>${escHtml(c.name)}</b><small>N° ${escHtml(c.number)}${oc ? ' · ×' + oc.qty : ''}</small></div>`+
+             (oc ? `<div class="rq">${val > 0 ? fmtEur(val) : ''}<small>${oc.qty} ex.</small></div>` : '') +
+             `</div>`;
+      }
+    }
+  }
+  vue(h);
+}
+
 // Grille d'une extension : cartes de la base, sous-extensions (Galeries,
 // coffres, collections classiques) à la suite, comme dans PoKoalaShop
 let _gridFilt = 'all', _gridQ = '';
@@ -3329,7 +3519,7 @@ function renderGrid(){
 }
 
 function gridTapUnowned(id, name, img){
-  const c=_gridCards.find(x=>(x.id===id)||((_gridSetId+'-'+x.localId)===id));
+  const c=(_gridCards||[]).find(x=>(x.id===id)||((_gridSetId+'-'+x.localId)===id)) || _mobileDB?.cards?.find(x=>x.id===id);
   // Chaîne de fallback depuis l'id réel de la carte : les GG/TG et les cartes
   // sans image en base n'ont pas d'URL TCGdex en .webp
   const _p = String(id).split('-');
@@ -3447,6 +3637,9 @@ function _uiBack(){
   }
   if(document.getElementById('coll-overlay')?.classList.contains('open')){
     closeCollOverlay(); return true;
+  }
+  if(document.getElementById('nav-browse')?.classList.contains('active') && document.getElementById('br-q')?.value){
+    brClear(false); return true;
   }
   const activeTab = document.querySelector('.nav-btn.active');
   if(activeTab && activeTab.id !== 'nav-home'){ switchTab('home'); return true; }
@@ -3842,7 +4035,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.87';
+const APP_VERSION = '4.88';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -4883,22 +5076,6 @@ async function init(){
   }
   _driveChecked = true;
   updateSyncBadge();
-  // Délégation d'événements sur les résultats de recherche
-  document.getElementById('search-results').addEventListener('click', function(e){
-    const addBtn = e.target.closest('[data-add]');
-    if(addBtn){
-      const idx = parseInt(addBtn.dataset.add);
-      const c = _searchCardMap.get(idx);
-      if(c){ addCard(c); toast('✅ Ajoutée'); }
-      return;
-    }
-    const row = e.target.closest('[data-idx]');
-    if(row){
-      const idx = parseInt(row.dataset.idx);
-      openCardModalFromSearch(idx);
-    }
-  });
-
   // Charger la base mobile en arrière-plan
   await loadMobileDB();
   updateScanDBStatus();

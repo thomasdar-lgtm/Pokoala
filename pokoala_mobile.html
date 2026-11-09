@@ -404,10 +404,15 @@ body::before{
 .grid-card img{width:100%;height:100%;object-fit:cover;display:block}
 .grid-card.not-owned{filter:saturate(40%) brightness(0.62)}
 .grid-card-num{
-  position:absolute;bottom:3px;left:0;right:0;text-align:center;
+  position:absolute;bottom:4px;left:4px;max-width:calc(100% - 30px);text-align:left;white-space:nowrap;overflow:hidden;
+  background:rgba(0,0,0,0.62);border-radius:4px;padding:1px 4px;
   font-size:9px;font-weight:700;color:rgba(255,255,255,0.7);
   text-shadow:0 1px 3px rgba(0,0,0,0.8);
 }
+.grid-card-num .pr:not(:empty)::before{content:' · '}
+.grid-card-num .pr{color:#fff}
+.pr-fiche{margin-top:8px;font-size:13px;color:rgba(255,255,255,0.6)}
+.pr-fiche b{color:var(--yellow2);font-size:15px}
 .grid-card-qty{
   position:absolute;top:3px;right:3px;
   background:rgba(255,215,0,0.9);color:#000;
@@ -2605,6 +2610,53 @@ async function fetchCardPrice(cardId){
   _prices[cardId]={v:null, at:Date.now(), nf:1}; // introuvable : nouvel essai dans 7 jours
   return _prices[cardId];
 }
+// Prix affiché partout (grille, recherche, fiche d'ajout, scan) : tout élément
+// [data-pr="<id carte>"] reçoit le prix Cardmarket NM quand il devient visible.
+// Les prix sont demandés à TCGdex au fil de l'affichage (3 à la fois), et
+// gardés dans le même cache que ceux de la collection.
+function prTexte(id){
+  const oc = col.find(x => x.id === id);
+  if(oc && oc.priceManual != null) return fmtEur(+oc.priceManual);
+  const e = _prices[id];
+  return e && e.v > 0 ? fmtEur(e.v) : '';
+}
+function prRemplir(id){
+  const t = prTexte(id);
+  for(const el of document.querySelectorAll(`[data-pr="${CSS.escape(id)}"]`)){
+    el.textContent = t || (el.dataset.prv != null && _prices[id] ? el.dataset.prv : '');
+  }
+}
+const _prFile = [], _prVus = new Set();
+let _prActifs = 0, _prSaveT = null;
+function prPompe(){
+  while(_prActifs < 3 && _prFile.length){
+    const id = _prFile.shift();
+    _prActifs++;
+    fetchCardPrice(id).then(() => {
+      prRemplir(id);
+      clearTimeout(_prSaveT); _prSaveT = setTimeout(savePrices, 1500);
+    }).finally(() => { _prActifs--; _prVus.delete(id); prPompe(); });
+  }
+}
+const _prIO = 'IntersectionObserver' in window ? new IntersectionObserver(es => {
+  for(const e of es){
+    if(!e.isIntersecting) continue;
+    _prIO.unobserve(e.target);
+    const id = e.target.dataset.pr;
+    if(!priceStale(id) || col.some(x => x.id === id && x.priceManual != null)){ prRemplir(id); continue; }
+    if(!navigator.onLine || _prVus.has(id)) continue;
+    _prVus.add(id); _prFile.push(id);
+  }
+  prPompe();
+}, {rootMargin:'150px'}) : null;
+function prWatch(root){
+  for(const el of (root || document).querySelectorAll('[data-pr]')){
+    const id = el.dataset.pr;
+    if(!priceStale(id)) el.textContent = prTexte(id) || (el.dataset.prv != null ? el.dataset.prv : '');
+    else if(_prIO) _prIO.observe(el);
+  }
+}
+
 let _priceRunning=false;
 async function refreshPrices(){
   if(_priceRunning || !navigator.onLine) return;
@@ -3387,7 +3439,7 @@ function brSetMode(m){
   try{ localStorage.setItem('pk_brmode', m); }catch(e){}
   const i = document.getElementById('br-q');
   i.value = ''; document.getElementById('br-qx').style.display = 'none';
-  const sc = document.getElementById('content'); if(sc) sc.scrollTop = 0;
+  brHaut();
   brRender();
 }
 function brTabs(){
@@ -3442,10 +3494,13 @@ function renderArtists(q){
   }).join('');
 }
 
+// Remonter en haut de Parcourir (c'est #tab-browse qui défile) : une nouvelle
+// recherche ne doit pas s'afficher à la position où la liste était descendue
+function brHaut(){ for(const id of ['tab-browse','content']){ const e = document.getElementById(id); if(e) e.scrollTop = 0; } }
 function brInput(){
   const v = document.getElementById('br-q').value;
   document.getElementById('br-qx').style.display = v ? '' : 'none';
-  const sc = document.getElementById('content'); if(sc) sc.scrollTop = 0;
+  brHaut();
   clearTimeout(_brTimer);
   _brTimer = setTimeout(brRender, 180);
 }
@@ -3633,12 +3688,14 @@ async function brRender(){
         h += `<div class="br-row${oc ? '' : ' no'}" onclick="brTap('${escId(c.id)}')">`+
              `<img loading="lazy" src="${escHtml(srcs[0]||'')}" data-srcs="${escHtml(JSON.stringify(srcs))}" data-si="0" onerror="imgNext(this)" alt="">`+
              `<div class="rt"><b>${escHtml(c.name)}</b><small>N° ${escHtml(c.number)}${oc ? ' · ×' + oc.qty : ''}</small></div>`+
-             (oc ? `<div class="rq">${val > 0 ? fmtEur(val) : ''}<small>${oc.qty} ex.</small></div>` : '') +
+             (oc ? `<div class="rq">${val > 0 ? fmtEur(val) : ''}<small>${oc.qty} ex.</small></div>`
+                 : `<div class="rq"><span data-pr="${escHtml(c.id)}"></span></div>`) +
              `</div>`;
       }
     }
   }
   vue(h);
+  prWatch(box);
 }
 
 // Grille d'une extension : cartes de la base, sous-extensions (Galeries,
@@ -3776,12 +3833,13 @@ function renderGrid(){
     const cimg = escId(imgUrl);
     return sep+`<div class="grid-card${oc?'':' not-owned'}" data-id="${escHtml(id)}" data-name="${escHtml(getCardNameFR(c) || c.name || '')}" data-img="${escHtml(imgUrl)}" onclick="${oc?`openCardModal('${sid}')`:`gridTapUnowned('${sid}','${cname}','${cimg}')`}">
       <img src="${imgUrl}" data-srcs="${_srcsAttr}" data-si="0" loading="lazy" onerror="imgNext(this)">
-      <span class="grid-card-num">${escHtml(c.localId)}</span>
+      <span class="grid-card-num">${escHtml(c.localId)}<span class="pr" data-pr="${escHtml(id)}"></span></span>
       ${oc?`<span class="grid-card-qty">${oc.qty}×</span>`:''}
       ${!oc?`<button class="grid-add-btn" onclick="event.stopPropagation();quickAddFromGrid('${sid}','${cname}','${cimg}')">+</button>`:''}
       <button class="grid-cm-btn" title="Prix Cardmarket (FR, NM)" onclick="event.stopPropagation();openCM('${escId(c.nameEn||c.name||'')}','${escId(c.localId)}')"><img src="${CM_LOGO}" alt="Cardmarket"></button>
     </div>`;
   }).join('');
+  prWatch(g);
 }
 
 function gridTapUnowned(id, name, img){
@@ -3808,6 +3866,7 @@ function gridTapUnowned(id, name, img){
     <div class="modal-section">
       <div style="font-size:13px;color:rgba(255,255,255,0.55)">${escHtml(c?.setName||document.getElementById('grid-title').textContent)}${(c?.localId||c?.number)?' · N°'+(c.localId||c.number):''}${c?.rarity?' · '+c.rarity:''}</div>
       ${pksCard(c?.setId, c?.localId||c?.number)?.artist?`<div class="modal-art">Illustrateur : <b>${escHtml(pksCard(c.setId, c.localId||c.number).artist)}</b></div>`:''}
+      <div class="pr-fiche">Prix Cardmarket (NM) : <b data-pr="${escHtml(id)}" data-prv="indisponible">…</b></div>
     </div>
     <div class="btn-row">
       <button class="btn btn-primary btn-full" onclick="addCard(window._addCard);closeModal('card-modal');updateGridCard(window._addCard.id)">
@@ -3821,6 +3880,7 @@ function gridTapUnowned(id, name, img){
       </button>
     </div>`;
   openModal('card-modal');
+  prWatch(document.getElementById('card-modal'));
 }
 
 // Met à jour une seule tuile après ajout, sans réécrire la grille : évite que
@@ -4333,7 +4393,7 @@ async function driveLoad(silent=false){
 }
 
 // ── SCANNER ──
-const APP_VERSION = '4.95';
+const APP_VERSION = '4.96';
 const VISION_KEY = 'AIzaSyDFL387z4zPy6v_DDm4mkT4rnbjtDYj3yE';
 const VISION_URL = `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`;
 
@@ -5024,8 +5084,10 @@ function scanLiveShow(card, alts, msg){
       <div class="t"><div class="n">${escHtml(card.name)}</div>
         <div class="s">${escHtml(card.setName || '')} · N° ${escHtml(card.number)}</div>
         ${card.rarity ? `<div style="margin-top:6px">${rareBadge(card.rarity)}</div>` : ''}
+        <div class="s" style="margin-top:6px">Prix NM : <b style="color:var(--yellow2)" data-pr="${escHtml(card.id)}" data-prv="—">…</b></div>
         ${own ? `<div class="o">✓ Déjà ${own.qty}× dans ta collection</div>` : ''}
       </div></div>`;
+    prWatch(live);
   }
   document.getElementById('sl-ok').disabled = !card;
   const r = document.getElementById('sl-res');
